@@ -29,20 +29,12 @@ library GeneralMath {
     }
 
     // Throws if c = 0 and both a != 0, b != 0
-    function mulDivUp(
-        uint256 a,
-        uint256 b,
-        uint256 c
-    ) internal pure returns (uint256) {
+    function mulDivUp(uint256 a, uint256 b, uint256 c) internal pure returns (uint256) {
         return ceilingDiv(a * b, c);
     }
 
     // Throws if c = 0
-    function mulDivDown(
-        uint256 a,
-        uint256 b,
-        uint256 c
-    ) internal pure returns (uint256) {
+    function mulDivDown(uint256 a, uint256 b, uint256 c) internal pure returns (uint256) {
         return (a * b) / c;
     }
 

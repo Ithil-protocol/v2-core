@@ -27,7 +27,7 @@ contract VaultTest is PRBTest, StdCheats {
     /// @dev Run Forge with `-vvvv` to see console logs.
     function testExample() public {
         uint256 amount = 1000;
-        
+
         assertTrue(vault.decimals() == token.decimals());
         vault.deposit(amount, address(this));
         assertTrue(vault.totalAssets() == amount);

@@ -21,7 +21,7 @@ jobs:
           submodules: "recursive"
 
       - name: "Install Foundry"
-        uses: "onbjerg/foundry-toolchain@v1"
+        uses: "foundry-rs/foundry-toolchain@v1"
         with:
           version: "nightly"
 
@@ -42,18 +42,30 @@ jobs:
           echo "## Linting" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
-      - name: "Show the Foundry config"
-        run: "forge config"
-
       - name: "Run the tests"
         run: "forge test"
-
-      - name: "Build the contracts"
-        run: |
-          forge --version
-          forge build --sizes
 
       - name: "Add test summary"
         run: |
           echo "## Tests" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+      - name: "Run Slither"
+        uses: "crytic/slither-action@v0.1.1"
+        continue-on-error: true
+        id: "slither"
+        with:
+          node-version: "lts/*"
+          ignore-compile: true
+          fail-on: "high"
+          sarif: "results.sarif"
+
+      - name: "Add static analysis summary"
+        run: |
+          echo "## Static analysis" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+#      - name: "Upload SARIF file"
+#        uses: "github/codeql-action/upload-sarif@v2"
+#        with:
+#          sarif_file: ${{ steps.slither.outputs.sarif }}
