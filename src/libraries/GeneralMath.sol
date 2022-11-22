@@ -15,7 +15,7 @@ library GeneralMath {
     }
 
     // Never throws, returns max(a-b,0)
-    function positiveSub(uint256 a, uint256 b) internal pure returns (uint256) {
+    function safeSub(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a > b) {
             return a - b;
         } else {

@@ -2,6 +2,7 @@
 pragma solidity =0.8.17;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
@@ -57,7 +58,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0
-                ? super.totalAssets().safeAdd(netLoans).positiveSub(uint256(lockedProfits))
+                ? super.totalAssets().safeAdd(netLoans).safeSub(uint256(lockedProfits))
                 : super.totalAssets().safeAdd(netLoans).safeAdd(uint256(-lockedProfits));
     }
 
@@ -68,7 +69,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0
-                ? IERC20(asset()).balanceOf(address(this)).positiveSub(uint256(lockedProfits))
+                ? IERC20(asset()).balanceOf(address(this)).safeSub(uint256(lockedProfits))
                 : IERC20(asset()).balanceOf(address(this));
     }
 
@@ -78,7 +79,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return freeLiquidity().min(super.maxWithdraw(owner));
     }
 
-    // Throws 'ERC20: transfer amount exceeds balance' if
+    // Throws 'ERC20: transfer amount exceeds balance
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner
     function withdraw(uint256 assets, address receiver, address owner)
@@ -109,7 +110,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         emit Withdrawn(_msgSender(), receiver, owner, assets, shares);
 
-        return shares;
+        return assets;
     }
 
     // Direct mint and burn are used to manage boosting and seniority in loans
@@ -124,7 +125,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 increasedAssets = convertToAssets(shares);
         _mint(receiver, shares);
 
-        currentProfits = _calculateLockedProfits() - int256(increasedAssets);
+        currentProfits = _calculateLockedProfits() - SafeCast.toInt256(increasedAssets);
         latestRepay = _blockTimestamp();
 
         emit DirectMint(receiver, shares, increasedAssets);
@@ -149,7 +150,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         // Since this is onlyOwner we are not worried about reentrancy
         // So we can modify the state here
-        currentProfits = _calculateLockedProfits() + int256(distributedAssets);
+        currentProfits = _calculateLockedProfits() + SafeCast.toInt256(distributedAssets);
         latestRepay = _blockTimestamp();
 
         emit DirectBurn(owner, shares, distributedAssets);
@@ -177,7 +178,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
     function repay(uint256 amount, uint256 debt, address repayer) external onlyOwner {
-        netLoans = netLoans.positiveSub(debt);
+        netLoans = netLoans.safeSub(debt);
 
         // any excess amount is considered to be fees
         // if a bad debt has beed repaid, we recover part from the locked profits
@@ -196,8 +197,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // It is zero when _blockTimestamp()-latestRepay > feeUnlockTime
     function _calculateLockedProfits() internal view returns (int256) {
         return
-            (currentProfits * int256(feeUnlockTime.positiveSub(_blockTimestamp() - latestRepay))) /
-            int256(feeUnlockTime);
+            (currentProfits * int256(feeUnlockTime.safeSub(_blockTimestamp() - latestRepay))) / int256(feeUnlockTime);
     }
 
     // overridden in tests
