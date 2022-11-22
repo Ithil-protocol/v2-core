@@ -49,3 +49,17 @@ jobs:
         run: |
           echo "## Tests" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+      - name: "Run Slither"
+        uses: "crytic/slither-action@v0.1.1"
+        continue-on-error: true
+        id: "slither"
+        with:
+          node-version: "lts/*"
+          ignore-compile: true
+          sarif: "results.sarif"
+
+      - name: "Upload SARIF file"
+        uses: "github/codeql-action/upload-sarif@v2"
+        with:
+          sarif_file: ${{ steps.slither.outputs.sarif }}
