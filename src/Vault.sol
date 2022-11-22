@@ -113,13 +113,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return assets;
     }
 
-    // Direct mint and burn are used to manage boosting and seniority in loans
+    // mint and burn are used to manage boosting and seniority in loans
 
     // Minting during a loss is equivalent to declaring the receiver senior
     // Minting dilutes stakers (damping)
     // Use case: treasury, backing contract...
     // Invariant: maximumWithdraw(account) for account != receiver
-    function directMint(uint256 shares, address receiver) external onlyOwner {
+    function directMint(uint256 shares, address receiver) external override onlyOwner returns (uint256) {
         // When minting, the receiver assets increase
         // Thus we produce negative profits and we need to lock them
         uint256 increasedAssets = convertToAssets(shares);
@@ -129,13 +129,15 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         latestRepay = _blockTimestamp();
 
         emit DirectMint(receiver, shares, increasedAssets);
+
+        return increasedAssets;
     }
 
     // Burning during a loss is equivalent to declaring the owner junior
     // Burning undilutes stakers (boosting)
     // Use case: insurance reserve...
     // Invariant: maximumWithdraw(account) for account != receiver
-    function directBurn(uint256 shares, address owner) external onlyOwner {
+    function directBurn(uint256 shares, address owner) external override onlyOwner returns (uint256) {
         // Burning the entire supply would trigger an _initialConvertToShares at next deposit
         // Meaning that the first to deposit will get everything
         // To avoid overriding _initialConvertToShares, we make the following check
@@ -154,6 +156,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         latestRepay = _blockTimestamp();
 
         emit DirectBurn(owner, shares, distributedAssets);
+
+        return distributedAssets;
     }
 
     // Owner is the only trusted borrower
@@ -172,8 +176,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Owner is the only trusted repayer
     // Transfers assets from repayer to the vault
     // assets amount may be greater or less than debt
-    // Throws if repayer did not approve the vault
-    // Throws if repayer does not have the specified number of assets
+    // Reverts if the repayer did not approve the vault
+    // Reverts if the repayer does not have the specified number of assets
     // _calculateLockedProfits() = currentProfits immediately after
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)

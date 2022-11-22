@@ -73,6 +73,12 @@ interface IRouter {
         external
         returns (uint256 amountOut);
 
+    function get(address token) external view returns (address);
+
+    function directMint(address token, address to, uint256 shares, uint256 maxAmountIn) external returns (uint256);
+
+    function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
+
     function borrow(address token, uint256 amount) external;
 
     function repay(address token, uint256 amount, uint256 debt) external;

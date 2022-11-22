@@ -7,29 +7,37 @@ import { PRBTest } from "@prb/test/PRBTest.sol";
 import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { Vault } from "../src/Vault.sol";
+import { Router } from "../src/Router.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
 /// https://book.getfoundry.sh/forge/writing-tests
-contract VaultTest is PRBTest, StdCheats {
-    Vault internal immutable vault;
+contract RouterTest is PRBTest, StdCheats {
+    Router internal immutable router;
     ERC20PresetMinterPauser internal immutable token;
+    address internal vault;
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
-        vault = new Vault(IERC20Metadata(address(token)));
+        router = new Router(address(0));
     }
 
     function setUp() public {
         token.mint(address(this), type(uint128).max);
-        token.approve(address(vault), type(uint256).max);
+        vault = router.create(address(token));
     }
 
-    /// @dev Run Forge with `-vvvv` to see console logs.
-    function testDeposit() public {
-        uint256 amount = 1000;
+    function testCreateVaultSuccessful() public {
+        assertTrue(vault != address(0));
+        assertTrue(vault == router.vaults(address(token)));
+    }
 
-        assertTrue(vault.decimals() == token.decimals());
-        vault.deposit(amount, address(this));
-        assertTrue(vault.totalAssets() == amount);
+    function testCreateVaultTwiceReverts() public {
+        vm.expectRevert();
+        router.create(address(token));
+    }
+
+    function testDeposit() public {
+        token.approve(address(router), type(uint256).max);
+        router.deposit(address(token), address(this), 1000, 1);
     }
 }
