@@ -20,7 +20,7 @@ abstract contract ETHWrapper {
     }
 
     function wrap() external payable {
-        weth.deposit{value: msg.value}();
+        weth.deposit{ value: msg.value }();
     }
 
     function unwrap(uint256 amount, address recipient) external {

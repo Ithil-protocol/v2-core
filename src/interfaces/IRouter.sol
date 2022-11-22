@@ -28,12 +28,7 @@ interface IRouter {
      @return amountIn the amount of assets used to mint by `to`.
      @dev throws MaxAmountError   
     */
-    function mint(
-        IERC4626 vault,
-        address to,
-        uint256 shares,
-        uint256 maxAmountIn
-    ) external returns (uint256 amountIn);
+    function mint(IERC4626 vault, address to, uint256 shares, uint256 maxAmountIn) external returns (uint256 amountIn);
 
     /** 
      @notice deposit `amount` to an ERC4626 vault.
@@ -44,12 +39,9 @@ interface IRouter {
      @return sharesOut the amount of shares received by `to`.
      @dev throws MinSharesError   
     */
-    function deposit(
-        IERC4626 vault,
-        address to,
-        uint256 amount,
-        uint256 minSharesOut
-    ) external returns (uint256 sharesOut);
+    function deposit(IERC4626 vault, address to, uint256 amount, uint256 minSharesOut)
+        external
+        returns (uint256 sharesOut);
 
     /** 
      @notice withdraw `amount` from an ERC4626 vault.
@@ -60,12 +52,9 @@ interface IRouter {
      @return sharesOut the amount of shares received by `to`.
      @dev throws MaxSharesError   
     */
-    function withdraw(
-        IERC4626 vault,
-        address to,
-        uint256 amount,
-        uint256 minSharesOut
-    ) external returns (uint256 sharesOut);
+    function withdraw(IERC4626 vault, address to, uint256 amount, uint256 minSharesOut)
+        external
+        returns (uint256 sharesOut);
 
     /** 
      @notice redeem `shares` shares from an ERC4626 vault.
@@ -76,10 +65,7 @@ interface IRouter {
      @return amountOut the amount of assets received by `to`.
      @dev throws MinAmountError   
     */
-    function redeem(
-        IERC4626 vault,
-        address to,
-        uint256 shares,
-        uint256 minAmountOut
-    ) external returns (uint256 amountOut);
+    function redeem(IERC4626 vault, address to, uint256 shares, uint256 minAmountOut)
+        external
+        returns (uint256 amountOut);
 }

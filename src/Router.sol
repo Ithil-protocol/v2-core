@@ -22,48 +22,44 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
     }
 
     /// @inheritdoc IRouter
-    function mint(
-        IERC4626 vault,
-        address to,
-        uint256 shares,
-        uint256 maxAmountIn
-    ) external override returns (uint256 amountIn) {
+    function mint(IERC4626 vault, address to, uint256 shares, uint256 maxAmountIn)
+        external
+        override
+        returns (uint256 amountIn)
+    {
         if ((amountIn = vault.mint(shares, to)) > maxAmountIn) {
             revert MaxAmountError();
         }
     }
 
     /// @inheritdoc IRouter
-    function deposit(
-        IERC4626 vault,
-        address to,
-        uint256 amount,
-        uint256 minSharesOut
-    ) external override returns (uint256 sharesOut) {
+    function deposit(IERC4626 vault, address to, uint256 amount, uint256 minSharesOut)
+        external
+        override
+        returns (uint256 sharesOut)
+    {
         if ((sharesOut = vault.deposit(amount, to)) < minSharesOut) {
             revert MinSharesError();
         }
     }
 
     /// @inheritdoc IRouter
-    function withdraw(
-        IERC4626 vault,
-        address to,
-        uint256 amount,
-        uint256 maxSharesOut
-    ) external override returns (uint256 sharesOut) {
+    function withdraw(IERC4626 vault, address to, uint256 amount, uint256 maxSharesOut)
+        external
+        override
+        returns (uint256 sharesOut)
+    {
         if ((sharesOut = vault.withdraw(amount, to, msg.sender)) > maxSharesOut) {
             revert MaxSharesError();
         }
     }
 
     /// @inheritdoc IRouter
-    function redeem(
-        IERC4626 vault,
-        address to,
-        uint256 shares,
-        uint256 minAmountOut
-    ) external override returns (uint256 amountOut) {
+    function redeem(IERC4626 vault, address to, uint256 shares, uint256 minAmountOut)
+        external
+        override
+        returns (uint256 amountOut)
+    {
         if ((amountOut = vault.redeem(shares, to, msg.sender)) < minAmountOut) {
             revert MinAmountError();
         }

@@ -81,7 +81,11 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Throws 'ERC20: transfer amount exceeds balance' if
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner
-    function withdraw(uint256 assets, address receiver, address owner) public override(ERC4626, IERC4626) returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override(ERC4626, IERC4626)
+        returns (uint256)
+    {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
         uint256 freeLiq = freeLiquidity();
@@ -94,7 +98,11 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     // Needs approvals if caller is not owner
-    function redeem(uint256 shares, address receiver, address owner) public override(ERC4626, IERC4626) returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override(ERC4626, IERC4626)
+        returns (uint256)
+    {
         uint256 freeLiq = freeLiquidity();
         uint256 assets = super.redeem(shares, receiver, owner);
         if (assets >= freeLiq) revert Vault__Insufficient_Liquidity(freeLiq);
