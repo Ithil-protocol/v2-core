@@ -24,10 +24,7 @@ contract Vault is ERC4626, ERC20Permit, Ownable {
     VaultAccounting public vaultAccounting;
 
     constructor(IERC20Metadata _token)
-        ERC20(
-            string(abi.encodePacked("Ithil ", _token.name())),
-            string(abi.encodePacked("i", _token.symbol()))
-        )
+        ERC20(string(abi.encodePacked("Ithil ", _token.name())), string(abi.encodePacked("i", _token.symbol())))
         ERC20Permit(string(abi.encodePacked("Ithil ", _token.name())))
         ERC4626(_token)
     {
@@ -112,11 +109,7 @@ contract Vault is ERC4626, ERC20Permit, Ownable {
     // Throws 'ERC20: transfer amount exceeds balance' if
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public virtual override returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner) public virtual override returns (uint256) {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
         uint256 freeLiq = freeLiquidity();
@@ -129,11 +122,7 @@ contract Vault is ERC4626, ERC20Permit, Ownable {
     }
 
     // Needs approvals if caller is not owner
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual override returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner) public virtual override returns (uint256) {
         uint256 freeLiq = freeLiquidity();
         uint256 assets = super.redeem(shares, receiver, owner);
         if (assets >= freeLiq) revert ERROR_Vault__Insufficient_Liquidity(freeLiq);
@@ -207,11 +196,7 @@ contract Vault is ERC4626, ERC20Permit, Ownable {
     // _calculateLockedProfits() = vaultAccounting.currentProfits immediately after
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
-    function repay(
-        uint256 amount,
-        uint256 debt,
-        address repayer
-    ) external onlyOwner {
+    function repay(uint256 amount, uint256 debt, address repayer) external onlyOwner {
         vaultAccounting.netLoans = vaultAccounting.netLoans.positiveSub(debt);
 
         // any excess amount is considered to be fees
