@@ -35,7 +35,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         _;
     }
 
-    function decimals() public view virtual override(IERC20Metadata, ERC4626, ERC20) returns (uint8) {
+    function decimals() public view override(IERC20Metadata, ERC4626, ERC20) returns (uint8) {
         return super.decimals();
     }
 
@@ -53,7 +53,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // As per ERC4626 standard this must never throw, thus we use protected math
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
-    function totalAssets() public view virtual override(ERC4626, IERC4626) returns (uint256) {
+    function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0
@@ -74,18 +74,14 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
-    function maxWithdraw(address owner) public view virtual override(ERC4626, IERC4626) returns (uint256) {
+    function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
         return freeLiquidity().min(super.maxWithdraw(owner));
     }
 
     // Throws 'ERC20: transfer amount exceeds balance' if
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public virtual override(ERC4626, IERC4626) returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner) public override(ERC4626, IERC4626) returns (uint256) {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
         uint256 freeLiq = freeLiquidity();
@@ -98,11 +94,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     // Needs approvals if caller is not owner
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual override(ERC4626, IERC4626) returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner) public override(ERC4626, IERC4626) returns (uint256) {
         uint256 freeLiq = freeLiquidity();
         uint256 assets = super.redeem(shares, receiver, owner);
         if (assets >= freeLiq) revert Vault__Insufficient_Liquidity(freeLiq);
@@ -176,11 +168,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // _calculateLockedProfits() = currentProfits immediately after
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
-    function repay(
-        uint256 amount,
-        uint256 debt,
-        address repayer
-    ) external onlyOwner {
+    function repay(uint256 amount, uint256 debt, address repayer) external onlyOwner {
         netLoans = netLoans.positiveSub(debt);
 
         // any excess amount is considered to be fees
@@ -205,7 +193,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     // overridden in tests
-    function _blockTimestamp() internal view virtual returns (uint256) {
+    function _blockTimestamp() internal view returns (uint256) {
         return block.timestamp;
     }
 }
