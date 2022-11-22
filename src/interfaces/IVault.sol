@@ -7,8 +7,9 @@ import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626
 /// @author   Ithil
 interface IVault is IERC4626 {
     function borrow(uint256 assets, address receiver) external;
+
     function repay(uint256 assets, uint256 debt, address repayer) external;
-        
+
     // Events
     event DegradationCoefficientWasChanged(uint256 degradationCoefficient);
     event Deposited(address indexed user, address indexed receiver, uint256 assets, uint256 shares);

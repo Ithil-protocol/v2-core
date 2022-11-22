@@ -23,6 +23,11 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
         _;
     }
 
+    modifier exists(address token) {
+        if (vaults[token] == address(0)) revert Vault_Missing();
+        _;
+    }
+
     function deploy(address token) external onlyOwner {
         vaults[token] = Create2.deploy(0, SALT, type(Vault).creationCode);
     }
@@ -41,59 +46,61 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
     }
 
     /// @inheritdoc IRouter
-    function borrow(address token, uint256 amount) external override onlyServices {
+    function borrow(address token, uint256 amount) external override exists(token) onlyServices {
         assert(vaults[token] != address(0));
 
         IVault(vaults[token]).borrow(amount, msg.sender);
     }
 
     /// @inheritdoc IRouter
-    function repay(address token, uint256 amount, uint256 debt) external override onlyServices {
-        assert(vaults[token] != address(0));
-
+    function repay(address token, uint256 amount, uint256 debt) external override exists(token) onlyServices {
         IVault(vaults[token]).repay(amount, debt, msg.sender);
     }
 
     /// @inheritdoc IRouter
-    function mint(IERC4626 vault, address to, uint256 shares, uint256 maxAmountIn)
+    function mint(address token, address to, uint256 shares, uint256 maxAmountIn)
         external
         override
+        exists(token)
         returns (uint256 amountIn)
     {
-        if ((amountIn = vault.mint(shares, to)) > maxAmountIn) {
+        if ((amountIn = IERC4626(vaults[token]).mint(shares, to)) > maxAmountIn) {
             revert Max_Amount_Exceeded();
         }
     }
 
     /// @inheritdoc IRouter
-    function deposit(IERC4626 vault, address to, uint256 amount, uint256 minSharesOut)
+    function deposit(address token, address to, uint256 amount, uint256 minSharesOut)
         external
         override
+        exists(token)
         returns (uint256 sharesOut)
     {
-        if ((sharesOut = vault.deposit(amount, to)) < minSharesOut) {
+        if ((sharesOut = IERC4626(vaults[token]).deposit(amount, to)) < minSharesOut) {
             revert Below_Min_Shares();
         }
     }
 
     /// @inheritdoc IRouter
-    function withdraw(IERC4626 vault, address to, uint256 amount, uint256 maxSharesOut)
+    function withdraw(address token, address to, uint256 amount, uint256 maxSharesOut)
         external
         override
+        exists(token)
         returns (uint256 sharesOut)
     {
-        if ((sharesOut = vault.withdraw(amount, to, msg.sender)) > maxSharesOut) {
+        if ((sharesOut = IERC4626(vaults[token]).withdraw(amount, to, msg.sender)) > maxSharesOut) {
             revert Max_Shares_Exceeded();
         }
     }
 
     /// @inheritdoc IRouter
-    function redeem(IERC4626 vault, address to, uint256 shares, uint256 minAmountOut)
+    function redeem(address token, address to, uint256 shares, uint256 minAmountOut)
         external
         override
+        exists(token)
         returns (uint256 amountOut)
     {
-        if ((amountOut = vault.redeem(shares, to, msg.sender)) < minAmountOut) {
+        if ((amountOut = IERC4626(vaults[token]).redeem(shares, to, msg.sender)) < minAmountOut) {
             revert Below_Min_Amount();
         }
     }
