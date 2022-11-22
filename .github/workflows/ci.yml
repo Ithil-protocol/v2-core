@@ -21,7 +21,7 @@ jobs:
           submodules: "recursive"
 
       - name: "Install Foundry"
-        uses: "onbjerg/foundry-toolchain@v1"
+        uses: "foundry-rs/foundry-toolchain@v1"
         with:
           version: "nightly"
 
@@ -42,16 +42,8 @@ jobs:
           echo "## Linting" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
-      - name: "Show the Foundry config"
-        run: "forge config"
-
       - name: "Run the tests"
         run: "forge test"
-
-      - name: "Build the contracts"
-        run: |
-          forge --version
-          forge build --sizes
 
       - name: "Add test summary"
         run: |
