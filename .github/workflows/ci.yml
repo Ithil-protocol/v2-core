@@ -57,6 +57,7 @@ jobs:
         with:
           node-version: "lts/*"
           ignore-compile: true
+          fail-on: "high"
           sarif: "results.sarif"
 
       - name: "Add static analysis summary"
