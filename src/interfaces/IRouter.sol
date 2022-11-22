@@ -7,17 +7,22 @@ import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626
 /// @author   Ithil
 /// @notice   A canonical router between ERC4626 Vaults https://eips.ethereum.org/EIPS/eip-4626
 interface IRouter {
+    event ServiceWasAdded(address indexed service);
+    event ServiceWasRemoved(address indexed service);
+    
     /// @notice thrown when amount of assets received is below the min set by caller
-    error MinAmountError();
+    error Below_Min_Amount();
 
     /// @notice thrown when amount of shares received is below the min set by caller
-    error MinSharesError();
+    error Below_Min_Shares();
 
     /// @notice thrown when amount of assets received is above the max set by caller
-    error MaxAmountError();
+    error Max_Amount_Exceeded();
 
     /// @notice thrown when amount of shares received is above the max set by caller
-    error MaxSharesError();
+    error Max_Shares_Exceeded();
+
+    error Restricted_To_Whitelisted_Services();
 
     /** 
      @notice mint `shares` from an ERC4626 vault.
@@ -68,4 +73,7 @@ interface IRouter {
     function redeem(IERC4626 vault, address to, uint256 shares, uint256 minAmountOut)
         external
         returns (uint256 amountOut);
+
+    function borrow(address token, uint256 amount) external;
+    function repay(address token, uint256 amount, uint256 debt) external;
 }

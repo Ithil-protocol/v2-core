@@ -14,11 +14,44 @@ import { IRouter } from "./interfaces/IRouter.sol";
 contract Router is IRouter, Multicall, ETHWrapper, Ownable {
     bytes32 public constant SALT = "ithil-router";
     mapping(address => address) public vaults; // TODO should we use static routing instead?
+    mapping(address => bool) public services;
 
     constructor(address _weth) ETHWrapper(_weth) {}
 
+    modifier onlyServices() {
+        if (!services[msg.sender]) revert Restricted_To_Whitelisted_Services();
+        _;
+    }
+
     function deploy(address token) external onlyOwner {
         vaults[token] = Create2.deploy(0, SALT, type(Vault).creationCode);
+    }
+
+    function addService(address service) external onlyOwner {
+        services[service] = true;
+
+        emit ServiceWasAdded(service);
+    }
+
+    function removeService(address service) external onlyOwner {
+        assert(services[service]);
+        delete services[service];
+
+        emit ServiceWasRemoved(service);
+    }
+
+    /// @inheritdoc IRouter
+    function borrow(address token, uint256 amount) external override onlyServices {
+        assert(vaults[token] != address(0));
+
+        IVault(vaults[token]).borrow(amount, msg.sender);
+    }
+
+    /// @inheritdoc IRouter
+    function repay(address token, uint256 amount, uint256 debt) external override onlyServices {
+        assert(vaults[token] != address(0));
+
+        IVault(vaults[token]).repay(amount, debt, msg.sender);
     }
 
     /// @inheritdoc IRouter
@@ -28,7 +61,7 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
         returns (uint256 amountIn)
     {
         if ((amountIn = vault.mint(shares, to)) > maxAmountIn) {
-            revert MaxAmountError();
+            revert Max_Amount_Exceeded();
         }
     }
 
@@ -39,7 +72,7 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
         returns (uint256 sharesOut)
     {
         if ((sharesOut = vault.deposit(amount, to)) < minSharesOut) {
-            revert MinSharesError();
+            revert Below_Min_Shares();
         }
     }
 
@@ -50,7 +83,7 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
         returns (uint256 sharesOut)
     {
         if ((sharesOut = vault.withdraw(amount, to, msg.sender)) > maxSharesOut) {
-            revert MaxSharesError();
+            revert Max_Shares_Exceeded();
         }
     }
 
@@ -61,7 +94,7 @@ contract Router is IRouter, Multicall, ETHWrapper, Ownable {
         returns (uint256 amountOut)
     {
         if ((amountOut = vault.redeem(shares, to, msg.sender)) < minAmountOut) {
-            revert MinAmountError();
+            revert Below_Min_Amount();
         }
     }
 }
