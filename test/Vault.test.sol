@@ -9,10 +9,12 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { Vault } from "../src/Vault.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
+/// @dev Run Forge with `-vvvv` to see console logs.
 /// https://book.getfoundry.sh/forge/writing-tests
 contract VaultTest is PRBTest, StdCheats {
     Vault internal immutable vault;
     ERC20PresetMinterPauser internal immutable token;
+    uint256 internal constant amount = 1000;
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
@@ -24,12 +26,25 @@ contract VaultTest is PRBTest, StdCheats {
         token.approve(address(vault), type(uint256).max);
     }
 
-    /// @dev Run Forge with `-vvvv` to see console logs.
-    function testDeposit() public {
-        uint256 amount = 1000;
-
+    function testBase() public {
         assertTrue(vault.decimals() == token.decimals());
+    }
+
+    function testDeposit() public {
+        uint256 balanceBefore = token.balanceOf(address(this));
         vault.deposit(amount, address(this));
         assertTrue(vault.totalAssets() == amount);
+        uint256 change = balanceBefore - token.balanceOf(address(this));
+        assertTrue(change == amount);
+        assertTrue(vault.balanceOf(address(this)) == amount);
+    }
+
+    function testWithdraw() public {
+        uint256 balanceBefore = token.balanceOf(address(this));
+
+        vault.withdraw(amount-1, address(this), address(this));
+        assertTrue(vault.totalAssets() == 1);
+        uint256 change = balanceBefore - token.balanceOf(address(this));
+        assertTrue(change == amount-1);
     }
 }

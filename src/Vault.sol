@@ -8,6 +8,7 @@ import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensio
 import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { GeneralMath } from "./libraries/GeneralMath.sol";
 import { IVault } from "./interfaces/IVault.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract Vault is IVault, ERC4626, ERC20Permit {
     using GeneralMath for uint256;
@@ -54,6 +55,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
+        console2.log(1);
+
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0

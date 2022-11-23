@@ -16,8 +16,6 @@ interface IManager {
     /// @notice thrown when amount of assets received is above the max set by caller
     error Max_Amount_Exceeded();
 
-    function get(address token) external view returns (address);
-
     function borrow(address token, uint256 amount) external;
 
     function repay(address token, uint256 amount, uint256 debt) external;

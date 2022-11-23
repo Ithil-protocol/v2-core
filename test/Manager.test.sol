@@ -59,7 +59,11 @@ contract ManagerTest is PRBTest, StdCheats {
     function testBorrow() public {
         uint256 amount = 1e18;
         token.mint(address(this), amount);
+        uint256 balanceBefore = token.balanceOf(address(this));
         IVault(vault).deposit(amount, address(this));
-        service.pull(amount);
+        uint256 change = balanceBefore - token.balanceOf(address(this));
+        assertTrue(change == amount);
+
+        //service.pull(amount);
     }
 }

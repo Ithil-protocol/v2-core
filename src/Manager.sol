@@ -2,7 +2,6 @@
 pragma solidity =0.8.17;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { Vault } from "./Vault.sol";
 import { IVault } from "./interfaces/IVault.sol";
@@ -25,23 +24,10 @@ contract Manager is IManager, Ownable {
     function create(address token) external onlyOwner returns (address) {
         assert(vaults[token] == address(0));
 
-        address vault = Create2.deploy(
-            0,
-            keccak256(abi.encode(token)),
-            abi.encode(type(Vault).creationCode, IERC20Metadata(token))
-        );
+        address vault = address(new Vault{salt: keccak256(abi.encode(token))}(IERC20Metadata(token)));
         vaults[token] = vault;
 
         return vault;
-    }
-
-    /// @inheritdoc IManager
-    function get(address token) external view override returns (address) {
-        return
-            Create2.computeAddress(
-                keccak256(abi.encode(token)),
-                keccak256(abi.encode(type(Vault).creationCode, IERC20Metadata(token)))
-            );
     }
 
     function addService(address service) external onlyOwner {
