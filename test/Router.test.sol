@@ -6,38 +6,40 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { PRBTest } from "@prb/test/PRBTest.sol";
 import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
-import { Vault } from "../src/Vault.sol";
 import { Router } from "../src/Router.sol";
+import { Vault } from "../src/Vault.sol";
 
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// https://book.getfoundry.sh/forge/writing-tests
-contract RouterTest is PRBTest, StdCheats {
+contract ManagerTest is PRBTest, StdCheats {
     Router internal immutable router;
     ERC20PresetMinterPauser internal immutable token;
-    address internal vault;
+    Vault internal immutable vault;
+    uint256 constant amount = 1000;
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
         router = new Router(address(0));
+        vault = new Vault(IERC20Metadata(address(token)));
     }
 
     function setUp() public {
         token.mint(address(this), type(uint128).max);
-        vault = router.create(address(token));
-    }
-
-    function testCreateVaultSuccessful() public {
-        assertTrue(vault != address(0));
-        assertTrue(vault == router.vaults(address(token)));
-    }
-
-    function testCreateVaultTwiceReverts() public {
-        vm.expectRevert();
-        router.create(address(token));
+        token.approve(address(router), type(uint256).max);
+        router.selfApprove(token, address(vault), amount);
     }
 
     function testDeposit() public {
-        token.approve(address(router), type(uint256).max);
-        router.deposit(address(token), address(this), 1000, 1);
+        uint256 deposited = router.deposit(vault, address(this), amount, 1);
+        assertTrue(vault.previewDeposit(amount) == deposited);
     }
+
+    function testSlippageOnDeposit() public {
+        vm.expectRevert();
+        router.deposit(vault, address(this), amount, amount + 1);
+    }
+
+    /*function testWithdraw() public {
+        router.deposit(vault, address(this), amount, 1);
+        uint256 withdrawed = router.withdraw(vault, address(this), amount, 1);
+        assertTrue(vault.previewWithdraw(amount) == withdrawed);
+    }*/
 }
