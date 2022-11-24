@@ -103,6 +103,7 @@ contract VaultTest is PRBTest, StdCheats {
     function testDirectMintDilutesOtherLPs() public {
         uint256 amount1 = 1e18;
         uint256 amount2 = 2e18;
+        uint256 toMint = 2e18;
 
         token.transfer(address(1), amount1);
         vm.startPrank(address(1));
@@ -120,8 +121,9 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 initialMaximumWithdraw1 = vault.maxWithdraw(address(1));
         uint256 initialMaximumWithdraw2 = vault.maxWithdraw(address(2));
 
+        uint256 supply = vault.totalSupply();
         // Check maximum withdraw stay the same while direct minting
-        vault.directMint(investorShares, address(2));
+        vault.directMint(toMint, address(2));
         assertTrue(initialMaximumWithdraw1 == vault.maxWithdraw(address(1)));
 
         // Advance time to unlock the loss
@@ -131,10 +133,9 @@ contract VaultTest is PRBTest, StdCheats {
 
         // Initially with the same shares, now investor2 has twice as many as investor1
         // Therefore investor1 can withdraw only one-third of the total amount
-
       // Fix rounding errors
-      assertTrue(finalMaximumWithdraw1 == initialMaximumWithdraw1 * 2 / 3);
-      assertTrue(finalMaximumWithdraw2 - 1 == initialMaximumWithdraw2 * 4 / 3);
+        assertTrue(finalMaximumWithdraw1 == initialMaximumWithdraw1 * supply / (supply + toMint) );
+        assertTrue(finalMaximumWithdraw2 == initialMaximumWithdraw2 * supply * (investorShares + toMint) / (investorShares * (supply + toMint)));
 
       // The total amount is very close to be constant, but there are rounding errors (not avoidable)
     }

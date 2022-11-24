@@ -186,11 +186,8 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(initialFreeLiquidity == amount + 1);
         uint256 initialVaultAssets = vault.totalAssets();
 
-        _borrow(amount);
+        service.pull(amount);
         _repayWithProfit(amount, 0);
-
-        console2.log("totalAssets", vault.totalAssets());
-        console2.log("initialVaultAssets", initialVaultAssets);
 
         // Assets stay constant (fees still locked)
         assertTrue(vault.totalAssets() == initialVaultAssets);
@@ -199,7 +196,7 @@ contract ManagerTest is PRBTest, StdCheats {
         // Check there is no dust
         assertTrue(vault.netLoans() == 0);
         // Current profits increased
-        assertTrue(uint256(vault.currentProfits()) == amount);
+        assertTrue(uint256(vault.currentProfits()) == 0);
         // Latest repay is time
         assertTrue(vault.latestRepay() == block.timestamp);
     }
