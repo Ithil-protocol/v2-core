@@ -13,7 +13,6 @@ contract ManagerTest is PRBTest, StdCheats {
     Router internal immutable router;
     ERC20PresetMinterPauser internal immutable token;
     Vault internal immutable vault;
-    uint256 constant amount = 1000;
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
@@ -22,24 +21,31 @@ contract ManagerTest is PRBTest, StdCheats {
     }
 
     function setUp() public {
-        token.mint(address(this), type(uint128).max);
+        token.mint(address(this), type(uint256).max);
         token.approve(address(router), type(uint256).max);
-        router.selfApprove(token, address(vault), amount);
+        router.approve(token, address(vault), type(uint256).max);
     }
 
-    function testDeposit() public {
-        uint256 deposited = router.deposit(vault, address(this), amount, 1);
+    function testDeposit(uint256 amount) public {
+        uint256 shares = vault.previewDeposit(amount);
+        uint256 deposited = router.deposit(vault, address(this), amount, shares);
         assertTrue(vault.previewDeposit(amount) == deposited);
     }
 
-    function testSlippageOnDeposit() public {
+    function testSlippageOnDeposit(uint256 amount) public {
+        uint256 shares = vault.previewDeposit(amount);
+
         vm.expectRevert();
-        router.deposit(vault, address(this), amount, amount + 1);
+        router.deposit(vault, address(this), amount, shares + 1);
     }
 
-    /*function testWithdraw() public {
-        router.deposit(vault, address(this), amount, 1);
-        uint256 withdrawed = router.withdraw(vault, address(this), amount, 1);
+    /*function testWithdraw(uint256 amount) public {
+        vm.assume(amount > 1);
+
+        uint256 shares = vault.previewDeposit(amount);
+        router.deposit(vault, address(this), amount, shares);
+        shares = vault.previewWithdraw(amount);
+        uint256 withdrawed = router.withdraw(vault, address(this), amount-1, shares);
         assertTrue(vault.previewWithdraw(amount) == withdrawed);
     }*/
 }

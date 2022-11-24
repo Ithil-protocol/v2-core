@@ -18,7 +18,7 @@ interface IRouter {
 
     function selfPermit(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
 
-    function selfApprove(IERC20 token, address to, uint256 amount) external;
+    function approve(IERC20 token, address to, uint256 amount) external;
 
     /** 
      @notice deposit `amount` to an ERC4626 vault.

@@ -11,6 +11,7 @@ import { IRouter } from "./interfaces/IRouter.sol";
 contract Router is IRouter, Multicall, ETHWrapper {
     using SafeERC20 for IERC20;
 
+    // solhint-disable-next-line no-empty-blocks
     constructor(address weth) ETHWrapper(weth) {}
 
     /// @inheritdoc IRouter
@@ -21,7 +22,7 @@ contract Router is IRouter, Multicall, ETHWrapper {
         IERC20Permit(token).permit(msg.sender, address(this), value, deadline, v, r, s);
     }
 
-    function selfApprove(IERC20 token, address to, uint256 amount) external override {
+    function approve(IERC20 token, address to, uint256 amount) external override {
         token.safeApprove(to, amount);
     }
 

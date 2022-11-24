@@ -7,6 +7,8 @@ import { IMulticall } from "./interfaces/IMulticall.sol";
 /// @notice Enables calling multiple methods in a single call to the contract
 /// @dev forked from https://github.com/Uniswap/v3-periphery/blob/main/contracts/base/Multicall.sol
 abstract contract Multicall is IMulticall {
+    /* solhint-disable reason-string, no-inline-assembly */
+
     /// @inheritdoc IMulticall
     function multicall(bytes[] calldata data) public payable override returns (bytes[] memory results) {
         results = new bytes[](data.length);
@@ -25,4 +27,6 @@ abstract contract Multicall is IMulticall {
             results[i] = result;
         }
     }
+
+    /* solhint-enable reason-string, no-inline-assembly */
 }

@@ -8,31 +8,30 @@ import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensio
 import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { GeneralMath } from "./libraries/GeneralMath.sol";
 import { IVault } from "./interfaces/IVault.sol";
-import { console2 } from "forge-std/console2.sol";
 
 contract Vault is IVault, ERC4626, ERC20Permit {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public immutable router;
-    uint256 public immutable creationTime;
-    uint256 public feeUnlockTime;
-    uint256 public netLoans;
-    uint256 public latestRepay;
-    int256 public currentProfits;
+    address public immutable manager;
+    uint256 public immutable override creationTime;
+    uint256 public override feeUnlockTime;
+    uint256 public override netLoans;
+    uint256 public override latestRepay;
+    int256 public override currentProfits;
 
     constructor(IERC20Metadata _token)
         ERC20(string(abi.encodePacked("Ithil ", _token.name())), string(abi.encodePacked("i", _token.symbol())))
         ERC20Permit(string(abi.encodePacked("Ithil ", _token.name())))
         ERC4626(_token)
     {
-        router = msg.sender;
-        creationTime = _blockTimestamp();
+        manager = msg.sender;
+        creationTime = block.timestamp;
         feeUnlockTime = 21600; // six hours
     }
 
     modifier onlyOwner() {
-        assert(router == msg.sender);
+        assert(manager == msg.sender);
         _;
     }
 
@@ -55,8 +54,6 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
-        console2.log(1);
-
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0
@@ -67,7 +64,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Free liquidity available to withdraw or borrow
     // Locked profits are locked for every operation
     // We do not consider negative profits since they are not true liquidity
-    function freeLiquidity() public view returns (uint256) {
+    function freeLiquidity() public view override returns (uint256) {
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0
@@ -92,10 +89,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
         uint256 freeLiq = freeLiquidity();
-        if (assets >= freeLiq) revert Insufficient_Liquidity(freeLiq);
+        if (assets >= freeLiq) revert Insufficient_Liquidity();
         uint256 shares = super.withdraw(assets, receiver, owner);
 
-        emit Withdrawn(_msgSender(), receiver, owner, assets, shares);
+        emit Withdrawn(msg.sender, receiver, owner, assets, shares);
 
         return shares;
     }
@@ -108,9 +105,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     {
         uint256 freeLiq = freeLiquidity();
         uint256 assets = super.redeem(shares, receiver, owner);
-        if (assets >= freeLiq) revert Insufficient_Liquidity(freeLiq);
+        if (assets >= freeLiq) revert Insufficient_Liquidity();
 
-        emit Withdrawn(_msgSender(), receiver, owner, assets, shares);
+        emit Withdrawn(msg.sender, receiver, owner, assets, shares);
 
         return assets;
     }
@@ -128,7 +125,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         _mint(receiver, shares);
 
         currentProfits = _calculateLockedProfits() - SafeCast.toInt256(increasedAssets);
-        latestRepay = _blockTimestamp();
+        latestRepay = block.timestamp;
 
         emit DirectMint(receiver, shares, increasedAssets);
 
@@ -149,13 +146,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Thus we need to lock them in order to avoid flashloan attacks
         uint256 distributedAssets = convertToAssets(shares);
 
-        _spendAllowance(owner, _msgSender(), shares);
+        _spendAllowance(owner, msg.sender, shares);
         _burn(owner, shares);
 
         // Since this is onlyOwner we are not worried about reentrancy
         // So we can modify the state here
         currentProfits = _calculateLockedProfits() + SafeCast.toInt256(distributedAssets);
-        latestRepay = _blockTimestamp();
+        latestRepay = block.timestamp;
 
         emit DirectBurn(owner, shares, distributedAssets);
 
@@ -168,7 +165,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
-        if (assets >= freeLiq) revert Insufficient_Free_Liquidity(freeLiq);
+        if (assets >= freeLiq) revert Insufficient_Free_Liquidity();
         netLoans += assets;
         IERC20(asset()).safeTransfer(receiver, assets);
 
@@ -190,7 +187,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // if a bad debt has beed repaid, we recover part from the locked profits
         // similarly, if lockedProfits < 0, a good repay can recover them
         currentProfits = _calculateLockedProfits() + int256(assets) - int256(debt);
-        latestRepay = _blockTimestamp();
+        latestRepay = block.timestamp;
 
         // the vault is not responsible for any payoff
         // slither-disable-next-line arbitrary-send-erc20
@@ -200,14 +197,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     // Starts from currentProfits and go linearly to 0
-    // It is zero when _blockTimestamp()-latestRepay > feeUnlockTime
+    // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedProfits() internal view returns (int256) {
-        return
-            (currentProfits * int256(feeUnlockTime.safeSub(_blockTimestamp() - latestRepay))) / int256(feeUnlockTime);
-    }
-
-    // overridden in tests
-    function _blockTimestamp() internal view returns (uint256) {
-        return block.timestamp;
+        return (currentProfits * int256(feeUnlockTime.safeSub(block.timestamp - latestRepay))) / int256(feeUnlockTime);
     }
 }

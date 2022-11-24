@@ -8,7 +8,7 @@ import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
 
 contract Manager is IManager, Ownable {
-    mapping(address => address) public vaults;
+    mapping(address => address) public override vaults;
     mapping(address => bool) public services;
 
     modifier onlyServices() {
@@ -24,7 +24,7 @@ contract Manager is IManager, Ownable {
     function create(address token) external onlyOwner returns (address) {
         assert(vaults[token] == address(0));
 
-        address vault = address(new Vault{salt: keccak256(abi.encode(token))}(IERC20Metadata(token)));
+        address vault = address(new Vault{ salt: keccak256(abi.encode(token)) }(IERC20Metadata(token)));
         vaults[token] = vault;
 
         return vault;

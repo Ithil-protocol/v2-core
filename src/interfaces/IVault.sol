@@ -6,6 +6,18 @@ import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626
 /// @title    Interface of the Vault contract
 /// @author   Ithil
 interface IVault is IERC4626 {
+    function creationTime() external view returns (uint256);
+
+    function feeUnlockTime() external view returns (uint256);
+
+    function netLoans() external view returns (uint256);
+
+    function latestRepay() external view returns (uint256);
+
+    function currentProfits() external view returns (int256);
+
+    function freeLiquidity() external view returns (uint256);
+
     function borrow(uint256 assets, address receiver) external;
 
     function repay(uint256 assets, uint256 debt, address repayer) external;
@@ -30,8 +42,8 @@ interface IVault is IERC4626 {
     event DirectBurn(address indexed receiver, uint256 shares, uint256 distributedAssets);
 
     // Errors
-    error Insufficient_Liquidity(uint256 balance);
-    error Insufficient_Free_Liquidity(uint256 freeLiquidity);
+    error Insufficient_Liquidity();
+    error Insufficient_Free_Liquidity();
     error Supply_Burned();
     error Fee_Unlock_Out_Of_Range();
 }
