@@ -100,10 +100,10 @@ contract VaultTest is PRBTest, StdCheats {
         vault.borrow(vaultBalance, address(this));
     }
 
-    function testDirectMintDilutesOtherLPs() public {
-        uint256 amount1 = 1e18;
-        uint256 amount2 = 2e18;
-        uint256 toMint = 2e18;
+    function testDirectMintDilutesOtherLPs(uint256 amount1, uint256 amount2, uint256 toMint) public {
+        vm.assume(amount1 > 0 && amount1 < type(uint64).max);
+        vm.assume(amount2 > 0 && amount2 < type(uint64).max);
+        vm.assume(toMint < type(uint64).max);
 
         token.transfer(address(1), amount1);
         vm.startPrank(address(1));
@@ -133,10 +133,13 @@ contract VaultTest is PRBTest, StdCheats {
 
         // Initially with the same shares, now investor2 has twice as many as investor1
         // Therefore investor1 can withdraw only one-third of the total amount
-      // Fix rounding errors
-        assertTrue(finalMaximumWithdraw1 == initialMaximumWithdraw1 * supply / (supply + toMint) );
-        assertTrue(finalMaximumWithdraw2 == initialMaximumWithdraw2 * supply * (investorShares + toMint) / (investorShares * (supply + toMint)));
+        // Fix rounding errors
+        assertTrue(finalMaximumWithdraw1 == (initialMaximumWithdraw1 * supply) / (supply + toMint));
+        assertTrue(
+            finalMaximumWithdraw2 ==
+                (initialMaximumWithdraw2 * supply * (investorShares + toMint)) / (investorShares * (supply + toMint))
+        );
 
-      // The total amount is very close to be constant, but there are rounding errors (not avoidable)
+        // The total amount is very close to be constant, but there are rounding errors (not avoidable)
     }
 }
