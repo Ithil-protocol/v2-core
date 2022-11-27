@@ -77,10 +77,11 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     function exit(bytes calldata order) external virtual {}
 
     function getVault(address asset) internal view returns (address) {
-        return Create2.computeAddress(
-            salt,
-            keccak256(abi.encodePacked(type(Vault).creationCode, abi.encode(IERC20Metadata(asset)))),
-            address(manager)
-        );
+        return
+            Create2.computeAddress(
+                salt,
+                keccak256(abi.encodePacked(type(Vault).creationCode, abi.encode(IERC20Metadata(asset)))),
+                address(manager)
+            );
     }
 }
