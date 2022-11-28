@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.17;
+pragma solidity =0.8.17;
 
 /// @title    GeneralMath library
 /// @author   Ithil
 /// @notice   A library to perform the most common math operations
 library GeneralMath {
     // Never throws, returns min(a+b,2^256-1)
-    function protectedAdd(uint256 a, uint256 b) internal pure returns (uint256) {
+    function safeAdd(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a > type(uint256).max - b) {
             return type(uint256).max;
         } else {
@@ -15,7 +15,7 @@ library GeneralMath {
     }
 
     // Never throws, returns max(a-b,0)
-    function positiveSub(uint256 a, uint256 b) internal pure returns (uint256) {
+    function safeSub(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a > b) {
             return a - b;
         } else {
