@@ -11,6 +11,7 @@ import { IVault } from "./interfaces/IVault.sol";
 
 contract Vault is IVault, ERC4626, ERC20Permit {
     using GeneralMath for uint256;
+    using GeneralMath for int256;
     using SafeERC20 for IERC20;
 
     address public immutable manager;
@@ -55,10 +56,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
         int256 lockedProfits = _calculateLockedProfits();
-        return
-            lockedProfits > 0
-                ? super.totalAssets().safeAdd(netLoans).safeSub(uint256(lockedProfits))
-                : super.totalAssets().safeAdd(netLoans).safeAdd(uint256(-lockedProfits));
+        return super.totalAssets().safeAdd(netLoans).positiveSub(lockedProfits);
     }
 
     // Free liquidity available to withdraw or borrow
@@ -68,7 +66,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         int256 lockedProfits = _calculateLockedProfits();
         return
             lockedProfits > 0
-                ? IERC20(asset()).balanceOf(address(this)).safeSub(uint256(lockedProfits))
+                ? IERC20(asset()).balanceOf(address(this)).positiveSub(uint256(lockedProfits))
                 : IERC20(asset()).balanceOf(address(this));
     }
 
@@ -181,12 +179,12 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
     function repay(uint256 assets, uint256 debt, address repayer) external override onlyOwner {
-        netLoans = netLoans.safeSub(debt);
+        netLoans = netLoans.positiveSub(debt);
 
         // any excess asset is considered to be fees
         // if a bad debt has beed repaid, we recover part from the locked profits
         // similarly, if lockedProfits < 0, a good repay can recover them
-        currentProfits = _calculateLockedProfits() + int256(assets) - int256(debt);
+        currentProfits = _calculateLockedProfits().safeAdd(assets).safeSub(debt);
         latestRepay = block.timestamp;
 
         // the vault is not responsible for any payoff
@@ -199,6 +197,6 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Starts from currentProfits and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedProfits() internal view returns (int256) {
-        return (currentProfits * int256(feeUnlockTime.safeSub(block.timestamp - latestRepay))) / int256(feeUnlockTime);
+        return currentProfits.safeMulDiv(int256(feeUnlockTime.positiveSub(block.timestamp - latestRepay)),int256(feeUnlockTime));
     }
 }
