@@ -16,6 +16,8 @@ interface IManager {
     /// @notice thrown when amount of assets received is above the max set by caller
     error Max_Amount_Exceeded();
 
+    function salt() external pure returns (bytes32);
+
     function vaults(address token) external view returns (address);
 
     function borrow(address token, uint256 amount) external;

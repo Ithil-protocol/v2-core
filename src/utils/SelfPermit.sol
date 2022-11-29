@@ -3,7 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import { ISelfPermit, IERC20PermitAllowed } from "./interfaces/ISelfPermit.sol";
+import { ISelfPermit, IERC20PermitAllowed } from "../interfaces/ISelfPermit.sol";
 
 /// @title Self Permit
 /// @notice Functionality to call permit on any EIP-2612-compliant token for use in the route

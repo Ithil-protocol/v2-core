@@ -4,8 +4,8 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import { ETHWrapper } from "./ETHWrapper.sol";
-import { Multicall } from "./Multicall.sol";
+import { ETHWrapper } from "./utils/ETHWrapper.sol";
+import { Multicall } from "./utils/Multicall.sol";
 import { IRouter } from "./interfaces/IRouter.sol";
 
 contract Router is IRouter, Multicall, ETHWrapper {
