@@ -97,8 +97,8 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(vault.totalAssets() == initialTotalAssets);
     }
 
-    function testRepayWithProfit(uint256 amount, uint256 fees) public {
-        vm.assume(amount > 0 && amount < type(uint256).max - fees);
+    function testRepayWithProfit(uint256 amount, int256 fees) public {
+        vm.assume(fees > 0 && amount > 0 && amount < type(uint256).max - uint256(fees));
 
         vault.deposit(amount, address(this));
         service.pull(amount - 1);
@@ -106,34 +106,30 @@ contract ManagerTest is PRBTest, StdCheats {
         uint256 initialTotalAssets = vault.totalAssets();
         uint256 initialDebt = vault.netLoans();
 
-        _repayWithProfit(amount - 1, fees);
+        _repayWithProfit(amount - 1, uint256(fees));
 
-        int256 newProfits = int256(0).safeAdd(amount + fees - 1).safeSub(amount - 1);
-        // Correction in case it overflows
-        int256 lockedProfits = int256(0).safeAdd(amount + fees - 1).safeSub(amount + fees - 1);
         // Net loans decreased
         assertTrue(vault.netLoans() == initialDebt.positiveSub(amount - 1));
         // Current profits increased
-        assertTrue(vault.currentProfits() == newProfits);
+        assertTrue(vault.currentProfits() == fees);
         // Vault assets stay constant
-        assertTrue(vault.totalAssets() == initialTotalAssets.positiveSub(lockedProfits));
+        assertTrue(vault.totalAssets() == initialTotalAssets);
     }
 
-    function testFeesUnlockTime(uint256 amount, uint256 fees, uint256 timePast) public {
-        vm.assume(amount > 0 && timePast < 1e9 && amount < type(uint256).max - fees);
+    function testFeesUnlockTime(uint256 amount, int256 fees, uint256 timePast) public {
+        vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - uint256(fees));
 
         vault.deposit(amount, address(this));
         service.pull(amount - 1);
-        _repayWithProfit(amount - 1, fees);
+        _repayWithProfit(amount - 1, uint256(fees));
 
-        int256 profits = int256(0).safeAdd(amount + fees - 1).safeSub(amount - 1);
         uint256 unlockTime = vault.feeUnlockTime();
         int256 latestRepay = int256(vault.latestRepay());
 
         uint256 nextTimestamp = block.timestamp + timePast;
         vm.warp(nextTimestamp);
 
-        int256 expectedLocked = profits.safeMulDiv(int256(unlockTime.positiveSub(int256(nextTimestamp) - latestRepay)), int256(unlockTime));
+        int256 expectedLocked = fees.safeMulDiv(int256(unlockTime.positiveSub(int256(nextTimestamp) - latestRepay)), int256(unlockTime));
         assertTrue(vault.totalAssets() == token.balanceOf(address(vault)).positiveSub(expectedLocked));
     }
 
@@ -169,14 +165,13 @@ contract ManagerTest is PRBTest, StdCheats {
         service.pull(amount - 1);
         _repayWithProfit(amount - 1, 0);
 
-        // Assets stay constant unless it overflows(fees still locked)
-        int256 newProfits = int256(0).safeAdd(amount - 1).safeSub(amount - 1);
-        assertTrue(vault.totalAssets() == initialVaultAssets.positiveSub(newProfits));
+        // Assets stay constant (fees still locked)
+        assertTrue(vault.totalAssets() == initialVaultAssets);
         // Free liquidity is constant
         assertTrue(vault.freeLiquidity() == initialFreeLiquidity);
         // Check there is no dust
         assertTrue(vault.netLoans() == 0);
-        assertTrue(vault.currentProfits() == newProfits);
+        assertTrue(vault.currentProfits() == 0);
         // Latest repay is time
         assertTrue(vault.latestRepay() == block.timestamp);
     }

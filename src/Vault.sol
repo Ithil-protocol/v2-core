@@ -184,7 +184,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // any excess asset is considered to be fees
         // if a bad debt has beed repaid, we recover part from the locked profits
         // similarly, if lockedProfits < 0, a good repay can recover them
-        currentProfits = _calculateLockedProfits().safeAdd(assets).safeSub(debt);
+        currentProfits = assets > debt ? _calculateLockedProfits().safeAdd(assets - debt) : _calculateLockedProfits().safeSub(debt - assets);
         latestRepay = block.timestamp;
 
         // the vault is not responsible for any payoff

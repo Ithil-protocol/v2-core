@@ -145,15 +145,11 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 finalMaximumWithdraw1 = vault.maxWithdraw(address(1));
         uint256 finalMaximumWithdraw2 = vault.maxWithdraw(address(2));
 
-        // Initially with the same shares, now investor2 has twice as many as investor1
-        // Therefore investor1 can withdraw only one-third of the total amount
         // Fix rounding errors
         assertTrue(finalMaximumWithdraw1 == (initialMaximumWithdraw1 * supply) / (supply + toMint));
         assertTrue(
             finalMaximumWithdraw2 ==
                 (initialMaximumWithdraw2 * supply * (investorShares + toMint)) / (investorShares * (supply + toMint))
         );
-
-        // The total amount is very close to be constant, but there are rounding errors (not avoidable)
     }
 }
