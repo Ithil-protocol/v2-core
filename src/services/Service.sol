@@ -24,12 +24,18 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         uint256 amount;
     }
 
+    struct BaseAgreement {
+        Item held;
+        Item obtained;
+        address lender;
+    }
+
     IManager public immutable manager;
     bytes32 internal immutable salt;
     address public guardian;
     bool public locked;
     IInterestRateModel public interestRateModel;
-    mapping(uint256 => address) public lender; // token ID => lender address
+    mapping(uint256 => BaseAgreement) public agreements;
     mapping(address => uint256) public riskFactors; // asset => risk factor value (if 0 -> not supported)
 
     constructor(string memory _name, string memory _symbol, address _manager) ERC721(_name, _symbol) {
