@@ -97,8 +97,8 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(vault.totalAssets() == initialTotalAssets);
     }
 
-    function testRepayWithProfit(uint256 amount, int256 fees) public {
-        vm.assume(fees > 0 && amount > 0 && amount < type(uint256).max - uint256(fees));
+    function testRepayWithProfit(uint256 amount, uint256 fees) public {
+        vm.assume(fees > 0 && amount > 0 && amount < type(uint256).max - fees);
 
         vault.deposit(amount, address(this));
         service.pull(amount - 1);
@@ -106,7 +106,7 @@ contract ManagerTest is PRBTest, StdCheats {
         uint256 initialTotalAssets = vault.totalAssets();
         uint256 initialDebt = vault.netLoans();
 
-        _repayWithProfit(amount - 1, uint256(fees));
+        _repayWithProfit(amount - 1, fees);
 
         // Net loans decreased
         assertTrue(vault.netLoans() == initialDebt.positiveSub(amount - 1));
@@ -116,23 +116,20 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(vault.totalAssets() == initialTotalAssets);
     }
 
-    function testFeesUnlockTime(uint256 amount, int256 fees, uint256 timePast) public {
-        vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - uint256(fees));
+    function testFeesUnlockTime(uint256 amount, uint256 fees, uint256 timePast) public {
+        vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - fees);
 
         vault.deposit(amount, address(this));
         service.pull(amount - 1);
-        _repayWithProfit(amount - 1, uint256(fees));
+        _repayWithProfit(amount - 1, fees);
 
         uint256 unlockTime = vault.feeUnlockTime();
-        int256 latestRepay = int256(vault.latestRepay());
+        uint256 latestRepay = vault.latestRepay();
 
         uint256 nextTimestamp = block.timestamp + timePast;
         vm.warp(nextTimestamp);
 
-        int256 expectedLocked = fees.safeMulDiv(
-            int256(unlockTime.positiveSub(int256(nextTimestamp) - latestRepay)),
-            int256(unlockTime)
-        );
+        uint256 expectedLocked = fees.safeMulDiv(unlockTime.positiveSub(nextTimestamp - latestRepay), unlockTime);
         assertTrue(vault.totalAssets() == token.balanceOf(address(vault)).positiveSub(expectedLocked));
     }
 
@@ -145,13 +142,15 @@ contract ManagerTest is PRBTest, StdCheats {
         service.pull(amount - 1);
         _repayWithProfit(amount - 1, fees);
 
-        int256 initialProfits = vault.currentProfits();
+        uint256 initialProfits = vault.currentProfits();
         // Make a bad repay
         _depositAndBorrow(amount);
         _repayWithLoss(amount, loss);
 
-        // Current profits are correctly updated
-        assertTrue(vault.currentProfits() == initialProfits - int256(loss));
+        // Current profits are invariate
+        assertTrue(vault.currentProfits() == initialProfits);
+        // Current losses are correctly updated
+        assertTrue(vault.currentLosses() == loss);
     }
 
     function testGenerateFeesWithNoLoans(uint256 amount) public {

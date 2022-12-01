@@ -14,7 +14,9 @@ interface IVault is IERC4626 {
 
     function latestRepay() external view returns (uint256);
 
-    function currentProfits() external view returns (int256);
+    function currentProfits() external view returns (uint256);
+
+    function currentLosses() external view returns (uint256);
 
     function freeLiquidity() external view returns (uint256);
 
