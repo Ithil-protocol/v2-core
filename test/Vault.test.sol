@@ -117,7 +117,9 @@ contract VaultTest is PRBTest, StdCheats {
     function testDirectMintDilutesOtherLPs(uint256 amount1, uint256 amount2, uint256 toMint) public {
         // On purpose avoid overflows
         // todo: check overflows
-        vm.assume(amount1 > 0 && amount2 > 0 && toMint > 0 && amount1 < 1 << 85 && amount2 < 1 << 85 && toMint < 1 << 85);
+        vm.assume(
+            amount1 > 0 && amount2 > 0 && toMint > 0 && amount1 < 1 << 85 && amount2 < 1 << 85 && toMint < 1 << 85
+        );
 
         token.transfer(address(1), amount1);
         vm.startPrank(address(1));

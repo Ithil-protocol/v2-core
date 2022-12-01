@@ -133,7 +133,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Burning during a loss is equivalent to declaring the owner junior
     // Burning undilutes stakers (boosting)
     // Use case: insurance reserve...
-    // Invariant: maximumWithdraw(account) for account != receiver
+    // Invariants: totalAssets(), maximumWithdraw(account) for account != receiver
     function directBurn(uint256 shares, address owner) external override onlyOwner returns (uint256) {
         // Burning the entire supply would trigger an _initialConvertToShares at next deposit
         // Meaning that the first to deposit will get everything
@@ -158,12 +158,14 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     // Owner is the only trusted borrower
-    // Invariant: totalAssets(), maxWithdraw()
+    // Invariant: totalAssets()
     function borrow(uint256 assets, address receiver) external override onlyOwner {
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
         if (assets >= freeLiq) revert Insufficient_Free_Liquidity();
+        // Net loans are in any moment less than IERC20(asset()).totalSupply()
+        // Thus the next sum never overflows
         netLoans += assets;
         IERC20(asset()).safeTransfer(receiver, assets);
 
@@ -179,16 +181,20 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
     function repay(uint256 assets, uint256 debt, address repayer) external override onlyOwner {
-        netLoans = netLoans.positiveSub(debt);
+        if (netLoans < debt) debt = netLoans;
+        netLoans -= debt;
 
         // any excess asset is considered to be fees
         // if a bad debt has beed repaid, we recover part from the locked profits
         // similarly, if lockedProfits < 0, a good repay can recover them
-        currentProfits = assets > debt ? _calculateLockedProfits().safeAdd(assets - debt) : _calculateLockedProfits().safeSub(debt - assets);
+        currentProfits = assets > debt
+            ? _calculateLockedProfits().safeAdd(assets - debt)
+            : _calculateLockedProfits().safeSub(debt - assets);
         latestRepay = block.timestamp;
 
         // the vault is not responsible for any payoff
         // slither-disable-next-line arbitrary-send-erc20
+        // super.totalAssets() += assets and never overflows by definition
         IERC20(asset()).safeTransferFrom(repayer, address(this), assets);
 
         emit Repaid(repayer, assets, debt);
@@ -197,6 +203,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Starts from currentProfits and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedProfits() internal view returns (int256) {
-        return currentProfits.safeMulDiv(int256(feeUnlockTime.positiveSub(block.timestamp - latestRepay)),int256(feeUnlockTime));
+        return
+            currentProfits.safeMulDiv(
+                int256(feeUnlockTime.positiveSub(block.timestamp - latestRepay)),
+                int256(feeUnlockTime)
+            );
     }
 }

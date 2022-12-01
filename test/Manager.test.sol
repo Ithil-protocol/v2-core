@@ -129,12 +129,14 @@ contract ManagerTest is PRBTest, StdCheats {
         uint256 nextTimestamp = block.timestamp + timePast;
         vm.warp(nextTimestamp);
 
-        int256 expectedLocked = fees.safeMulDiv(int256(unlockTime.positiveSub(int256(nextTimestamp) - latestRepay)), int256(unlockTime));
+        int256 expectedLocked = fees.safeMulDiv(
+            int256(unlockTime.positiveSub(int256(nextTimestamp) - latestRepay)),
+            int256(unlockTime)
+        );
         assertTrue(vault.totalAssets() == token.balanceOf(address(vault)).positiveSub(expectedLocked));
     }
 
     function testRepayWithLossCoverableByFees() public {
-        
         uint256 amount = 100e18;
         uint256 fees = 1e18;
         uint256 loss = 5e17;
@@ -150,7 +152,6 @@ contract ManagerTest is PRBTest, StdCheats {
 
         // Current profits are correctly updated
         assertTrue(vault.currentProfits() == initialProfits - int256(loss));
-        
     }
 
     function testGenerateFeesWithNoLoans(uint256 amount) public {
