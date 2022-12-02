@@ -20,6 +20,8 @@ interface IVault is IERC4626 {
 
     function freeLiquidity() external view returns (uint256);
 
+    function setFeeUnlockTime(uint256 _feeUnlockTime) external;
+
     function borrow(uint256 assets, address receiver) external;
 
     function repay(uint256 assets, uint256 debt, address repayer) external;

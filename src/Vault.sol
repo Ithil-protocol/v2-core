@@ -41,7 +41,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return super.decimals();
     }
 
-    function setFeeUnlockTime(uint256 _feeUnlockTime) external onlyOwner {
+    function setFeeUnlockTime(uint256 _feeUnlockTime) external override onlyOwner {
         // Minimum 30 seconds, maximum 7 days
         // This also avoids division by zero in _calculateLockedProfits()
         if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert Fee_Unlock_Out_Of_Range();
@@ -58,7 +58,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
-        return (super.totalAssets() - _calculateLockedProfits()).safeAdd(netLoans  + _calculateLockedLosses());
+        return (super.totalAssets() - _calculateLockedProfits()).safeAdd(netLoans + _calculateLockedLosses());
     }
 
     // Free liquidity available to withdraw or borrow
@@ -184,8 +184,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         netLoans -= debt;
 
         // Since assets are transferred, this is always less than totalSupply() so no overflow
-        if (assets > debt) currentProfits = _calculateLockedProfits() + (assets - debt);
-        // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
+        if (assets > debt)
+            currentProfits = _calculateLockedProfits() + (assets - debt);
+            // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
         else currentLosses = _calculateLockedLosses() + (debt - assets);
         latestRepay = block.timestamp;
 
