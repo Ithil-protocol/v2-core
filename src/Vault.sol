@@ -53,12 +53,12 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Total assets are used to calculate shares to mint and redeem
     // They represent the deposited amount, the loans and the unlocked fees
     // As per ERC4626 standard this must never throw
-    // super.totalAssets() + netLoans <= IERC20(asset()).totalSupply() so no overflow
+    // super.totalAssets() - _calculateLockedProfits() <= IERC20(asset()).totalSupply() - netLoans so no overflow
     // _calculateLockedProfits() <= currentProfits <= super.totalAssets() so no underflow
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
-        return ((super.totalAssets() + netLoans) - _calculateLockedProfits()) + _calculateLockedLosses();
+        return (super.totalAssets() - _calculateLockedProfits()).safeAdd(netLoans  + _calculateLockedLosses());
     }
 
     // Free liquidity available to withdraw or borrow
@@ -179,16 +179,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
     function repay(uint256 assets, uint256 debt, address repayer) external override onlyOwner {
-        if (netLoans < debt) debt = netLoans;
+        uint256 initialLoans = netLoans;
+        debt = debt.min(initialLoans);
         netLoans -= debt;
 
-        // any excess asset is considered to be fees
-        // if a bad debt has beed repaid, we recover part from the locked profits
-        // similarly, if lockedProfits < 0, a good repay can recover them
-
         // Since assets are transferred, this is always less than totalSupply() so no overflow
-        // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
         if (assets > debt) currentProfits = _calculateLockedProfits() + (assets - debt);
+        // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
         else currentLosses = _calculateLockedLosses() + (debt - assets);
         latestRepay = block.timestamp;
 
