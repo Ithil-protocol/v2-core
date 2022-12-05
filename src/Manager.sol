@@ -49,6 +49,10 @@ contract Manager is IManager, Ownable {
         emit ServiceWasRemoved(service);
     }
 
+    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override exists(token) {
+        IVault(vaults[token]).setFeeUnlockTime(feeUnlockTime);
+    }
+
     /// @inheritdoc IManager
     function borrow(address token, uint256 amount) external override exists(token) onlyServices {
         IVault(vaults[token]).borrow(amount, msg.sender);

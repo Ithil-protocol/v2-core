@@ -14,9 +14,13 @@ interface IVault is IERC4626 {
 
     function latestRepay() external view returns (uint256);
 
-    function currentProfits() external view returns (int256);
+    function currentProfits() external view returns (uint256);
+
+    function currentLosses() external view returns (uint256);
 
     function freeLiquidity() external view returns (uint256);
+
+    function setFeeUnlockTime(uint256 _feeUnlockTime) external;
 
     function borrow(uint256 assets, address receiver) external;
 

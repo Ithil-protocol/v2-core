@@ -19,7 +19,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     uint256 public override feeUnlockTime;
     uint256 public override netLoans;
     uint256 public override latestRepay;
-    int256 public override currentProfits;
+    uint256 public override currentProfits;
+    uint256 public override currentLosses;
 
     constructor(IERC20Metadata _token)
         ERC20(string(abi.encodePacked("Ithil ", _token.name())), string(abi.encodePacked("i", _token.symbol())))
@@ -40,7 +41,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return super.decimals();
     }
 
-    function setFeeUnlockTime(uint256 _feeUnlockTime) external onlyOwner {
+    function setFeeUnlockTime(uint256 _feeUnlockTime) external override onlyOwner {
         // Minimum 30 seconds, maximum 7 days
         // This also avoids division by zero in _calculateLockedProfits()
         if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert Fee_Unlock_Out_Of_Range();
@@ -51,23 +52,20 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     // Total assets are used to calculate shares to mint and redeem
     // They represent the deposited amount, the loans and the unlocked fees
-    // As per ERC4626 standard this must never throw, thus we use protected math
+    // As per ERC4626 standard this must never throw
+    // super.totalAssets() - _calculateLockedProfits() <= IERC20(asset()).totalSupply() - netLoans so no overflow
+    // _calculateLockedProfits() <= currentProfits <= super.totalAssets() so no underflow
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
-        int256 lockedProfits = _calculateLockedProfits();
-        return super.totalAssets().safeAdd(netLoans).positiveSub(lockedProfits);
+        return (super.totalAssets() - _calculateLockedProfits()).safeAdd(netLoans + _calculateLockedLosses());
     }
 
     // Free liquidity available to withdraw or borrow
     // Locked profits are locked for every operation
     // We do not consider negative profits since they are not true liquidity
     function freeLiquidity() public view override returns (uint256) {
-        int256 lockedProfits = _calculateLockedProfits();
-        return
-            lockedProfits > 0
-                ? IERC20(asset()).balanceOf(address(this)).positiveSub(uint256(lockedProfits))
-                : IERC20(asset()).balanceOf(address(this));
+        return IERC20(asset()).balanceOf(address(this)).positiveSub(_calculateLockedProfits());
     }
 
     // Assets include netLoans but they are not available for withdraw
@@ -122,7 +120,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 increasedAssets = convertToAssets(shares);
         _mint(receiver, shares);
 
-        currentProfits = _calculateLockedProfits() - SafeCast.toInt256(increasedAssets);
+        currentLosses = _calculateLockedLosses() + increasedAssets;
         latestRepay = block.timestamp;
 
         emit DirectMint(receiver, shares, increasedAssets);
@@ -133,7 +131,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Burning during a loss is equivalent to declaring the owner junior
     // Burning undilutes stakers (boosting)
     // Use case: insurance reserve...
-    // Invariants: totalAssets(), maximumWithdraw(account) for account != receiver
+    // Invariants: maximumWithdraw(account) for account != receiver
     function directBurn(uint256 shares, address owner) external override onlyOwner returns (uint256) {
         // Burning the entire supply would trigger an _initialConvertToShares at next deposit
         // Meaning that the first to deposit will get everything
@@ -149,7 +147,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         // Since this is onlyOwner we are not worried about reentrancy
         // So we can modify the state here
-        currentProfits = _calculateLockedProfits() + SafeCast.toInt256(distributedAssets);
+        currentProfits = _calculateLockedProfits() + distributedAssets;
         latestRepay = block.timestamp;
 
         emit DirectBurn(owner, shares, distributedAssets);
@@ -181,15 +179,15 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Invariant: totalAssets()
     // maxWithdraw() is invariant as long as totalAssets()-currentProfits >= native.balanceOf(this)
     function repay(uint256 assets, uint256 debt, address repayer) external override onlyOwner {
-        if (netLoans < debt) debt = netLoans;
+        uint256 initialLoans = netLoans;
+        debt = debt.min(initialLoans);
         netLoans -= debt;
 
-        // any excess asset is considered to be fees
-        // if a bad debt has beed repaid, we recover part from the locked profits
-        // similarly, if lockedProfits < 0, a good repay can recover them
-        currentProfits = assets > debt
-            ? _calculateLockedProfits().safeAdd(assets - debt)
-            : _calculateLockedProfits().safeSub(debt - assets);
+        // Since assets are transferred, this is always less than totalSupply() so no overflow
+        if (assets > debt)
+            currentProfits = _calculateLockedProfits() + (assets - debt);
+            // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
+        else currentLosses = _calculateLockedLosses() + (debt - assets);
         latestRepay = block.timestamp;
 
         // the vault is not responsible for any payoff
@@ -202,11 +200,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     // Starts from currentProfits and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
-    function _calculateLockedProfits() internal view returns (int256) {
-        return
-            currentProfits.safeMulDiv(
-                int256(feeUnlockTime.positiveSub(block.timestamp - latestRepay)),
-                int256(feeUnlockTime)
-            );
+    function _calculateLockedProfits() internal view returns (uint256) {
+        return currentProfits.safeMulDiv(feeUnlockTime.positiveSub(block.timestamp - latestRepay), feeUnlockTime);
+    }
+
+    // Starts from currentLosses and go linearly to 0
+    // It is zero when block.timestamp-latestRepay > feeUnlockTime
+    function _calculateLockedLosses() internal view returns (uint256) {
+        return currentLosses.safeMulDiv(feeUnlockTime.positiveSub(block.timestamp - latestRepay), feeUnlockTime);
     }
 }
