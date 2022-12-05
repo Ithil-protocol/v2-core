@@ -7,11 +7,15 @@ import { PRBTest } from "@prb/test/PRBTest.sol";
 import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault, Vault } from "../src/Vault.sol";
+import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
 /// @dev Run Forge with `-vvvv` to see console logs.
 /// https://book.getfoundry.sh/forge/writing-tests
 contract VaultTest is PRBTest, StdCheats {
+    using GeneralMath for uint256;
+    using GeneralMath for int256;
+
     Vault internal immutable vault;
     ERC20PresetMinterPauser internal immutable token;
 
@@ -33,6 +37,16 @@ contract VaultTest is PRBTest, StdCheats {
         assertTrue(vault.creationTime() == block.timestamp);
         assertTrue(vault.netLoans() == 0);
         assertTrue(vault.currentProfits() == 0);
+    }
+
+    function testSafeAdd(int256 a, uint256 b) public {
+        // Just execute it: fuzzy will detect overflows
+        a.safeAdd(b);
+    }
+
+    function testSafeSub(int256 a, uint256 b) public {
+        // Just execute it: fuzzy will detect overflows
+        a.safeSub(b);
     }
 
     function testAccess() public {
@@ -101,9 +115,11 @@ contract VaultTest is PRBTest, StdCheats {
     }
 
     function testDirectMintDilutesOtherLPs(uint256 amount1, uint256 amount2, uint256 toMint) public {
-        vm.assume(amount1 > 0 && amount1 < type(uint64).max);
-        vm.assume(amount2 > 0 && amount2 < type(uint64).max);
-        vm.assume(toMint < type(uint64).max);
+        // On purpose avoid overflows
+        // todo: check overflows
+        vm.assume(
+            amount1 > 0 && amount2 > 0 && toMint > 0 && amount1 < 1 << 85 && amount2 < 1 << 85 && toMint < 1 << 85
+        );
 
         token.transfer(address(1), amount1);
         vm.startPrank(address(1));
@@ -131,15 +147,11 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 finalMaximumWithdraw1 = vault.maxWithdraw(address(1));
         uint256 finalMaximumWithdraw2 = vault.maxWithdraw(address(2));
 
-        // Initially with the same shares, now investor2 has twice as many as investor1
-        // Therefore investor1 can withdraw only one-third of the total amount
         // Fix rounding errors
         assertTrue(finalMaximumWithdraw1 == (initialMaximumWithdraw1 * supply) / (supply + toMint));
         assertTrue(
             finalMaximumWithdraw2 ==
                 (initialMaximumWithdraw2 * supply * (investorShares + toMint)) / (investorShares * (supply + toMint))
         );
-
-        // The total amount is very close to be constant, but there are rounding errors (not avoidable)
     }
 }
