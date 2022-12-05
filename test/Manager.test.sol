@@ -77,62 +77,72 @@ contract ManagerTest is PRBTest, StdCheats {
         manager.create(address(token));
     }
 
-    function testBorrow(uint256 amount) public {
-        vm.assume(amount > 0);
+    function testBorrow(uint256 deposited, uint256 borrowed) public {
+        vm.assume(borrowed < deposited);
         uint256 balanceBefore = token.balanceOf(address(this));
 
-        vault.deposit(amount, address(this));
+        vault.deposit(deposited, address(this));
         uint256 change = balanceBefore - token.balanceOf(address(this));
-        assertTrue(change == amount);
+        assertTrue(change == deposited);
 
         uint256 initialVaultBalance = token.balanceOf(address(vault));
         uint256 initialTotalAssets = vault.totalAssets();
 
-        service.pull(amount - 1);
+        service.pull(borrowed);
         // Net loans increased
-        assertTrue(vault.netLoans() == amount - 1);
+        assertTrue(vault.netLoans() == borrowed);
         // Vault balance decreased
-        assertTrue(initialVaultBalance - token.balanceOf(address(vault)) == amount - 1);
+        assertTrue(initialVaultBalance - token.balanceOf(address(vault)) == borrowed);
         // Vault assets stay constant
         assertTrue(vault.totalAssets() == initialTotalAssets);
     }
 
-    function testRepayWithProfit(uint256 amount, int256 fees) public {
-        vm.assume(fees > 0 && amount > 0 && amount < type(uint256).max - uint256(fees));
+    function testBorrowRepay(uint256 deposited, uint256 borrowed, uint256 repaid, uint256 debt) public {
+        // So that pull does not fail for free liquidity
+        vm.assume(borrowed < deposited);
 
-        vault.deposit(amount, address(this));
-        service.pull(amount - 1);
+        // Because the total token supply is capped by type(uint256).max
+        // deposited - borrowed + repaid <= type(uint256).max
+        vm.assume(deposited - borrowed <= type(uint256).max - repaid);
 
-        uint256 initialTotalAssets = vault.totalAssets();
-        uint256 initialDebt = vault.netLoans();
+        vault.deposit(deposited, address(this));
+        service.pull(borrowed);
 
-        _repayWithProfit(amount - 1, uint256(fees));
+        token.transfer(address(service), repaid.positiveSub(borrowed));
+        uint256 initialAssets = vault.totalAssets();
+        uint256 netLoans = vault.netLoans();
+        uint256 debtRepaid = debt.min(borrowed);
 
-        // Net loans decreased
-        assertTrue(vault.netLoans() == initialDebt.positiveSub(amount - 1));
-        // Current profits increased
-        assertTrue(vault.currentProfits() == fees);
-        // Vault assets stay constant
-        assertTrue(vault.totalAssets() == initialTotalAssets);
+        service.push(repaid, debt);
+
+        assertTrue(vault.netLoans() == netLoans - debtRepaid);
+        assertTrue(vault.currentProfits() == repaid.positiveSub(debtRepaid));
+        assertTrue(vault.currentLosses() == debtRepaid.positiveSub(repaid));
+        assertTrue(vault.totalAssets() == initialAssets);
+
+        // Unlock fees
+        vm.warp(block.timestamp + vault.feeUnlockTime());
+
+        assertTrue(
+            vault.totalAssets() ==
+                (initialAssets - debtRepaid.positiveSub(repaid)).safeAdd(repaid.positiveSub(debtRepaid))
+        );
     }
 
-    function testFeesUnlockTime(uint256 amount, int256 fees, uint256 timePast) public {
-        vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - uint256(fees));
+    function testFeesUnlockTime(uint256 amount, uint256 fees, uint256 timePast) public {
+        vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - fees);
 
         vault.deposit(amount, address(this));
         service.pull(amount - 1);
-        _repayWithProfit(amount - 1, uint256(fees));
+        _repayWithProfit(amount - 1, fees);
 
         uint256 unlockTime = vault.feeUnlockTime();
-        int256 latestRepay = int256(vault.latestRepay());
+        uint256 latestRepay = vault.latestRepay();
 
         uint256 nextTimestamp = block.timestamp + timePast;
         vm.warp(nextTimestamp);
 
-        int256 expectedLocked = fees.safeMulDiv(
-            int256(unlockTime.positiveSub(int256(nextTimestamp) - latestRepay)),
-            int256(unlockTime)
-        );
+        uint256 expectedLocked = fees.safeMulDiv(unlockTime.positiveSub(nextTimestamp - latestRepay), unlockTime);
         assertTrue(vault.totalAssets() == token.balanceOf(address(vault)).positiveSub(expectedLocked));
     }
 
@@ -145,13 +155,15 @@ contract ManagerTest is PRBTest, StdCheats {
         service.pull(amount - 1);
         _repayWithProfit(amount - 1, fees);
 
-        int256 initialProfits = vault.currentProfits();
+        uint256 initialProfits = vault.currentProfits();
         // Make a bad repay
         _depositAndBorrow(amount);
         _repayWithLoss(amount, loss);
 
-        // Current profits are correctly updated
-        assertTrue(vault.currentProfits() == initialProfits - int256(loss));
+        // Current profits are invariate
+        assertTrue(vault.currentProfits() == initialProfits);
+        // Current losses are correctly updated
+        assertTrue(vault.currentLosses() == loss);
     }
 
     function testGenerateFeesWithNoLoans(uint256 amount) public {
@@ -175,5 +187,59 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(vault.currentProfits() == 0);
         // Latest repay is time
         assertTrue(vault.latestRepay() == block.timestamp);
+    }
+
+    function testSetupArbitraryState(
+        uint256 feeUnlockTime,
+        uint256 totalSupply,
+        uint256 balanceOf,
+        uint256 netLoans,
+        uint256 latestRepay,
+        uint256 currentProfits,
+        uint256 currentLosses
+    ) public {
+        // Set fee unlock time
+        vm.assume(feeUnlockTime > 30 && feeUnlockTime < 7 days);
+        manager.setFeeUnlockTime(address(token), feeUnlockTime);
+
+        // Set totalSupply by depositing
+        vault.deposit(totalSupply, address(this));
+
+        // Set latestRepay
+        vm.warp(latestRepay);
+        service.push(0, 0);
+
+        // Set currentProfits (assume this otherwise there are no tokens available)
+        vm.assume(currentProfits.positiveSub(token.balanceOf(address(service))) <= token.balanceOf(address(this)));
+        if (currentProfits > token.balanceOf(address(service))) {
+            token.transfer(address(service), currentProfits - token.balanceOf(address(service)));
+        }
+        service.push(currentProfits, 0);
+
+        // Set currentLosses
+        // TODO: remove this assumption
+        vm.assume(currentLosses < vault.freeLiquidity() && currentLosses <= token.balanceOf(address(this)));
+        service.pull(currentLosses);
+        service.push(0, currentLosses);
+
+        // Set netLoans
+        vm.assume(netLoans < vault.freeLiquidity());
+        service.pull(netLoans);
+
+        // Set balanceOf by adjusting
+        vm.assume(balanceOf > 0); // Otherwise it fails due to unhealthy vault
+        // Assume this otherwise there are no tokens available
+        uint256 initialBalance = token.balanceOf(address(vault));
+        // TODO: remove this assumption
+        vm.assume(balanceOf > initialBalance && balanceOf - initialBalance <= token.balanceOf(address(this)));
+        token.transfer(address(vault), balanceOf - initialBalance);
+
+        assertTrue(vault.feeUnlockTime() == feeUnlockTime);
+        assertTrue(vault.totalSupply() == totalSupply);
+        assertTrue(token.balanceOf(address(vault)) == balanceOf);
+        assertTrue(vault.netLoans() == netLoans);
+        assertTrue(vault.latestRepay() == latestRepay);
+        assertTrue(vault.currentProfits() == currentProfits);
+        assertTrue(vault.currentLosses() == currentLosses);
     }
 }

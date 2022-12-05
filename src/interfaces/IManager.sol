@@ -20,6 +20,8 @@ interface IManager {
 
     function vaults(address token) external view returns (address);
 
+    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
+
     function borrow(address token, uint256 amount) external;
 
     function repay(address token, uint256 amount, uint256 debt) external;

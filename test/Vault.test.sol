@@ -39,16 +39,6 @@ contract VaultTest is PRBTest, StdCheats {
         assertTrue(vault.currentProfits() == 0);
     }
 
-    function testSafeAdd(int256 a, uint256 b) public {
-        // Just execute it: fuzzy will detect overflows
-        a.safeAdd(b);
-    }
-
-    function testSafeSub(int256 a, uint256 b) public {
-        // Just execute it: fuzzy will detect overflows
-        a.safeSub(b);
-    }
-
     function testAccess() public {
         vm.prank(address(0));
         vm.expectRevert();
