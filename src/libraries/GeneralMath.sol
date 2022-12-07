@@ -25,11 +25,15 @@ library GeneralMath {
         }
     }
 
-    // Throws if c = 0 and if c - b underflows
-    // Best precision if a > c > b as is the case in calculateLockedProfits
+    // Throws if c = 0
     function safeMulDiv(uint256 a, uint256 b, uint256 c) internal pure returns (uint256) {
         if (b == 0) return 0;
-        return a < type(uint256).max / b ? (a * b) / c : a - (a / c) * (c - b);
+        if (a < type(uint256).max / b) return (a * b) / c;
+        else {
+            if (c >= b) return a - (a / c) * (c - b);
+            else if (a / c < type(uint256).max / (b - c)) return safeAdd(a, (a / c) * (b - c));
+            else return type(uint256).max;
+        }
     }
 
     // Throws if b = 0 and a != 0
