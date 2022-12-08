@@ -9,8 +9,12 @@ import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
 import { IInterestRateModel } from "../interfaces/IInterestRateModel.sol";
 import { Vault } from "../Vault.sol";
+import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 abstract contract Service is IService, ERC721Enumerable, Ownable {
+    using GeneralMath for uint256;
+    uint256 internal constant RESOLUTION = 1e18;
+    uint256 internal constant oneYear = 1 years;
     enum ItemType {
         ERC20,
         ERC721,
@@ -85,7 +89,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     function exit(bytes calldata order) external virtual {}
 
-    function calculateFees(uint256 id) public view returns (uint256) {}
+    function calculateFees(uint256 id) public view returns (uint256) {
+        agreements[id].amount.safeMulDiv(agreements[id].interestRate, RESOLUTION).safeMulDiv(
+            block.timestamp - agreements[id].createdAt,
+            oneYear
+        );
+    }
 
     // Why would you want the Vault if who gets the funds is the lender (already in BaseAgreement)?
     // This would also avoid the need of the salt

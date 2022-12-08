@@ -3,7 +3,6 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Service } from "./Service.sol";
-import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 abstract contract SecuritisableService is Service {
     using SafeERC20 for IERC20;
