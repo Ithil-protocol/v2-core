@@ -157,7 +157,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     // Owner is the only trusted borrower
     // Invariant: totalAssets()
-    function borrow(uint256 assets, address receiver) external override onlyOwner {
+    function borrow(uint256 assets, address receiver) external override onlyOwner returns (uint256, uint256) {
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
@@ -168,6 +168,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Borrowed(receiver, assets);
+
+        return (freeLiq, netLoans);
     }
 
     // Owner is the only trusted repayer
