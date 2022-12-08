@@ -20,14 +20,16 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     struct Item {
         ItemType itemType;
         address token;
-        uint256 identifier;
+        uint256 identifier; // what is this?
         uint256 amount;
     }
 
     struct BaseAgreement {
-        Item held;
+        Item owed;
         Item obtained;
         address lender;
+        uint256 interestRate;
+        uint256 createdAt;
     }
 
     IManager public immutable manager;
@@ -36,7 +38,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     bool public locked;
     IInterestRateModel public interestRateModel;
     mapping(uint256 => BaseAgreement) public agreements;
-    mapping(address => uint256) public riskFactors; // asset => risk factor value (if 0 -> not supported)
+    mapping(address => uint256) public riskSpread; // asset => risk spread value (if 0 -> not supported)
 
     constructor(string memory _name, string memory _symbol, address _manager) ERC721(_name, _symbol) {
         manager = IManager(_manager);
@@ -66,12 +68,13 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         emit LockWasToggled(locked);
     }
 
-    function setRiskFactor(address asset, uint256 newValue) external onlyOwner {
-        riskFactors[asset] = newValue;
+    function setRiskSpread(address asset, uint256 newValue) external onlyOwner {
+        riskSpread[asset] = newValue;
 
-        emit RiskFactorWasUpdated(asset, newValue);
+        emit RiskSpreadWasUpdated(asset, newValue);
     }
 
+    // Should be setup in the constructor? A service with no IR seems ill-defined
     function setInterestRateModel(address newInterestRateModel) external onlyOwner {
         interestRateModel = IInterestRateModel(newInterestRateModel);
 
@@ -82,6 +85,10 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     function exit(bytes calldata order) external virtual {}
 
+    function calculateFees(uint256 id) public view returns (uint256) {}
+
+    // Why would you want the Vault if who gets the funds is the lender (already in BaseAgreement)?
+    // This would also avoid the need of the salt
     function getVault(address asset) internal view returns (address) {
         return
             Create2.computeAddress(

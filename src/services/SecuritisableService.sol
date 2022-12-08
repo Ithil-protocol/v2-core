@@ -3,9 +3,11 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Service } from "./Service.sol";
+import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 abstract contract SecuritisableService is Service {
     using SafeERC20 for IERC20;
+    using GeneralMath for uint256;
 
     event LenderWasChanged(uint256 indexed id, address indexed newLender);
 
@@ -13,20 +15,25 @@ abstract contract SecuritisableService is Service {
         assert(_exists(id));
 
         // repay debt and assign
+        // repay already has the repayer parameter: no need to do a double transfer
+        // Purchaser must previously approve the Vault to spend its tokens
         uint256 toPay = price(id);
-        IERC20(agreements[id].held.token).safeTransferFrom(msg.sender, address(this), toPay);
+        manager.repay(agreements[id].owed.token, toPay, agreements[id].owed.amount, purchaser);
         agreements[id].lender = purchaser;
-
-        // TODO repay the vault
-        /// manager.repay(toPay)
 
         emit LenderWasChanged(id, purchaser);
     }
 
     function price(uint256 id) public view returns (uint256) {
-        uint256 fees = 1;
+        uint256 fees = calculateFees(id);
         BaseAgreement memory agreement = agreements[id];
 
-        return agreement.held.amount + fees * (1 - riskFactors[agreement.held.token]);
+        // Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
+        return
+            agreement.owed.amount +
+            fees.safeMulDiv(
+                agreements[id].interestRate - riskSpread[agreement.owed.token],
+                agreements[id].interestRate
+            );
     }
 }
