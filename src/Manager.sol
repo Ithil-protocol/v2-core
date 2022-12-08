@@ -54,8 +54,14 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, address receiver) external override exists(token) onlyServices {
-        IVault(vaults[token]).borrow(amount, receiver);
+    function borrow(address token, uint256 amount, address receiver)
+        external
+        override
+        exists(token)
+        onlyServices
+        returns (uint256, uint256)
+    {
+        return IVault(vaults[token]).borrow(amount, receiver);
     }
 
     /// @inheritdoc IManager

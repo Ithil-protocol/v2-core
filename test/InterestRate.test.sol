@@ -29,12 +29,12 @@ contract MockService {
     }
 
     function pull(uint256 amount) external returns (uint256) {
-        (uint256 freeLiquidity, ) = manager.borrow(token, amount);
+        (uint256 freeLiquidity, ) = manager.borrow(token, amount, address(this));
         return irmodel.computeInterestRate(amount, freeLiquidity);
     }
 
     function push(uint256 amount, uint256 debt) external {
-        manager.repay(token, amount, debt);
+        manager.repay(token, amount, debt, address(this));
     }
 }
 
