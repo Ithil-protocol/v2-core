@@ -15,7 +15,7 @@ contract AuctionRateModel is IInterestRateModel {
     // gas save: latest is a timestamp and base < RESOLUTION
     // thus they all fit in uint256
     // baseAndLatest = timestamp * 2^128 + base
-    mapping(address => uint256) public baseAndLatest;
+    mapping(address => uint256) internal baseAndLatest;
 
     function initializeIR(uint256 initialRate, uint256 firstTimestamp) external override {
         require(initialRate < RESOLUTION && firstTimestamp < RESOLUTION, "Invalid reset IR");
