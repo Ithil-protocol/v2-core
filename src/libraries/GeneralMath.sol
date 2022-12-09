@@ -5,6 +5,8 @@ pragma solidity =0.8.17;
 /// @author   Ithil
 /// @notice   A library to perform the most common math operations
 library GeneralMath {
+    uint256 public constant RESOLUTION = 1e18;
+
     // Recall that type(uint256).max = 2^256-1, type(int256).max = 2^255 - 1, type(int256).min = -2^255
 
     // Never throws, returns min(a+b,2^256-1)
