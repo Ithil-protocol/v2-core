@@ -10,18 +10,25 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 contract AuctionRateModel is IInterestRateModel {
     using GeneralMath for uint256;
 
+    /**
+     * @dev gas saving trick
+     * latest is a timestamp and base < GeneralMath.RESOLUTION, they all fit in uint256
+     * baseAndLatest = timestamp * 2^128 + base
+     */
+    mapping(address => uint256) internal baseAndLatest;
+    uint256 public immutable halvingTime;
+
     error InvalidParams();
 
-    // gas save: latest is a timestamp and base < GeneralMath.RESOLUTION
-    // thus they all fit in uint256
-    // baseAndLatest = timestamp * 2^128 + base
-    mapping(address => uint256) internal baseAndLatest;
-    uint256 private constant HALVING_TIME = 1 weeks;
+    constructor(uint256 _halvingTime) {
+        assert(_halvingTime > 0);
+        halvingTime = _halvingTime;
+    }
 
-    function initializeIR(uint256 initialRate, uint256 firstTimestamp) external override {
-        if (initialRate > GeneralMath.RESOLUTION || firstTimestamp > GeneralMath.RESOLUTION) revert InvalidParams();
+    function initializeIR(uint256 initialRate) external override {
+        if (initialRate > GeneralMath.RESOLUTION) revert InvalidParams();
 
-        baseAndLatest[msg.sender] = initialRate + (firstTimestamp << 128);
+        baseAndLatest[msg.sender] = initialRate + (block.timestamp << 128);
     }
 
     // throws if block.timestamp is smaller than latestBorrow
@@ -33,8 +40,8 @@ contract AuctionRateModel is IInterestRateModel {
         // Increase base due to new borrow
         uint256 newBase = (bal % (1 << 128)).safeMulDiv(freeLiquidity, freeLiquidity - amount);
         assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
-        // Apply time based discount: after HALVING_TIME it is divided by 2
-        newBase = newBase.safeMulDiv(HALVING_TIME, block.timestamp - latestBorrow + HALVING_TIME);
+        // Apply time based discount: after halvingTime it is divided by 2
+        newBase = newBase.safeMulDiv(halvingTime, block.timestamp - latestBorrow + halvingTime);
         // Reset new base and latest borrow
         assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
         baseAndLatest[msg.sender] = newBase + (latestBorrow << 128);

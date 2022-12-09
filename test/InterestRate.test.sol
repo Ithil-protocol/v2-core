@@ -11,7 +11,7 @@ import { IVault } from "../src/interfaces/IVault.sol";
 import { IInterestRateModel } from "../src/interfaces/IInterestRateModel.sol";
 import { Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
-import { AuctionRateModel } from "../src/services/AuctionRateModel.sol";
+import { AuctionRateModel } from "../src/irmodels/AuctionRateModel.sol";
 
 contract MockService {
     IManager internal immutable manager;
@@ -21,9 +21,9 @@ contract MockService {
     constructor(IManager _manager, address _token) {
         manager = _manager;
         token = _token;
-        irmodel = IInterestRateModel(new AuctionRateModel());
+        irmodel = IInterestRateModel(new AuctionRateModel(1 weeks));
 
-        irmodel.initializeIR(5e16, block.timestamp);
+        irmodel.initializeIR(5e16);
 
         IERC20(token).approve(manager.vaults(token), type(uint256).max);
     }
