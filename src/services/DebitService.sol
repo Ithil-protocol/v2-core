@@ -4,15 +4,19 @@ pragma solidity =0.8.17;
 import { Service } from "./Service.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IInterestRateModel } from "../interfaces/IInterestRateModel.sol";
+import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 abstract contract DebitService is Service {
     // Owed is forcefully ERC20: the Manager only deals with current ERC4626 Vault and vault.asset() is ERC20
+    struct Loan {
+        address token;
+        uint256 amount;
+        uint256 interestAndSpread;
+    }
+
     struct DebitAgreement {
-        ERC20[] owed;
+        Loan[] loans;
         Item[] obtained;
-        uint256[] amountsOwed;
-        uint256[] interestRates;
-        uint256[] riskSpreads;
         address lender;
         uint256 createdAt;
     }
@@ -34,8 +38,7 @@ abstract contract DebitService is Service {
         emit BaseRiskSpreadWasUpdated(asset, id, newValue);
     }
 
-    // TODO: all debit service must have a liquidation process, but what happens with multitokens?
-    // function liquidationScore(uint256 id) public virtual returns (uint256[] memory, uint256[] memory);
+    function liquidationScore(uint256 id) public virtual returns (uint256);
 
     // When quoting we need to return values and fees for all owed items
     function quote(uint256 id) public virtual returns (uint256[] memory, uint256[] memory);

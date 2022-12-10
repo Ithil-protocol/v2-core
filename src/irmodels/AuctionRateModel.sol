@@ -28,17 +28,16 @@ contract AuctionRateModel is IInterestRateModel {
     function initializeIR(uint256 initialRate) external override {
         if (initialRate > GeneralMath.RESOLUTION) revert InvalidParams();
 
-        baseAndLatest[msg.sender] = initialRate + (block.timestamp << 128);
+        baseAndLatest[msg.sender] = GeneralMath.packInUint(block.timestamp, initialRate);
     }
 
     // throws if block.timestamp is smaller than latestBorrow
     // throws if amount >= freeLiquidity
     // throws if spread > type(uint256).max - newBase
     function computeInterestRate(uint256 amount, uint256 freeLiquidity) external override returns (uint256) {
-        uint256 bal = baseAndLatest[msg.sender];
-        uint256 latestBorrow = bal >> 128;
+        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(baseAndLatest[msg.sender]);
         // Increase base due to new borrow
-        uint256 newBase = (bal % (1 << 128)).safeMulDiv(freeLiquidity, freeLiquidity - amount);
+        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - amount);
         assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
         // Apply time based discount: after halvingTime it is divided by 2
         newBase = newBase.safeMulDiv(halvingTime, block.timestamp - latestBorrow + halvingTime);

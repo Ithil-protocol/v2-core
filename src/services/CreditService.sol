@@ -6,10 +6,14 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract CreditService is Service {
     // No need of lender or borrower: one side is always owner(), other is always the Vault(s)
+    struct Deposit {
+        address token;
+        uint256 amount;
+    }
+
     struct CreditAgreement {
-        ERC20[] owed;
+        Deposit[] deposits;
         Item[] obtained;
-        uint256[] entitlements;
         uint256 createdAt;
     }
 

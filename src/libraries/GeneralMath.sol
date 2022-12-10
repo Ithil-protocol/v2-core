@@ -38,27 +38,20 @@ library GeneralMath {
         }
     }
 
-    // Throws if b = 0 and a != 0
-    function ceilingDiv(uint256 a, uint256 b) internal pure returns (uint256 c) {
-        if (a > 0) c = 1 + (a - 1) / b;
+    // Computes uint256 a * 2^128 + b
+    // warning: if b >= 2^128, this cannot be unpacked anymore
+    // throws if a >= 2^128
+    // TODO: he natural datatype here is uint128 which never throws, but this cascades to many casts
+    function packInUint(uint256 a, uint256 b) internal pure returns (uint256) {
+        return (a << 128) + b;
     }
 
-    // Throws if c = 0 and both a != 0, b != 0
-    function mulDivUp(uint256 a, uint256 b, uint256 c) internal pure returns (uint256) {
-        return ceilingDiv(a * b, c);
+    // division with remainder of a by 2^128
+    // Never throws: checks should be implemented by the user
+    function unpackUint(uint256 a) internal pure returns (uint256, uint256) {
+        return (a >> 128, a % (1 << 128));
     }
 
-    // Throws if c = 0
-    function mulDivDown(uint256 a, uint256 b, uint256 c) internal pure returns (uint256) {
-        return (a * b) / c;
-    }
-
-    // Never throws, returns max(a,b)
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? b : a;
-    }
-
-    // Never throws, returns min(a,b)
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }

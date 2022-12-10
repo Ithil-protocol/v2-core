@@ -15,19 +15,16 @@ abstract contract SecuritisableService is DebitService {
         assert(_exists(id));
 
         (uint256[] memory values, uint256[] memory fees) = quote(id);
-        DebitAgreement memory agreement = agreements[id];
+        Loan[] memory loans = agreements[id].loans;
 
         for (uint256 index = 0; index < values.length; index++) {
             // Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
-            uint256 price = agreement.amountsOwed[index] +
-                fees[index].safeMulDiv(
-                    agreement.interestRates[index] - agreement.riskSpreads[index],
-                    agreement.interestRates[index]
-                );
+            (uint256 interestRate, uint256 riskSpread) = loans[index].interestAndSpread.unpackUint();
+            uint256 price = loans[index].amount + fees[index].safeMulDiv(interestRate - riskSpread, interestRate);
             // repay debt
             // repay already has the repayer parameter: no need to do a double transfer
             // Purchaser must previously approve the Vault to spend its tokens
-            manager.repay(address(agreement.owed[index]), price, agreement.amountsOwed[index], purchaser);
+            manager.repay(loans[index].token, price, loans[index].amount, purchaser);
         }
 
         // reassign and mark as purchased (develop such that exiting will not repay the vault)
