@@ -9,7 +9,9 @@ abstract contract SecuritisableService is DebitService {
 
     event LenderWasChanged(uint256 indexed id, address indexed newLender);
 
-    mapping(uint256 => bool) public wasPurchased;
+    // The lender is initialized only after purchase
+    // In this way, exiting can check lender to trigger a repay or transfer
+    address public lender;
 
     function purchaseCredit(uint256 id, address purchaser) external {
         assert(_exists(id));
@@ -27,9 +29,7 @@ abstract contract SecuritisableService is DebitService {
             manager.repay(loans[index].token, price, loans[index].amount, purchaser);
         }
 
-        // reassign and mark as purchased (develop such that exiting will not repay the vault)
-        agreements[id].lender = purchaser;
-        wasPurchased[id] = true;
+        lender = purchaser;
 
         emit LenderWasChanged(id, purchaser);
     }
