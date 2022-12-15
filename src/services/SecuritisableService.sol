@@ -9,9 +9,9 @@ abstract contract SecuritisableService is DebitService {
 
     event LenderWasChanged(uint256 indexed id, address indexed newLender);
 
-    // The lender is initialized only after purchase
-    // In this way, exiting can check lender to trigger a repay or transfer
-    address public lender;
+    /// @dev The lender is initialized only after purchase
+    /// In this way, exiting can check lender to trigger a repay or transfer
+    mapping(uint256 => address) public lenders;
 
     function purchaseCredit(uint256 id, address purchaser) external {
         assert(_exists(id));
@@ -20,16 +20,17 @@ abstract contract SecuritisableService is DebitService {
         Loan[] memory loans = agreements[id].loans;
 
         for (uint256 index = 0; index < values.length; index++) {
-            // Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
+            /// @dev Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
             (uint256 interestRate, uint256 riskSpread) = loans[index].interestAndSpread.unpackUint();
             uint256 price = loans[index].amount + fees[index].safeMulDiv(interestRate - riskSpread, interestRate);
-            // repay debt
-            // repay already has the repayer parameter: no need to do a double transfer
-            // Purchaser must previously approve the Vault to spend its tokens
+
+            /// @dev Repay debt
+            /// repay already has the repayer parameter: no need to do a double transfer
+            /// Purchaser must previously approve the Vault to spend its tokens
             manager.repay(loans[index].token, price, loans[index].amount, purchaser);
         }
 
-        lender = purchaser;
+        lenders[id] = purchaser;
 
         emit LenderWasChanged(id, purchaser);
     }

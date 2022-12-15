@@ -10,10 +10,6 @@ abstract contract DebitService is Service {
     // token => tokenID (ERC721/1155) / 0 (ERC20) => risk spread value (if 0 then it is not supported)
     mapping(address => mapping(uint256 => uint256)) public baseRiskSpread;
 
-    constructor(string memory _name, string memory _symbol, address _manager, address _interestRateModel)
-        Service(_name, _symbol, _manager, _interestRateModel)
-    {}
-
     function setBaseRiskSpread(address asset, uint256 id, uint256 newValue) external onlyOwner {
         baseRiskSpread[asset][id] = newValue;
 
@@ -26,6 +22,7 @@ abstract contract DebitService is Service {
     function liquidationScore(uint256 id) public returns (uint256) {
         (uint256[] memory quotes, ) = quote(id);
         Agreement memory agreement = agreements[id];
+
         uint256 score = 0;
         for (uint256 index = 0; index < quotes.length; index++) {
             (uint256 interestRate, uint256 riskSpread) = agreement.loans[index].interestAndSpread.unpackUint();
@@ -37,6 +34,7 @@ abstract contract DebitService is Service {
             );
             score += adjustedLoan.positiveSub(quotes[index]);
         }
+
         return score;
     }
 

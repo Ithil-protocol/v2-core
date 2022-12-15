@@ -12,7 +12,7 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 abstract contract Service is IService, ERC721Enumerable, Ownable {
     using GeneralMath for uint256;
 
-    // Owed is forcefully ERC20: the Manager only deals with current ERC4626 Vault and vault.asset() is ERC20
+    // Owed is forcefully ERC20: the Manager only deals with current ERC20/ERC4626 Vault
     struct Loan {
         address token;
         uint256 amount;
