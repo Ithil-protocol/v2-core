@@ -72,14 +72,6 @@ contract InterestRateTest is PRBTest, StdCheats {
         uint256 initialTimestamp = block.timestamp;
         vm.warp(initialTimestamp + timePast);
         uint256 finalInterestRate = service.pull(borrowed2);
-        console2.log("initialInterestRate", initialInterestRate);
-        console2.log("initialTimestamp", initialTimestamp);
-        console2.log("finalInterestRate", finalInterestRate);
-        console2.log("deposited", deposited);
-        console2.log("borrowed1", borrowed1);
-        console2.log("borrowed2", borrowed2);
-        console2.log("halvingTime", halvingTime);
-        console2.log("block.timestamp", block.timestamp);
         assertTrue(
             finalInterestRate ==
                 (initialInterestRate.safeMulDiv(deposited - borrowed1, deposited - borrowed1 - borrowed2)).safeMulDiv(

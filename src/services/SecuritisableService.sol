@@ -37,6 +37,6 @@ abstract contract SecuritisableService is DebitService {
     function _priceDebit(uint256 amount, uint256 fees, uint256 interestAndSpread) internal virtual returns (uint256) {
         /// @dev Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
         (uint256 interestRate, uint256 riskSpread) = interestAndSpread.unpackUint();
-        return amount + fees.safeMulDiv(interestRate - riskSpread, interestRate);
+        return amount + fees.safeMulDiv(riskSpread, interestRate + riskSpread);
     }
 }
