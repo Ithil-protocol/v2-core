@@ -38,7 +38,7 @@ contract MockService {
     }
 }
 
-contract ManagerTest is PRBTest, StdCheats {
+contract InterestRateTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
 
     ERC20PresetMinterPauser internal immutable token;
