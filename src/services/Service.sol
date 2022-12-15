@@ -43,9 +43,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     bool public locked;
     mapping(uint256 => Agreement) public agreements;
 
-    constructor(string memory _name, string memory _symbol, address _manager)
-        ERC721(_name, _symbol)
-    {
+    constructor(string memory _name, string memory _symbol, address _manager) ERC721(_name, _symbol) {
         manager = IManager(_manager);
         locked = false;
     }

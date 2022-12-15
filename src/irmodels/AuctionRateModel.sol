@@ -18,7 +18,7 @@ contract AuctionRateModel {
     uint256 internal halvingTime;
 
     constructor(uint256 _halvingTime, uint256 _initialRate) {
-        assert (_initialRate < GeneralMath.RESOLUTION);
+        assert(_initialRate < GeneralMath.RESOLUTION);
         assert(_halvingTime > 0);
         halvingTime = _halvingTime;
         baseAndLatest = GeneralMath.packInUint(block.timestamp, _initialRate);
