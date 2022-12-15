@@ -29,11 +29,12 @@ contract AuctionRateModel {
     // throws if spread > type(uint256).max - newBase
     function computeInterestRate(uint256 amount, uint256 freeLiquidity) internal returns (uint256) {
         (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(baseAndLatest);
-        // Increase base due to new borrow
-        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - amount);
-        assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
-        // Apply time based discount: after halvingTime it is divided by 2
-        newBase = newBase.safeMulDiv(halvingTime, block.timestamp - latestBorrow + halvingTime);
+        // Increase base due to new borrow and then
+        // apply time based discount: after halvingTime it is divided by 2
+        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - amount).safeMulDiv(
+            halvingTime,
+            block.timestamp - latestBorrow + halvingTime
+        );
         // Reset new base and latest borrow
         assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
         baseAndLatest = GeneralMath.packInUint(block.timestamp, newBase);

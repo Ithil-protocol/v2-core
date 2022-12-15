@@ -16,23 +16,50 @@ abstract contract DebitService is Service {
         emit BaseRiskSpreadWasUpdated(asset, id, newValue);
     }
 
+    /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
+    /// Throws if margin = 0
+    function riskSpreadFromMargin(uint256 amount, uint256 margin, uint256 baseSpread)
+        internal
+        virtual
+        returns (uint256)
+    {
+        return baseSpread.safeMulDiv(amount, margin);
+    }
+
+    /// Throws if riskSpread = 0
+    function marginFromRiskSpread(uint256 amount, uint256 baseSpread, uint256 riskSpread)
+        internal
+        virtual
+        returns (uint256)
+    {
+        return amount.safeMulDiv(baseSpread, riskSpread);
+    }
+
+    /// Defaults to amount + margin * riskSpread / (ir + riskSpread)
+    function liquidationThreshold(uint256 amount, uint256 baseSpread, uint256 interestAndSpread)
+        internal
+        virtual
+        returns (uint256)
+    {
+        (uint256 interestRate, uint256 riskSpread) = interestAndSpread.unpackUint();
+        uint256 margin = marginFromRiskSpread(amount, baseSpread, riskSpread);
+        return amount.safeAdd(margin.safeMulDiv(riskSpread, interestRate + riskSpread));
+    }
+
     // This function is positive if and only if at least one of the quoted values
-    // is less than amount + margin * riskSpread / (ir + riskSpread)
-    // Assumes riskSpread = baseRiskSpread * amount / margin
+    // is less than liquidationThreshold
     function liquidationScore(uint256 id) public returns (uint256) {
         Agreement memory agreement = agreements[id];
         (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
 
         uint256 score = 0;
         for (uint256 index = 0; index < quotes.length; index++) {
-            (uint256 interestRate, uint256 riskSpread) = agreement.loans[index].interestAndSpread.unpackUint();
-            uint256 adjustedLoan = agreement.loans[index].amount.safeMulDiv(
-                baseRiskSpread[agreement.loans[index].token][agreement.obtained[index].identifier] +
-                    interestRate +
-                    riskSpread,
-                interestRate + riskSpread
-            );
-            score += (adjustedLoan.safeAdd(fees[index])).positiveSub(quotes[index]);
+            uint256 minimumQuote = liquidationThreshold(
+                agreement.loans[index].amount,
+                baseRiskSpread[agreement.loans[index].token][agreement.obtained[index].identifier],
+                agreement.loans[index].interestAndSpread
+            ).safeAdd(fees[index]);
+            score = score.safeAdd(minimumQuote.positiveSub(quotes[index]));
         }
 
         return score;
