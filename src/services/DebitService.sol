@@ -20,8 +20,8 @@ abstract contract DebitService is Service {
     // is less than amount + margin * riskSpread / (ir + riskSpread)
     // Assumes riskSpread = baseRiskSpread * amount / margin
     function liquidationScore(uint256 id) public returns (uint256) {
-        (uint256[] memory quotes, ) = quote(id);
         Agreement memory agreement = agreements[id];
+        (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
 
         uint256 score = 0;
         for (uint256 index = 0; index < quotes.length; index++) {
@@ -32,7 +32,7 @@ abstract contract DebitService is Service {
                     riskSpread,
                 interestRate + riskSpread
             );
-            score += adjustedLoan.positiveSub(quotes[index]);
+            score += (adjustedLoan.safeAdd(fees[index])).positiveSub(quotes[index]);
         }
 
         return score;
@@ -40,5 +40,5 @@ abstract contract DebitService is Service {
 
     // When quoting we need to return values for all owed items
     // Algorithm: for first to last index, calculate minimum obtained >= loan amount + fees
-    function quote(uint256 id) public virtual returns (uint256[] memory, uint256[] memory);
+    function quote(Agreement memory agreement) public virtual returns (uint256[] memory, uint256[] memory);
 }

@@ -16,14 +16,12 @@ abstract contract SecuritisableService is DebitService {
     function purchaseCredit(uint256 id, address purchaser) external {
         assert(_exists(id));
 
-        (uint256[] memory values, uint256[] memory fees) = quote(id);
-        Loan[] memory loans = agreements[id].loans;
+        Agreement memory agreement = agreements[id];
+        Loan[] memory loans = agreement.loans;
+        (uint256[] memory values, uint256[] memory fees) = quote(agreement);
 
         for (uint256 index = 0; index < values.length; index++) {
-            /// @dev Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
-            (uint256 interestRate, uint256 riskSpread) = loans[index].interestAndSpread.unpackUint();
-            uint256 price = loans[index].amount + fees[index].safeMulDiv(interestRate - riskSpread, interestRate);
-
+            uint256 price = _priceDebit(loans[index].amount, fees[index], loans[index].interestAndSpread);
             /// @dev Repay debt
             /// repay already has the repayer parameter: no need to do a double transfer
             /// Purchaser must previously approve the Vault to spend its tokens
@@ -33,5 +31,12 @@ abstract contract SecuritisableService is DebitService {
         lenders[id] = purchaser;
 
         emit LenderWasChanged(id, purchaser);
+    }
+
+    /// @dev Particular service may override this
+    function _priceDebit(uint256 amount, uint256 fees, uint256 interestAndSpread) internal virtual returns (uint256) {
+        /// @dev Risk spread is annihilated when purchasing, thus we discount fees wrt risk spread
+        (uint256 interestRate, uint256 riskSpread) = interestAndSpread.unpackUint();
+        return amount + fees.safeMulDiv(interestRate - riskSpread, interestRate);
     }
 }

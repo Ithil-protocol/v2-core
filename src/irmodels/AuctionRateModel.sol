@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { IInterestRateModel } from "../interfaces/IInterestRateModel.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 // IR = baseIR + spread
 // Rate model in which baseIR is based on a Dutch auction
 // GeneralMath.RESOLUTION corresponds to 1, i.e. an interest rate of 100%
-contract AuctionRateModel is IInterestRateModel {
+contract AuctionRateModel {
     using GeneralMath for uint256;
 
     /**
@@ -15,27 +14,21 @@ contract AuctionRateModel is IInterestRateModel {
      * latest is a timestamp and base < GeneralMath.RESOLUTION, they all fit in uint256
      * baseAndLatest = timestamp * 2^128 + base
      */
-    mapping(address => uint256) internal baseAndLatest;
-    uint256 public immutable halvingTime;
+    uint256 internal baseAndLatest;
+    uint256 internal halvingTime;
 
-    error InvalidParams();
-
-    constructor(uint256 _halvingTime) {
+    constructor(uint256 _halvingTime, uint256 _initialRate) {
+        assert (_initialRate < GeneralMath.RESOLUTION);
         assert(_halvingTime > 0);
         halvingTime = _halvingTime;
-    }
-
-    function initializeIR(uint256 initialRate) external override {
-        if (initialRate > GeneralMath.RESOLUTION) revert InvalidParams();
-
-        baseAndLatest[msg.sender] = GeneralMath.packInUint(block.timestamp, initialRate);
+        baseAndLatest = GeneralMath.packInUint(block.timestamp, _initialRate);
     }
 
     // throws if block.timestamp is smaller than latestBorrow
     // throws if amount >= freeLiquidity
     // throws if spread > type(uint256).max - newBase
-    function computeInterestRate(uint256 amount, uint256 freeLiquidity) external override returns (uint256) {
-        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(baseAndLatest[msg.sender]);
+    function computeInterestRate(uint256 amount, uint256 freeLiquidity) internal returns (uint256) {
+        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(baseAndLatest);
         // Increase base due to new borrow
         uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - amount);
         assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
@@ -43,7 +36,7 @@ contract AuctionRateModel is IInterestRateModel {
         newBase = newBase.safeMulDiv(halvingTime, block.timestamp - latestBorrow + halvingTime);
         // Reset new base and latest borrow
         assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
-        baseAndLatest[msg.sender] = newBase + (latestBorrow << 128);
+        baseAndLatest = GeneralMath.packInUint(block.timestamp, newBase);
 
         return newBase;
     }

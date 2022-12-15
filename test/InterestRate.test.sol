@@ -8,29 +8,24 @@ import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IManager } from "../src/interfaces/IManager.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
-import { IInterestRateModel } from "../src/interfaces/IInterestRateModel.sol";
 import { Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../src/irmodels/AuctionRateModel.sol";
 
-contract MockService {
+contract MockService is AuctionRateModel {
     IManager internal immutable manager;
-    IInterestRateModel internal immutable irmodel;
     address internal immutable token;
 
-    constructor(IManager _manager, address _token) {
+    constructor(IManager _manager, address _token) AuctionRateModel(604800, 50000000000000000) {
         manager = _manager;
         token = _token;
-        irmodel = IInterestRateModel(new AuctionRateModel(1 weeks));
-
-        irmodel.initializeIR(5e16);
 
         IERC20(token).approve(manager.vaults(token), type(uint256).max);
     }
 
     function pull(uint256 amount) external returns (uint256) {
         (uint256 freeLiquidity, ) = manager.borrow(token, amount, address(this));
-        return irmodel.computeInterestRate(amount, freeLiquidity);
+        return computeInterestRate(amount, freeLiquidity);
     }
 
     function push(uint256 amount, uint256 debt) external {
@@ -77,6 +72,14 @@ contract InterestRateTest is PRBTest, StdCheats {
         uint256 initialTimestamp = block.timestamp;
         vm.warp(initialTimestamp + timePast);
         uint256 finalInterestRate = service.pull(borrowed2);
+        console2.log("initialInterestRate", initialInterestRate);
+        console2.log("initialTimestamp", initialTimestamp);
+        console2.log("finalInterestRate", finalInterestRate);
+        console2.log("deposited", deposited);
+        console2.log("borrowed1", borrowed1);
+        console2.log("borrowed2", borrowed2);
+        console2.log("halvingTime", halvingTime);
+        console2.log("block.timestamp", block.timestamp);
         assertTrue(
             finalInterestRate ==
                 (initialInterestRate.safeMulDiv(deposited - borrowed1, deposited - borrowed1 - borrowed2)).safeMulDiv(
