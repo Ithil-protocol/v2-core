@@ -7,14 +7,16 @@ import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/exte
 import { Vault } from "./Vault.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
+import { GeneralMath } from "./libraries/GeneralMath.sol";
 
 contract Manager is IManager, Ownable {
+    using GeneralMath for uint256;
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    mapping(address => bool) public services;
+    mapping(address => uint256) public serviceCaps;
 
     modifier onlyServices() {
-        if (!services[msg.sender]) revert Restricted_To_Whitelisted_Services();
+        if (serviceCaps[msg.sender] == 0) revert Zero_Borrow_Cap();
         _;
     }
 
@@ -36,15 +38,15 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function addService(address service) external onlyOwner {
-        services[service] = true;
+    function addService(address service, uint256 cap) external onlyOwner {
+        serviceCaps[service] = cap;
 
-        emit ServiceWasAdded(service);
+        emit ServiceWasAdded(service, cap);
     }
 
     function removeService(address service) external onlyOwner {
-        assert(services[service]);
-        delete services[service];
+        assert(serviceCaps[service] > 0);
+        delete serviceCaps[service];
 
         emit ServiceWasRemoved(service);
     }
@@ -61,6 +63,9 @@ contract Manager is IManager, Ownable {
         onlyServices
         returns (uint256, uint256)
     {
+        uint256 serviceCap = serviceCaps[msg.sender];
+        if (serviceCap < amount) revert Exceeded_Borrow_Cap(serviceCap);
+        serviceCaps[msg.sender] -= amount;
         return IVault(vaults[token]).borrow(amount, receiver);
     }
 
@@ -71,6 +76,7 @@ contract Manager is IManager, Ownable {
         exists(token)
         onlyServices
     {
+        serviceCaps[msg.sender] = serviceCaps[msg.sender].safeAdd(amount);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 

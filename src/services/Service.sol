@@ -76,5 +76,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     function enter(bytes calldata order) external virtual unlocked {}
 
+    function edit(bytes calldata order) external virtual unlocked {}
+
     function exit(bytes calldata order) external virtual {}
 }

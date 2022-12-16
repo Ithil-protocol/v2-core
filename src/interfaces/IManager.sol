@@ -5,13 +5,15 @@ pragma solidity =0.8.17;
 /// @author   Ithil
 /// @notice   Manages lending and borrowing from and to the ERC4626 vaults
 interface IManager {
-    event ServiceWasAdded(address indexed service);
+    event ServiceWasAdded(address indexed service, uint256 cap);
 
     event ServiceWasRemoved(address indexed service);
 
     error Vault_Missing();
 
-    error Restricted_To_Whitelisted_Services();
+    error Zero_Borrow_Cap();
+
+    error Exceeded_Borrow_Cap(uint256);
 
     /// @notice thrown when amount of assets received is above the max set by caller
     error Max_Amount_Exceeded();

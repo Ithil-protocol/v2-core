@@ -66,6 +66,7 @@ abstract contract DebitService is Service {
     }
 
     // When quoting we need to return values for all owed items
-    // Algorithm: for first to last index, calculate minimum obtained >= loan amount + fees
+    // Algorithm: from first to second-last index, calculate minimum obtained >= loan amount + fees
+    // For the last index calculate the maximum obtainable
     function quote(Agreement memory agreement) public virtual returns (uint256[] memory, uint256[] memory);
 }
