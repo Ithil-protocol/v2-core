@@ -45,7 +45,7 @@ contract ManagerTest is PRBTest, StdCheats {
         manager = new Manager();
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
-        manager.addService(address(service), type(uint256).max);
+        manager.addService(address(service));
     }
 
     function setUp() public {
