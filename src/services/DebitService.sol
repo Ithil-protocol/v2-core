@@ -26,7 +26,7 @@ abstract contract DebitService is Service {
         return baseSpread.safeMulDiv(amount, margin);
     }
 
-    /// Throws if riskSpread = 0
+    /// @dev Throws if riskSpread = 0
     function marginFromRiskSpread(uint256 amount, uint256 baseSpread, uint256 riskSpread)
         internal
         virtual
@@ -35,7 +35,7 @@ abstract contract DebitService is Service {
         return amount.safeMulDiv(baseSpread, riskSpread);
     }
 
-    /// Defaults to amount + margin * riskSpread / (ir + riskSpread)
+    /// @dev Defaults to amount + margin * riskSpread / (ir + riskSpread)
     function liquidationThreshold(uint256 amount, uint256 baseSpread, uint256 interestAndSpread)
         internal
         virtual
@@ -46,8 +46,8 @@ abstract contract DebitService is Service {
         return amount.safeAdd(margin.safeMulDiv(riskSpread, interestRate + riskSpread));
     }
 
-    // This function is positive if and only if at least one of the quoted values
-    // is less than liquidationThreshold
+    /// @dev This function is positive if and only if at least one of the quoted values
+    /// is less than liquidationThreshold
     function liquidationScore(uint256 id) public returns (uint256) {
         Agreement memory agreement = agreements[id];
         (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
@@ -65,7 +65,7 @@ abstract contract DebitService is Service {
         return score;
     }
 
-    // When quoting we need to return values for all owed items
-    // Algorithm: for first to last index, calculate minimum obtained >= loan amount + fees
+    /// @dev When quoting we need to return values for all owed items
+    /// how: for first to last index, calculate minimum obtained >= loan amount + fees
     function quote(Agreement memory agreement) public virtual returns (uint256[] memory, uint256[] memory);
 }

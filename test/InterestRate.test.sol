@@ -15,8 +15,9 @@ import { AuctionRateModel } from "../src/irmodels/AuctionRateModel.sol";
 contract MockService is AuctionRateModel {
     IManager internal immutable manager;
     address internal immutable token;
+    uint256 internal constant initialRiskSpread = 5e16;
 
-    constructor(IManager _manager, address _token) AuctionRateModel(604800, 50000000000000000) {
+    constructor(IManager _manager, address _token) AuctionRateModel(1 weeks, initialRiskSpread) {
         manager = _manager;
         token = _token;
 

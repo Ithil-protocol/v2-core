@@ -5,7 +5,6 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
-import { IInterestRateModel } from "../interfaces/IInterestRateModel.sol";
 import { Vault } from "../Vault.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
