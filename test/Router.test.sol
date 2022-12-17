@@ -9,7 +9,7 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { Router } from "../src/Router.sol";
 import { Vault } from "../src/Vault.sol";
 
-contract ManagerTest is PRBTest, StdCheats {
+contract RouterTest is PRBTest, StdCheats {
     Router internal immutable router;
     ERC20PresetMinterPauser internal immutable token;
     Vault internal immutable vault;

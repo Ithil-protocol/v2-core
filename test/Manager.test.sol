@@ -23,11 +23,11 @@ contract MockService {
     }
 
     function pull(uint256 amount) external {
-        manager.borrow(token, amount);
+        manager.borrow(token, amount, address(this));
     }
 
     function push(uint256 amount, uint256 debt) external {
-        manager.repay(token, amount, debt);
+        manager.repay(token, amount, debt, address(this));
     }
 }
 

@@ -8,37 +8,33 @@ import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IManager } from "../src/interfaces/IManager.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
-import { IInterestRateModel } from "../src/interfaces/IInterestRateModel.sol";
 import { Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../src/irmodels/AuctionRateModel.sol";
 
-contract MockService {
+contract MockService is AuctionRateModel {
     IManager internal immutable manager;
-    IInterestRateModel internal immutable irmodel;
     address internal immutable token;
+    uint256 internal constant initialRiskSpread = 5e16;
 
-    constructor(IManager _manager, address _token) {
+    constructor(IManager _manager, address _token) AuctionRateModel(1 weeks, initialRiskSpread) {
         manager = _manager;
         token = _token;
-        irmodel = IInterestRateModel(new AuctionRateModel(1 weeks));
-
-        irmodel.initializeIR(5e16);
 
         IERC20(token).approve(manager.vaults(token), type(uint256).max);
     }
 
     function pull(uint256 amount) external returns (uint256) {
-        (uint256 freeLiquidity, ) = manager.borrow(token, amount);
-        return irmodel.computeInterestRate(amount, freeLiquidity);
+        (uint256 freeLiquidity, ) = manager.borrow(token, amount, address(this));
+        return computeInterestRate(amount, freeLiquidity);
     }
 
     function push(uint256 amount, uint256 debt) external {
-        manager.repay(token, amount, debt);
+        manager.repay(token, amount, debt, address(this));
     }
 }
 
-contract ManagerTest is PRBTest, StdCheats {
+contract InterestRateTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
 
     ERC20PresetMinterPauser internal immutable token;
