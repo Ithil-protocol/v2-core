@@ -24,7 +24,7 @@ contract AuctionRateModel {
         baseAndLatest = GeneralMath.packInUint(block.timestamp, _initialRate);
     }
 
-    /** 
+    /**
      * @dev calculating the end IR value
      * throws if block.timestamp is smaller than latestBorrow
      * throws if amount >= freeLiquidity
