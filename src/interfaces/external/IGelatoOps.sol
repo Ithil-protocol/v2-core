@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import { ITaskTreasuryUpgradable } from "./ITaskTreasuryUpgradable.sol";
-
 // solhint-disable max-line-length
 interface IGelatoOps {
     /**
@@ -74,7 +72,7 @@ interface IGelatoOps {
     /**
      * @notice TaskTreasury contract where user deposit funds to be used for fee payments.
      *
-     * @return ITaskTreasuryUpgradable TaskTreasury contract interface
+     * @return address TaskTreasury contract interface
      */
-    function taskTreasury() external view returns (ITaskTreasuryUpgradable);
+    function taskTreasury() external view returns (address);
 }
