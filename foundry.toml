@@ -14,6 +14,7 @@ src = "src"
 test = "test"
 remappings = [
   '@openzeppelin/=lib/openzeppelin-contracts/',
+  '@chainlink/=lib/chainlink/',
   'hardhat/=node_modules/hardhat/',
 ]
 
