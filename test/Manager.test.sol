@@ -42,7 +42,7 @@ contract ManagerTest is PRBTest, StdCheats {
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
-        manager = new Manager();
+        manager = new Manager(address(0));
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
         manager.addService(address(service));

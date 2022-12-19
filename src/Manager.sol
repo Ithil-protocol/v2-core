@@ -4,14 +4,19 @@ pragma solidity =0.8.17;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { Vault } from "./Vault.sol";
+import { ETHWrapper } from "./utils/ETHWrapper.sol";
+import { Multicall } from "./utils/Multicall.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
+import { Vault } from "./Vault.sol";
 
-contract Manager is IManager, Ownable {
+contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
     mapping(address => bool) public services;
+
+    // solhint-disable-next-line no-empty-blocks
+    constructor(address weth) ETHWrapper(weth) {}
 
     modifier onlyServices() {
         if (!services[msg.sender]) revert Restricted_To_Whitelisted_Services();
