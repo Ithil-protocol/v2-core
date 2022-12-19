@@ -50,6 +50,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         emit DegradationCoefficientWasChanged(feeUnlockTime);
     }
 
+    function sweep(address to, address token) external onlyOwner {
+        assert(token != asset());
+
+        IERC20 spuriousToken = IERC20(token);
+        spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
+    }
+
     // Total assets are used to calculate shares to mint and redeem
     // They represent the deposited amount, the loans and the unlocked fees
     // As per ERC4626 standard this must never throw
