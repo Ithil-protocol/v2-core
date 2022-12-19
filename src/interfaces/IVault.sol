@@ -22,6 +22,8 @@ interface IVault is IERC4626 {
 
     function setFeeUnlockTime(uint256 _feeUnlockTime) external;
 
+    function sweep(address to, address token) external;
+
     function borrow(uint256 assets, address receiver) external returns (uint256, uint256);
 
     function repay(uint256 assets, uint256 debt, address repayer) external;

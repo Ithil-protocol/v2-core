@@ -58,6 +58,10 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         IVault(vaults[token]).setFeeUnlockTime(feeUnlockTime);
     }
 
+    function sweep(address to, address token, address vault) external onlyOwner {
+        IVault(vault).sweep(to, token);
+    }
+
     /// @inheritdoc IManager
     function borrow(address token, uint256 amount, address receiver)
         external

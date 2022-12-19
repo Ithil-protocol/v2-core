@@ -242,4 +242,17 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(vault.currentProfits() == currentProfits);
         assertTrue(vault.currentLosses() == currentLosses);
     }
+
+    function testSweep(uint256 value) public {
+        ERC20PresetMinterPauser otherToken = new ERC20PresetMinterPauser("other", "OTHER");
+        otherToken.mint(address(this), value);
+        otherToken.transfer(address(vault), value);
+
+        manager.sweep(address(this), address(otherToken), address(vault));
+        assertTrue(otherToken.balanceOf(address(this)) == value);
+
+        vault.deposit(value, address(this));
+        vm.expectRevert();
+        manager.sweep(address(vault), address(token), address(this));
+    }
 }
