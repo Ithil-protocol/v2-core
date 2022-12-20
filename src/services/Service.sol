@@ -15,6 +15,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     struct Loan {
         address token;
         uint256 amount;
+        uint256 margin;
         uint256 interestAndSpread;
     }
 
@@ -44,7 +45,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     constructor(string memory _name, string memory _symbol, address _manager) ERC721(_name, _symbol) {
         manager = IManager(_manager);
-        locked = false;
     }
 
     modifier onlyGuardian() {

@@ -33,7 +33,6 @@ contract MockService {
 
 contract ManagerTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
-    using GeneralMath for int256;
 
     ERC20PresetMinterPauser internal immutable token;
     Manager internal immutable manager;
@@ -45,7 +44,8 @@ contract ManagerTest is PRBTest, StdCheats {
         manager = new Manager(address(0));
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
-        manager.addService(address(service));
+        uint256 spreadAndCap = GeneralMath.packInUint(1e15, 1e18);
+        manager.setSpreadAndCap(address(service), address(token), spreadAndCap);
     }
 
     function setUp() public {

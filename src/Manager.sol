@@ -13,13 +13,15 @@ import { Vault } from "./Vault.sol";
 contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    mapping(address => bool) public services;
+
+    // service => token => spreadAndCap (packed), if 0 then it is not supported
+    mapping(address => mapping(address => uint256)) public spreadAndCaps;
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address weth) ETHWrapper(weth) {}
 
-    modifier onlyServices() {
-        if (!services[msg.sender]) revert Restricted_To_Whitelisted_Services();
+    modifier supported(address token) {
+        if (spreadAndCaps[msg.sender][token] == 0) revert Restricted_To_Whitelisted_Services();
         _;
     }
 
@@ -41,17 +43,17 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         return vault;
     }
 
-    function addService(address service) external onlyOwner {
-        services[service] = true;
+    function setSpreadAndCap(address service, address token, uint256 spreadAndCap) external onlyOwner {
+        spreadAndCaps[service][token] = spreadAndCap;
 
-        emit ServiceWasAdded(service);
+        emit SpreadAndCapWasSet(service, token, spreadAndCap);
     }
 
-    function removeService(address service) external onlyOwner {
-        assert(services[service]);
-        delete services[service];
+    function removeTokenFromService(address service, address token) external onlyOwner {
+        assert(spreadAndCaps[service][token] > 0);
+        delete spreadAndCaps[service][token];
 
-        emit ServiceWasRemoved(service);
+        emit TokenWasRemovedFromService(service, token);
     }
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override exists(token) {
@@ -67,7 +69,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         external
         override
         exists(token)
-        onlyServices
+        supported(token)
         returns (uint256, uint256)
     {
         return IVault(vaults[token]).borrow(amount, receiver);
@@ -78,7 +80,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         external
         override
         exists(token)
-        onlyServices
+        supported(token)
     {
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
