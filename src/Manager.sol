@@ -9,13 +9,16 @@ import { Multicall } from "./utils/Multicall.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
+import { GeneralMath } from "./libraries/GeneralMath.sol";
 
 contract Manager is IManager, Ownable, ETHWrapper, Multicall {
+    using GeneralMath for uint256;
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
 
     // service => token => spreadAndCap (packed), if 0 then it is not supported
     mapping(address => mapping(address => uint256)) public spreadAndCaps;
+    mapping(address => mapping(address => uint256)) public exposures;
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address weth) ETHWrapper(weth) {}
@@ -43,10 +46,10 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         return vault;
     }
 
-    function setSpreadAndCap(address service, address token, uint256 spreadAndCap) external onlyOwner {
-        spreadAndCaps[service][token] = spreadAndCap;
+    function setSpreadAndCap(address service, address token, uint256 spread, uint256 cap) external onlyOwner {
+        spreadAndCaps[service][token] = GeneralMath.packInUint(spread, cap);
 
-        emit SpreadAndCapWasSet(service, token, spreadAndCap);
+        emit SpreadAndCapWasSet(service, token, spread, cap);
     }
 
     function removeTokenFromService(address service, address token) external onlyOwner {
@@ -72,7 +75,16 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         supported(token)
         returns (uint256, uint256)
     {
-        return IVault(vaults[token]).borrow(amount, receiver);
+        uint256 currentExposures = exposures[msg.sender][token].safeAdd(amount);
+        exposures[msg.sender][token] = currentExposures;
+        (, uint256 investmentCap) = spreadAndCaps[msg.sender][token].unpackUint();
+        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
+        uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
+            currentExposures,
+            freeLiquidity.safeAdd(netLoans - amount)
+        );
+        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        return (freeLiquidity, netLoans);
     }
 
     /// @inheritdoc IManager
@@ -82,6 +94,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         exists(token)
         supported(token)
     {
+        exposures[msg.sender][token] = exposures[msg.sender][token].positiveSub(debt);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 

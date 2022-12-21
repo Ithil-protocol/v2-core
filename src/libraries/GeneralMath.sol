@@ -29,13 +29,11 @@ library GeneralMath {
 
     // Throws if c = 0
     function safeMulDiv(uint256 a, uint256 b, uint256 c) internal pure returns (uint256) {
-        if (b == 0) return 0;
-        if (a < type(uint256).max / b) return (a * b) / c;
-        else {
-            if (c >= b) return a - (a / c) * (c - b);
-            else if (a / c < type(uint256).max / (b - c)) return safeAdd(a, (a / c) * (b - c));
-            else return type(uint256).max;
-        }
+        if (b == 0 || a == 0) return 0;
+        if (a < type(uint256).max / b || b < type(uint256).max / a) return (a * b) / c;
+        if (c >= b) return a - (a / c) * (c - b);
+        if (a / c < type(uint256).max / (b - c)) return safeAdd(a, (a / c) * (b - c));
+        return type(uint256).max;
     }
 
     // Computes uint256 a * 2^128 + b

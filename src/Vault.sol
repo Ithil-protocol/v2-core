@@ -72,7 +72,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Locked profits are locked for every operation
     // We do not consider negative profits since they are not true liquidity
     function freeLiquidity() public view override returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this)).positiveSub(_calculateLockedProfits());
+        return super.totalAssets() - _calculateLockedProfits();
     }
 
     // Assets include netLoans but they are not available for withdraw

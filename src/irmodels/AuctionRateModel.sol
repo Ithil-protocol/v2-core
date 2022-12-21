@@ -38,10 +38,12 @@ contract AuctionRateModel {
             halvingTime,
             block.timestamp - latestBorrow + halvingTime
         );
-        // Reset new base and latest borrow
-        assert(newBase < GeneralMath.RESOLUTION); // Interest rate overflow
+        // Reset new base and latest borrow, force IR stays below resolution
+        if (newBase >= GeneralMath.RESOLUTION) revert Interest_Rate_Overflow();
         baseAndLatest = GeneralMath.packInUint(block.timestamp, newBase);
 
         return newBase;
     }
+
+    error Interest_Rate_Overflow();
 }

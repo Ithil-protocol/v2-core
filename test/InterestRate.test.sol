@@ -4,7 +4,6 @@ pragma solidity =0.8.17;
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { PRBTest } from "@prb/test/PRBTest.sol";
-import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IManager } from "../src/interfaces/IManager.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
@@ -47,8 +46,7 @@ contract InterestRateTest is PRBTest, StdCheats {
         manager = new Manager(address(0));
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
-        uint256 spreadAndCap = GeneralMath.packInUint(1e15, 1e18);
-        manager.setSpreadAndCap(address(service), address(token), spreadAndCap);
+        manager.setSpreadAndCap(address(service), address(token), 1e15, 1e18);
     }
 
     function setUp() public {

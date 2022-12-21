@@ -44,8 +44,7 @@ contract ManagerTest is PRBTest, StdCheats {
         manager = new Manager(address(0));
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
-        uint256 spreadAndCap = GeneralMath.packInUint(1e15, 1e18);
-        manager.setSpreadAndCap(address(service), address(token), spreadAndCap);
+        manager.setSpreadAndCap(address(service), address(token), 1e15, 1e18);
     }
 
     function setUp() public {
@@ -112,9 +111,7 @@ contract ManagerTest is PRBTest, StdCheats {
         uint256 initialAssets = vault.totalAssets();
         uint256 netLoans = vault.netLoans();
         uint256 debtRepaid = debt.min(borrowed);
-
         service.push(repaid, debt);
-
         assertTrue(vault.netLoans() == netLoans - debtRepaid);
         assertTrue(vault.currentProfits() == repaid.positiveSub(debtRepaid));
         assertTrue(vault.currentLosses() == debtRepaid.positiveSub(repaid));
