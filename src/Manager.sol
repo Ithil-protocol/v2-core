@@ -76,7 +76,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         returns (uint256)
     {
         (, uint256 investmentCap) = spreadAndCaps[msg.sender][token].unpackUint();
-        (uint256 shares) = IVault(vaults[token]).deposit(amount, receiver);
+        uint256 shares = IVault(vaults[token]).deposit(amount, receiver);
         uint256 currentExposures = exposures[msg.sender][token].safeAdd(shares);
         exposures[msg.sender][token] = currentExposures;
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
@@ -88,14 +88,18 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     }
 
     /// @inheritdoc IManager
-    function withdraw(address token, uint256 amount, address receiver, address owner) external override 
+    function withdraw(address token, uint256 amount, address receiver, address owner)
+        external
+        override
         exists(token)
-        supported(token) returns (uint256) {
-        (uint256 shares) = IVault(vaults[token]).withdraw(amount, receiver, owner);
+        supported(token)
+        returns (uint256)
+    {
+        uint256 shares = IVault(vaults[token]).withdraw(amount, receiver, owner);
         exposures[msg.sender][token] = exposures[msg.sender][token].positiveSub(shares);
         return shares;
     }
-    
+
     /// @inheritdoc IManager
     function borrow(address token, uint256 amount, address receiver)
         external
