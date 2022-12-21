@@ -10,7 +10,7 @@ contract UsesChainlink is Ownable {
     address public constant EUR = address(978);
     IChainlinkFeedRegistry public immutable registry;
     uint256 public maxDeviation;
-    
+
     event MaxDeviationWasUpdated(uint256 newDeviation);
     error MaxDeviationError();
 
@@ -30,8 +30,13 @@ contract UsesChainlink is Ownable {
     }
 
     function getPrice(address base, address quote) public view returns (int256) {
-        (, /*uint80 roundID*/ int256 price, , /*uint256 startedAt*/ uint256 timestamp, ) = /*uint80 answeredInRound*/
-        registry.latestRoundData(base, quote);
+        (
+            ,
+            /*uint80 roundID*/ int256 price,
+            ,
+            /*uint256 startedAt*/ uint256 timestamp /*uint80 answeredInRound*/,
+
+        ) = registry.latestRoundData(base, quote);
 
         if (block.timestamp - timestamp > timestamp) revert MaxDeviationError();
 
