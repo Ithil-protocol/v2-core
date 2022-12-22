@@ -33,11 +33,6 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         _;
     }
 
-    modifier exists(address token) {
-        if (vaults[token] == address(0)) revert Vault_Missing();
-        _;
-    }
-
     function create(address token) external onlyOwner returns (address) {
         assert(vaults[token] == address(0));
 
@@ -51,11 +46,16 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         return vault;
     }
 
-    function setSpreadAndCap(address service, address token, uint256 spread, uint256 cap) external onlyOwner {
+    function setSpread(address service, address token, uint256 spread) external onlyOwner {
         riskParams[service][token].spread = spread;
+
+        emit SpreadWasSet(service, token, spread);
+    }
+
+    function setCap(address service, address token, uint256 cap) external onlyOwner {
         riskParams[service][token].cap = cap;
 
-        emit SpreadAndCapWasSet(service, token, spread, cap);
+        emit CapWasSet(service, token, cap);
     }
 
     function removeTokenFromService(address service, address token) external onlyOwner {
@@ -65,7 +65,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         emit TokenWasRemovedFromService(service, token);
     }
 
-    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override exists(token) {
+    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override onlyOwner {
         IVault(vaults[token]).setFeeUnlockTime(feeUnlockTime);
     }
 
@@ -77,7 +77,6 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function deposit(address token, uint256 amount, address receiver, address owner)
         external
         override
-        exists(token)
         supported(token)
         returns (uint256)
     {
@@ -97,7 +96,6 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function withdraw(address token, uint256 amount, address receiver, address owner)
         external
         override
-        exists(token)
         supported(token)
         returns (uint256)
     {
@@ -110,7 +108,6 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function borrow(address token, uint256 amount, address receiver)
         external
         override
-        exists(token)
         supported(token)
         returns (uint256, uint256)
     {
@@ -130,7 +127,6 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function repay(address token, uint256 amount, uint256 debt, address repayer)
         external
         override
-        exists(token)
         supported(token)
     {
         riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(debt);
@@ -141,7 +137,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function directMint(address token, address to, uint256 shares, uint256 maxAmountIn)
         external
         override
-        exists(token)
+        supported(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
@@ -154,7 +150,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
         external
         override
-        exists(token)
+        supported(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);

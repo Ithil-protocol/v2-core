@@ -30,9 +30,10 @@ abstract contract DebitService is Service {
         return amount.safeAdd(margin.safeMulDiv(riskSpread, interestRate + riskSpread));
     }
 
-    /// @dev This function is positive if and only if at least one of the quoted values
+    /// @dev This function defaults to positive if and only if at least one of the quoted values
     /// is less than liquidationThreshold
-    function liquidationScore(uint256 id) public view returns (uint256) {
+    /// @dev it MUST be such that a liquidable agreement has liquidationScore > 0
+    function liquidationScore(uint256 id) public view virtual returns (uint256) {
         Agreement memory agreement = agreements[id];
         (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
 

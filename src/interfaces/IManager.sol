@@ -5,7 +5,9 @@ pragma solidity =0.8.17;
 /// @author   Ithil
 /// @notice   Manages lending and borrowing from and to the ERC4626 vaults
 interface IManager {
-    event SpreadAndCapWasSet(address indexed service, address indexed token, uint256 spread, uint256 cap);
+    event SpreadWasSet(address indexed service, address indexed token, uint256 spread);
+
+    event CapWasSet(address indexed service, address indexed token, uint256 cap);
 
     event TokenWasRemovedFromService(address indexed service, address indexed token);
 

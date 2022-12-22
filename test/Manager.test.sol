@@ -64,8 +64,9 @@ contract ManagerTest is PRBTest, StdCheats {
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
         vanillaCreditService = new VanillaCreditService(manager, address(token));
-        manager.setSpreadAndCap(address(service), address(token), 1e15, 1e18);
-        manager.setSpreadAndCap(address(vanillaCreditService), address(token), 0, 1e18);
+        manager.setSpread(address(service), address(token), 1e15);
+        manager.setCap(address(service), address(token), 1e18);
+        manager.setCap(address(vanillaCreditService), address(token), 1e18);
     }
 
     function setUp() public {
