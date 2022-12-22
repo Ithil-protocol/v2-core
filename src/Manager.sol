@@ -124,11 +124,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer)
-        external
-        override
-        supported(token)
-    {
+    function repay(address token, uint256 amount, uint256 debt, address repayer) external override supported(token) {
         riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(debt);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
