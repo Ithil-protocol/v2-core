@@ -11,6 +11,24 @@ import { IVault } from "../src/interfaces/IVault.sol";
 import { Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 
+contract VanillaCreditService {
+    IManager internal immutable manager;
+    address internal immutable token;
+
+    constructor(IManager _manager, address _token) {
+        manager = _manager;
+        token = _token;
+    }
+
+    function deposit(uint256 amount) external {
+        manager.deposit(token, amount, address(this), msg.sender);
+    }
+
+    function withdraw(uint256 amount, address receiver, address owner) external {
+        manager.withdraw(token, amount, receiver, owner);
+    }
+}
+
 contract MockService {
     IManager internal immutable manager;
     address internal immutable token;
@@ -33,11 +51,11 @@ contract MockService {
 
 contract ManagerTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
-    using GeneralMath for int256;
 
     ERC20PresetMinterPauser internal immutable token;
     Manager internal immutable manager;
     MockService internal immutable service;
+    VanillaCreditService internal immutable vanillaCreditService;
     IVault internal immutable vault;
 
     constructor() {
@@ -45,7 +63,10 @@ contract ManagerTest is PRBTest, StdCheats {
         manager = new Manager(address(0));
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
-        manager.addService(address(service));
+        vanillaCreditService = new VanillaCreditService(manager, address(token));
+        manager.setSpread(address(service), address(token), 1e15);
+        manager.setCap(address(service), address(token), 1e18);
+        manager.setCap(address(vanillaCreditService), address(token), 1e18);
     }
 
     function setUp() public {
@@ -54,7 +75,7 @@ contract ManagerTest is PRBTest, StdCheats {
     }
 
     function _depositAndBorrow(uint256 amount) internal {
-        vault.deposit(amount, address(this));
+        vanillaCreditService.deposit(amount);
         service.pull(amount);
     }
 
@@ -79,10 +100,14 @@ contract ManagerTest is PRBTest, StdCheats {
 
     function testBorrow(uint256 deposited, uint256 borrowed) public {
         vm.assume(borrowed < deposited);
-        uint256 balanceBefore = token.balanceOf(address(this));
 
-        vault.deposit(deposited, address(this));
-        uint256 change = balanceBefore - token.balanceOf(address(this));
+        token.transfer(address(2), deposited);
+        uint256 balanceBefore = token.balanceOf(address(2));
+        vm.startPrank(address(2));
+        token.approve(address(vault), deposited);
+        vanillaCreditService.deposit(deposited);
+        vm.stopPrank();
+        uint256 change = balanceBefore - token.balanceOf(address(2));
         assertTrue(change == deposited);
 
         uint256 initialVaultBalance = token.balanceOf(address(vault));
@@ -105,16 +130,15 @@ contract ManagerTest is PRBTest, StdCheats {
         // deposited - borrowed + repaid <= type(uint256).max
         vm.assume(deposited - borrowed <= type(uint256).max - repaid);
 
-        vault.deposit(deposited, address(this));
+        token.approve(address(vanillaCreditService), deposited);
+        vanillaCreditService.deposit(deposited);
         service.pull(borrowed);
 
         token.transfer(address(service), repaid.positiveSub(borrowed));
         uint256 initialAssets = vault.totalAssets();
         uint256 netLoans = vault.netLoans();
         uint256 debtRepaid = debt.min(borrowed);
-
         service.push(repaid, debt);
-
         assertTrue(vault.netLoans() == netLoans - debtRepaid);
         assertTrue(vault.currentProfits() == repaid.positiveSub(debtRepaid));
         assertTrue(vault.currentLosses() == debtRepaid.positiveSub(repaid));
@@ -132,7 +156,8 @@ contract ManagerTest is PRBTest, StdCheats {
     function testFeesUnlockTime(uint256 amount, uint256 fees, uint256 timePast) public {
         vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - fees);
 
-        vault.deposit(amount, address(this));
+        token.approve(address(vanillaCreditService), amount);
+        vanillaCreditService.deposit(amount);
         service.pull(amount - 1);
         _repayWithProfit(amount - 1, fees);
 
@@ -151,7 +176,7 @@ contract ManagerTest is PRBTest, StdCheats {
         uint256 fees = 1e18;
         uint256 loss = 5e17;
         // This generates fees which are not yet unlocked
-        vault.deposit(amount, address(this));
+        vanillaCreditService.deposit(amount);
         service.pull(amount - 1);
         _repayWithProfit(amount - 1, fees);
 
@@ -168,7 +193,8 @@ contract ManagerTest is PRBTest, StdCheats {
 
     function testGenerateFeesWithNoLoans(uint256 amount) public {
         vm.assume(amount > 0);
-        vault.deposit(amount, address(this));
+        token.approve(address(vanillaCreditService), amount);
+        vanillaCreditService.deposit(amount);
 
         // Everything is free liquidity
         uint256 initialFreeLiquidity = vault.freeLiquidity();
@@ -203,7 +229,7 @@ contract ManagerTest is PRBTest, StdCheats {
         manager.setFeeUnlockTime(address(token), feeUnlockTime);
 
         // Set totalSupply by depositing
-        vault.deposit(totalSupply, address(this));
+        vanillaCreditService.deposit(totalSupply);
 
         // Set latestRepay
         vm.warp(latestRepay);
@@ -251,7 +277,7 @@ contract ManagerTest is PRBTest, StdCheats {
         manager.sweep(address(this), address(otherToken), address(vault));
         assertTrue(otherToken.balanceOf(address(this)) == value);
 
-        vault.deposit(value, address(this));
+        vanillaCreditService.deposit(value);
         vm.expectRevert();
         manager.sweep(address(vault), address(token), address(this));
     }

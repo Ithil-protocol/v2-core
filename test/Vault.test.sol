@@ -47,7 +47,7 @@ contract VaultTest is PRBTest, StdCheats {
 
     function testDeposit(uint256 amount) public {
         uint256 balanceBefore = token.balanceOf(address(this));
-        vault.deposit(amount, address(this));
+        vault.deposit(amount, address(this), address(this));
         assertTrue(vault.totalAssets() == amount);
         uint256 change = balanceBefore - token.balanceOf(address(this));
         assertTrue(change == amount);
@@ -56,7 +56,7 @@ contract VaultTest is PRBTest, StdCheats {
 
     function testWithdraw(uint256 amount) public {
         vm.assume(amount > 0);
-        vault.deposit(amount, address(this));
+        vault.deposit(amount, address(this), address(this));
 
         // withdraw on behalf of another user
         vm.prank(address(0));
@@ -72,7 +72,7 @@ contract VaultTest is PRBTest, StdCheats {
 
     function testRedeem(uint256 amount) public {
         vm.assume(amount > 0);
-        vault.mint(amount, address(this));
+        vault.mint(amount, address(this), address(this));
 
         // Cannot redeem everything, only one less than maximum
         vm.expectRevert(IVault.Insufficient_Liquidity.selector);
@@ -87,7 +87,7 @@ contract VaultTest is PRBTest, StdCheats {
 
     function testCannotWithdrawMoreThanFreeLiquidity(uint256 amount) public {
         vm.assume(amount > 0);
-        vault.deposit(amount, address(this));
+        vault.deposit(amount, address(this), address(this));
 
         // withdraw without leaving 1 token unit
         uint256 vaultBalance = token.balanceOf(address(vault));
@@ -97,7 +97,7 @@ contract VaultTest is PRBTest, StdCheats {
 
     function testCannotBorrowMoreThanFreeLiquidity(uint256 amount) public {
         vm.assume(amount > 0);
-        vault.deposit(amount, address(this));
+        vault.deposit(amount, address(this), address(this));
 
         uint256 vaultBalance = token.balanceOf(address(vault));
         vm.expectRevert(IVault.Insufficient_Free_Liquidity.selector);
@@ -114,14 +114,14 @@ contract VaultTest is PRBTest, StdCheats {
         token.transfer(address(1), amount1);
         vm.startPrank(address(1));
         token.approve(address(vault), amount1);
-        vault.deposit(amount1, address(1));
         vm.stopPrank();
+        vault.deposit(amount1, address(1), address(1));
 
         token.transfer(address(2), amount2);
         vm.startPrank(address(2));
         token.approve(address(vault), amount2);
-        vault.deposit(amount2, address(2));
         vm.stopPrank();
+        vault.deposit(amount2, address(2), address(2));
 
         uint256 investorShares = vault.balanceOf(address(2));
         uint256 initialMaximumWithdraw1 = vault.maxWithdraw(address(1));
