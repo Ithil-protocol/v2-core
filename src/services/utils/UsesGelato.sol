@@ -2,27 +2,21 @@
 pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ITaskTreasuryUpgradable } from "../interfaces/external/ITaskTreasuryUpgradable.sol";
-import { IGelatoOps } from "../interfaces/external/IGelatoOps.sol";
-import { Service } from "./Service.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IGelatoOps } from "../../interfaces/external/IGelatoOps.sol";
 
-abstract contract GelatoAutomatedService is Service {
+contract UsesGelato is Ownable {
     address public immutable weth;
     IGelatoOps public immutable ops;
-    ITaskTreasuryUpgradable public immutable gelatoTreasury;
     bytes32 public taskId;
 
     event NewGelatoTaskWasAdded(bytes32 indexed taskId);
-    event GelatoTreasuryRefill(uint256 amount);
     event GelatoTaskWasRemoved(bytes32 indexed taskId);
     event ExecutedByGelato(uint256 gelatoFee);
 
     constructor(address _weth, address _ops) {
         weth = _weth;
         ops = IGelatoOps(_ops);
-        gelatoTreasury = ops.taskTreasury();
-
-        IERC20(weth).approve(address(gelatoTreasury), type(uint256).max);
     }
 
     function createTask() external onlyOwner {
@@ -41,20 +35,13 @@ abstract contract GelatoAutomatedService is Service {
         emit NewGelatoTaskWasAdded(taskId);
     }
 
-    function cancelTask() external virtual onlyGuardian {
+    function cancelTask() external virtual onlyOwner {
         assert(taskId != bytes32(0)); // cannot cancel if not exitst
 
         ops.cancelTask(taskId);
         taskId = bytes32(0);
 
         emit GelatoTaskWasRemoved(taskId);
-    }
-
-    // TODO maybe this should be external
-    function payKeeper(uint256 amount) internal {
-        gelatoTreasury.depositFunds(address(this), weth, amount);
-
-        emit GelatoTreasuryRefill(amount);
     }
 
     /** 
