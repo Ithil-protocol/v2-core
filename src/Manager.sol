@@ -13,15 +13,9 @@ import { GeneralMath } from "./libraries/GeneralMath.sol";
 
 contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     using GeneralMath for uint256;
+
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-
-    struct RiskParams {
-        uint256 spread;
-        uint256 cap;
-        uint256 exposure;
-    }
-
     // service => token => RiskParams
     mapping(address => mapping(address => RiskParams)) public riskParams;
 
@@ -49,20 +43,13 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function setSpread(address service, address token, uint256 spread) external onlyOwner {
         riskParams[service][token].spread = spread;
 
-        emit SpreadWasSet(service, token, spread);
+        emit SpreadWasUpdated(service, token, spread);
     }
 
     function setCap(address service, address token, uint256 cap) external onlyOwner {
         riskParams[service][token].cap = cap;
 
-        emit CapWasSet(service, token, cap);
-    }
-
-    function removeTokenFromService(address service, address token) external onlyOwner {
-        assert(riskParams[service][token].cap > 0);
-        delete riskParams[service][token];
-
-        emit TokenWasRemovedFromService(service, token);
+        emit CapWasUpdated(service, token, cap);
     }
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override onlyOwner {

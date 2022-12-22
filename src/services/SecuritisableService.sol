@@ -7,7 +7,7 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 abstract contract SecuritisableService is DebitService {
     using GeneralMath for uint256;
 
-    event LenderWasChanged(uint256 indexed id, address indexed newLender);
+    event LenderWasUpdated(uint256 indexed id, address indexed newLender);
 
     /// @dev The lender is initialized only after purchase
     /// In this way, exiting can check lender to trigger a repay or transfer
@@ -30,7 +30,7 @@ abstract contract SecuritisableService is DebitService {
 
         lenders[id] = purchaser;
 
-        emit LenderWasChanged(id, purchaser);
+        emit LenderWasUpdated(id, purchaser);
     }
 
     /// @dev Particular service may override this

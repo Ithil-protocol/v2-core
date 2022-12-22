@@ -38,7 +38,7 @@ abstract contract DebitService is Service {
         (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
 
         uint256 score = 0;
-        for (uint256 index = 0; index < quotes.length; index++) {
+        for (uint256 index = quotes.length; index > 0 ; index--) {
             uint256 minimumQuote = liquidationThreshold(
                 agreement.loans[index].amount,
                 agreement.loans[index].margin,

@@ -47,7 +47,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert Fee_Unlock_Out_Of_Range();
         feeUnlockTime = _feeUnlockTime;
 
-        emit DegradationCoefficientWasChanged(feeUnlockTime);
+        emit DegradationCoefficientWasUpdated(feeUnlockTime);
     }
 
     function sweep(address to, address token) external onlyOwner {

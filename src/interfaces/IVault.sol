@@ -37,7 +37,7 @@ interface IVault is IERC4626 {
     function directBurn(uint256 shares, address owner) external returns (uint256);
 
     // Events
-    event DegradationCoefficientWasChanged(uint256 degradationCoefficient);
+    event DegradationCoefficientWasUpdated(uint256 degradationCoefficient);
     event Deposited(address indexed user, address indexed receiver, uint256 assets, uint256 shares);
     event Withdrawn(
         address indexed caller,

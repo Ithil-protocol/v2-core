@@ -9,6 +9,8 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 contract AuctionRateModel {
     using GeneralMath for uint256;
 
+    error Interest_Rate_Overflow();
+
     /**
      * @dev gas saving trick
      * latest is a timestamp and base < GeneralMath.RESOLUTION, they all fit in uint256
@@ -18,8 +20,9 @@ contract AuctionRateModel {
     uint256 public immutable halvingTime;
 
     constructor(uint256 _halvingTime, uint256 _initialRate) {
-        assert(_initialRate < GeneralMath.RESOLUTION);
         assert(_halvingTime > 0);
+        assert(_initialRate < GeneralMath.RESOLUTION);
+
         halvingTime = _halvingTime;
         baseAndLatest = GeneralMath.packInUint(block.timestamp, _initialRate);
     }
@@ -44,6 +47,4 @@ contract AuctionRateModel {
 
         return newBase;
     }
-
-    error Interest_Rate_Overflow();
 }
