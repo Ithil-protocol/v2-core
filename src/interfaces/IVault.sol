@@ -24,6 +24,10 @@ interface IVault is IERC4626 {
 
     function sweep(address to, address token) external;
 
+    function deposit(uint256 assets, address receiver, address owner) external returns (uint256);
+
+    function mint(uint256 shares, address receiver, address owner) external returns (uint256);
+
     function borrow(uint256 assets, address receiver) external returns (uint256, uint256);
 
     function repay(uint256 assets, uint256 debt, address repayer) external;

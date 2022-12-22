@@ -81,12 +81,45 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return freeLiquidity().min(super.maxWithdraw(owner));
     }
 
+    error Not_Implemented();
+
+    /** @dev See {IERC4626-deposit}. */
+    function deposit(uint256 assets, address receiver, address owner) public onlyOwner returns (uint256) {
+        require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
+
+        uint256 shares = previewDeposit(assets);
+        _deposit(owner, receiver, assets, shares);
+
+        return shares;
+    }
+
+    /** @dev See {IERC4626-mint}. */
+    function mint(uint256 shares, address receiver, address owner) public onlyOwner returns (uint256) {
+        require(shares <= maxMint(receiver), "ERC4626: mint more than max");
+
+        uint256 assets = previewMint(shares);
+        _deposit(owner, receiver, assets, shares);
+
+        return assets;
+    }
+
+    /** @dev See {IERC4626-deposit}. */
+    function deposit(uint256 assets, address receiver) public virtual override(ERC4626, IERC4626) returns (uint256) {
+        revert Not_Implemented();
+    }
+
+    /** @dev See {IERC4626-mint}. */
+    function mint(uint256 shares, address receiver) public virtual override(ERC4626, IERC4626) returns (uint256) {
+        revert Not_Implemented();
+    }
+
     // Throws 'ERC20: transfer amount exceeds balance
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner
     function withdraw(uint256 assets, address receiver, address owner)
         public
         override(ERC4626, IERC4626)
+        onlyOwner
         returns (uint256)
     {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
@@ -104,6 +137,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     function redeem(uint256 shares, address receiver, address owner)
         public
         override(ERC4626, IERC4626)
+        onlyOwner
         returns (uint256)
     {
         uint256 freeLiq = freeLiquidity();

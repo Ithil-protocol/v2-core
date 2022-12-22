@@ -16,15 +16,20 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
 
-    // service => token => spreadAndCap (packed), if 0 then it is not supported
-    mapping(address => mapping(address => uint256)) public spreadAndCaps;
-    mapping(address => mapping(address => uint256)) public exposures;
+    struct RiskParams {
+        uint256 spread;
+        uint256 cap;
+        uint256 exposure;
+    }
+
+    // service => token => RiskParams
+    mapping(address => mapping(address => RiskParams)) public riskParams;
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address weth) ETHWrapper(weth) {}
 
     modifier supported(address token) {
-        if (spreadAndCaps[msg.sender][token] == 0) revert Restricted_To_Whitelisted_Services();
+        if (riskParams[msg.sender][token].cap == 0) revert Restricted_To_Whitelisted_Services();
         _;
     }
 
@@ -47,14 +52,15 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     }
 
     function setSpreadAndCap(address service, address token, uint256 spread, uint256 cap) external onlyOwner {
-        spreadAndCaps[service][token] = GeneralMath.packInUint(spread, cap);
+        riskParams[service][token].spread = spread;
+        riskParams[service][token].cap = cap;
 
         emit SpreadAndCapWasSet(service, token, spread, cap);
     }
 
     function removeTokenFromService(address service, address token) external onlyOwner {
-        assert(spreadAndCaps[service][token] > 0);
-        delete spreadAndCaps[service][token];
+        assert(riskParams[service][token].cap > 0);
+        delete riskParams[service][token];
 
         emit TokenWasRemovedFromService(service, token);
     }
@@ -68,19 +74,19 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     }
 
     /// @inheritdoc IManager
-    function deposit(address token, uint256 amount, address receiver)
+    function deposit(address token, uint256 amount, address receiver, address owner)
         external
         override
         exists(token)
         supported(token)
         returns (uint256)
     {
-        (, uint256 investmentCap) = spreadAndCaps[msg.sender][token].unpackUint();
-        uint256 shares = IVault(vaults[token]).deposit(amount, receiver);
-        uint256 currentExposures = exposures[msg.sender][token].safeAdd(shares);
-        exposures[msg.sender][token] = currentExposures;
+        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 shares = IVault(vaults[token]).deposit(amount, receiver, owner);
+        uint256 currentExposure = riskParams[msg.sender][token].exposure + shares;
+        riskParams[msg.sender][token].exposure = currentExposure;
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
-            currentExposures,
+            currentExposure,
             IVault(vaults[token]).totalSupply()
         );
         if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
@@ -96,7 +102,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         returns (uint256)
     {
         uint256 shares = IVault(vaults[token]).withdraw(amount, receiver, owner);
-        exposures[msg.sender][token] = exposures[msg.sender][token].positiveSub(shares);
+        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(shares);
         return shares;
     }
 
@@ -108,12 +114,12 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         supported(token)
         returns (uint256, uint256)
     {
-        uint256 currentExposures = exposures[msg.sender][token].safeAdd(amount);
-        exposures[msg.sender][token] = currentExposures;
-        (, uint256 investmentCap) = spreadAndCaps[msg.sender][token].unpackUint();
+        uint256 currentExposure = riskParams[msg.sender][token].exposure + amount;
+        riskParams[msg.sender][token].exposure = currentExposure;
+        uint256 investmentCap = riskParams[msg.sender][token].cap;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
-            currentExposures,
+            currentExposure,
             freeLiquidity.safeAdd(netLoans - amount)
         );
         if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
@@ -127,7 +133,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         exists(token)
         supported(token)
     {
-        exposures[msg.sender][token] = exposures[msg.sender][token].positiveSub(debt);
+        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(debt);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 
