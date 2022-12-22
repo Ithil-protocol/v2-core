@@ -9,22 +9,21 @@ import { Multicall } from "./utils/Multicall.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
+import { GeneralMath } from "./libraries/GeneralMath.sol";
 
 contract Manager is IManager, Ownable, ETHWrapper, Multicall {
+    using GeneralMath for uint256;
+
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    mapping(address => bool) public services;
+    // service => token => RiskParams
+    mapping(address => mapping(address => RiskParams)) public riskParams;
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address weth) ETHWrapper(weth) {}
 
-    modifier onlyServices() {
-        if (!services[msg.sender]) revert Restricted_To_Whitelisted_Services();
-        _;
-    }
-
-    modifier exists(address token) {
-        if (vaults[token] == address(0)) revert Vault_Missing();
+    modifier supported(address token) {
+        if (riskParams[msg.sender][token].cap == 0) revert Restricted_To_Whitelisted_Services();
         _;
     }
 
@@ -41,20 +40,19 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
         return vault;
     }
 
-    function addService(address service) external onlyOwner {
-        services[service] = true;
+    function setSpread(address service, address token, uint256 spread) external onlyOwner {
+        riskParams[service][token].spread = spread;
 
-        emit ServiceWasAdded(service);
+        emit SpreadWasUpdated(service, token, spread);
     }
 
-    function removeService(address service) external onlyOwner {
-        assert(services[service]);
-        delete services[service];
+    function setCap(address service, address token, uint256 cap) external onlyOwner {
+        riskParams[service][token].cap = cap;
 
-        emit ServiceWasRemoved(service);
+        emit CapWasUpdated(service, token, cap);
     }
 
-    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override exists(token) {
+    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override onlyOwner {
         IVault(vaults[token]).setFeeUnlockTime(feeUnlockTime);
     }
 
@@ -63,23 +61,58 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, address receiver)
+    function deposit(address token, uint256 amount, address receiver, address owner)
         external
         override
-        exists(token)
-        onlyServices
-        returns (uint256, uint256)
+        supported(token)
+        returns (uint256)
     {
-        return IVault(vaults[token]).borrow(amount, receiver);
+        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 shares = IVault(vaults[token]).deposit(amount, receiver, owner);
+        uint256 currentExposure = riskParams[msg.sender][token].exposure + shares;
+        riskParams[msg.sender][token].exposure = currentExposure;
+        uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
+            currentExposure,
+            IVault(vaults[token]).totalSupply()
+        );
+        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        return shares;
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer)
+    function withdraw(address token, uint256 amount, address receiver, address owner)
         external
         override
-        exists(token)
-        onlyServices
+        supported(token)
+        returns (uint256)
     {
+        uint256 shares = IVault(vaults[token]).withdraw(amount, receiver, owner);
+        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(shares);
+        return shares;
+    }
+
+    /// @inheritdoc IManager
+    function borrow(address token, uint256 amount, address receiver)
+        external
+        override
+        supported(token)
+        returns (uint256, uint256)
+    {
+        uint256 currentExposure = riskParams[msg.sender][token].exposure + amount;
+        riskParams[msg.sender][token].exposure = currentExposure;
+        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
+        uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
+            currentExposure,
+            freeLiquidity.safeAdd(netLoans - amount)
+        );
+        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        return (freeLiquidity, netLoans);
+    }
+
+    /// @inheritdoc IManager
+    function repay(address token, uint256 amount, uint256 debt, address repayer) external override supported(token) {
+        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(debt);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 
@@ -87,7 +120,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function directMint(address token, address to, uint256 shares, uint256 maxAmountIn)
         external
         override
-        exists(token)
+        supported(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
@@ -100,7 +133,7 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
         external
         override
-        exists(token)
+        supported(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);

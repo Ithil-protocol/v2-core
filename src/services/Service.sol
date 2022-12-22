@@ -15,6 +15,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     struct Loan {
         address token;
         uint256 amount;
+        uint256 margin;
         uint256 interestAndSpread;
     }
 

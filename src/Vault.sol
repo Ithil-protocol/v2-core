@@ -47,7 +47,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert Fee_Unlock_Out_Of_Range();
         feeUnlockTime = _feeUnlockTime;
 
-        emit DegradationCoefficientWasChanged(feeUnlockTime);
+        emit DegradationCoefficientWasUpdated(feeUnlockTime);
     }
 
     function sweep(address to, address token) external onlyOwner {
@@ -72,13 +72,33 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Locked profits are locked for every operation
     // We do not consider negative profits since they are not true liquidity
     function freeLiquidity() public view override returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this)).positiveSub(_calculateLockedProfits());
+        return super.totalAssets() - _calculateLockedProfits();
     }
 
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
         return freeLiquidity().min(super.maxWithdraw(owner));
+    }
+
+    /** @dev See {IERC4626-deposit}. */
+    function deposit(uint256 assets, address receiver, address owner) public returns (uint256) {
+        require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
+
+        uint256 shares = previewDeposit(assets);
+        _deposit(owner, receiver, assets, shares);
+
+        return shares;
+    }
+
+    /** @dev See {IERC4626-mint}. */
+    function mint(uint256 shares, address receiver, address owner) public returns (uint256) {
+        require(shares <= maxMint(receiver), "ERC4626: mint more than max");
+
+        uint256 assets = previewMint(shares);
+        _deposit(owner, receiver, assets, shares);
+
+        return assets;
     }
 
     // Throws 'ERC20: transfer amount exceeds balance
