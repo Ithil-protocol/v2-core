@@ -282,5 +282,4 @@ contract ManagerTest is PRBTest, StdCheats {
         vm.expectRevert();
         manager.sweep(address(vault), address(token), address(this));
     }
-
 }
