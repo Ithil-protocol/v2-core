@@ -56,4 +56,5 @@ interface IVault is IERC4626 {
     error Insufficient_Free_Liquidity();
     error Supply_Burned();
     error Fee_Unlock_Out_Of_Range();
+    error Not_Owner();
 }

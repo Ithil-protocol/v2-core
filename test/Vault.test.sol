@@ -12,6 +12,25 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
 /// @dev Run Forge with `-vvvv` to see console logs.
 /// https://book.getfoundry.sh/forge/writing-tests
+
+/// @dev Vault native state:
+/// - Native:
+/// address public immutable manager;
+/// uint256 public immutable override creationTime;
+/// uint256 public override feeUnlockTime;
+/// uint256 public override netLoans;
+/// uint256 public override latestRepay;
+/// uint256 public override currentProfits;
+/// uint256 public override currentLosses;
+
+/// @dev Vault ERC4626 state
+/// - Vault is ERC4626: totalSupply(), balanceOf(address(this)), balanceOf(msg.sender),
+/// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
+
+/// @dev Vault underlying ERC20 state
+/// - ERC4626 -> constructor(IERC20 asset_): totalSupply(), balanceOf(address(this)), balanceOf(msg.sender),
+/// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
+
 contract VaultTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
     using GeneralMath for int256;
@@ -19,9 +38,12 @@ contract VaultTest is PRBTest, StdCheats {
     Vault internal immutable vault;
     ERC20PresetMinterPauser internal immutable token;
 
+    address internal immutable tokenSink;
+
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
         vault = new Vault(IERC20Metadata(address(token)));
+        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
     }
 
     function setUp() public {
@@ -30,13 +52,27 @@ contract VaultTest is PRBTest, StdCheats {
     }
 
     function testBase() public {
+        // Native state
+        assertTrue(vault.manager() == address(this));
+        assertTrue(vault.creationTime() == block.timestamp);
+        assertTrue(vault.feeUnlockTime() == 21600);
+        assertTrue(vault.latestRepay() == 0);
+        assertTrue(vault.netLoans() == 0);
+        assertTrue(vault.currentProfits() == 0);
+        assertTrue(vault.currentLosses() == 0);
+
+        // ERC4626 state
+        assertTrue(vault.totalSupply() == 0);
+        assertTrue(vault.balanceOf(address(this)) == 0);
+        assertTrue(vault.balanceOf(msg.sender) == 0);
         assertTrue(keccak256(bytes(vault.name())) == keccak256(bytes("Ithil test")));
         assertTrue(keccak256(bytes(vault.symbol())) == keccak256(bytes("iTEST")));
         assertTrue(vault.asset() == address(token));
         assertTrue(vault.decimals() == token.decimals());
-        assertTrue(vault.creationTime() == block.timestamp);
-        assertTrue(vault.netLoans() == 0);
-        assertTrue(vault.currentProfits() == 0);
+
+        // Underlying ERC20 state
+        assertTrue(token.balanceOf(address(vault)) == 0);
+        assertTrue(token.balanceOf(address(this)) == type(uint256).max);
     }
 
     function testAccess() public {

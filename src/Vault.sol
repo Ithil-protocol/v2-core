@@ -33,7 +33,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     modifier onlyOwner() {
-        assert(manager == msg.sender);
+        if (manager != msg.sender) revert Not_Owner();
         _;
     }
 
@@ -127,8 +127,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         returns (uint256)
     {
         uint256 freeLiq = freeLiquidity();
-        uint256 assets = super.redeem(shares, receiver, owner);
+        uint256 assets = previewRedeem(shares);
         if (assets >= freeLiq) revert Insufficient_Liquidity();
+        super.redeem(shares, receiver, owner);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
 
