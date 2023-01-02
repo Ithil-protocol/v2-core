@@ -479,6 +479,10 @@ contract VaultTest is PRBTest, StdCheats {
         // 30 billion years and not going backwards in time
         vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
         vm.warp(newTimestamp);
+        uint256 lockedProfits = currentProfits.safeMulDiv(
+            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
+            feeUnlockTime
+        );
         uint256 lockedLosses = currentLosses.safeMulDiv(
             feeUnlockTime.positiveSub(newTimestamp - latestRepay),
             feeUnlockTime
@@ -497,8 +501,159 @@ contract VaultTest is PRBTest, StdCheats {
             balanceOf,
             netLoans,
             newTimestamp,
-            currentProfits,
+            lockedProfits,
             lockedLosses + increasedAssets
+        );
+    }
+
+    function testDirectBurn(
+        uint256 feeUnlockTime,
+        uint256 totalSupply,
+        uint256 balanceOf,
+        uint256 netLoans,
+        uint256 latestRepay,
+        uint256 currentProfits,
+        uint256 currentLosses,
+        uint256 burned,
+        uint256 newTimestamp
+    ) public {
+        // 30 billion years and not going backwards in time
+        vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
+        _setupArbitraryState(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
+        uint256 initialShares = vault.balanceOf(anyAddress);
+        if(burned > initialShares) burned = initialShares;
+
+        vm.warp(newTimestamp);
+        uint256 lockedProfits = currentProfits.safeMulDiv(
+            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
+            feeUnlockTime
+        );
+        uint256 lockedLosses = currentLosses.safeMulDiv(
+            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
+            feeUnlockTime
+        );
+        // Necessary to avoid overflow
+        vm.startPrank(anyAddress);
+        vault.approve(address(this), burned);
+        vm.stopPrank();
+        uint256 increasedAssets = vault.directBurn(burned, anyAddress);
+        assertTrue(vault.balanceOf(anyAddress) == initialShares - burned);
+
+        _nativeStateCheck(
+            feeUnlockTime,
+            totalSupply - burned,
+            balanceOf,
+            netLoans,
+            newTimestamp,
+            lockedProfits + increasedAssets,
+            lockedLosses
+        );
+    }
+
+    function testBorrow(
+        uint256 feeUnlockTime,
+        uint256 totalSupply,
+        uint256 balanceOf,
+        uint256 netLoans,
+        uint256 latestRepay,
+        uint256 currentProfits,
+        uint256 currentLosses,
+        uint256 borrowed
+    ) public {
+        _setupArbitraryState(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
+
+        vm.assume(borrowed < vault.freeLiquidity());
+        uint256 initialBalance = token.balanceOf(receiver);
+        vault.borrow(borrowed, receiver);
+        
+        assertTrue(token.balanceOf(receiver) == initialBalance + borrowed);
+
+        _nativeStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf - borrowed,
+            netLoans + borrowed,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
+    }
+ 
+    function testRepay(
+        uint256 feeUnlockTime,
+        uint256 totalSupply,
+        uint256 balanceOf,
+        uint256 netLoans,
+        uint256 latestRepay,
+        uint256 currentProfits,
+        uint256 currentLosses,
+        uint256 newTimestamp,
+        uint256 debt,
+        uint256 repaid
+    ) public {
+        // 30 billion years and not going backwards in time
+        vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
+        _setupArbitraryState(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
+
+        vm.warp(newTimestamp);
+        uint256 lockedProfits = currentProfits.safeMulDiv(
+            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
+            feeUnlockTime
+        );
+        uint256 lockedLosses = currentLosses.safeMulDiv(
+            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
+            feeUnlockTime
+        );
+
+        if(repaid > token.balanceOf(repayer)){
+            vm.assume(repaid - token.balanceOf(repayer) <= token.balanceOf(tokenSink));
+            vm.startPrank(tokenSink);
+            token.transfer(repayer, repaid - token.balanceOf(repayer));
+            vm.stopPrank();
+        }
+        if(debt > netLoans) debt = netLoans;
+        vm.startPrank(repayer);
+        token.approve(address(vault), repaid);
+        vm.stopPrank();
+        vault.repay(repaid, debt, repayer);
+        
+        uint256 newProfits;
+        uint256 newLosses;
+        if(debt > repaid) newLosses = debt - repaid;
+        else newProfits = repaid - debt;
+
+        _nativeStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf + repaid,
+            netLoans - debt,
+            newTimestamp,
+            lockedProfits + newProfits,
+            lockedLosses + newLosses
         );
     }
 }
