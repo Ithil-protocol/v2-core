@@ -216,7 +216,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         netLoans -= debt;
 
         // Since assets are transferred, this is always less than totalSupply() so no overflow
-        if (assets > debt){
+        if (assets > debt) {
             currentProfits = _calculateLockedProfits() + (assets - debt);
             currentLosses = _calculateLockedLosses();
         }

@@ -529,7 +529,7 @@ contract VaultTest is PRBTest, StdCheats {
             currentLosses
         );
         uint256 initialShares = vault.balanceOf(anyAddress);
-        if(burned > initialShares) burned = initialShares;
+        if (burned > initialShares) burned = initialShares;
 
         vm.warp(newTimestamp);
         uint256 lockedProfits = currentProfits.safeMulDiv(
@@ -581,7 +581,7 @@ contract VaultTest is PRBTest, StdCheats {
         vm.assume(borrowed < vault.freeLiquidity());
         uint256 initialBalance = token.balanceOf(receiver);
         vault.borrow(borrowed, receiver);
-        
+
         assertTrue(token.balanceOf(receiver) == initialBalance + borrowed);
 
         _nativeStateCheck(
@@ -594,7 +594,7 @@ contract VaultTest is PRBTest, StdCheats {
             currentLosses
         );
     }
- 
+
     function testRepay(
         uint256 feeUnlockTime,
         uint256 totalSupply,
@@ -629,21 +629,21 @@ contract VaultTest is PRBTest, StdCheats {
             feeUnlockTime
         );
 
-        if(repaid > token.balanceOf(repayer)){
+        if (repaid > token.balanceOf(repayer)) {
             vm.assume(repaid - token.balanceOf(repayer) <= token.balanceOf(tokenSink));
             vm.startPrank(tokenSink);
             token.transfer(repayer, repaid - token.balanceOf(repayer));
             vm.stopPrank();
         }
-        if(debt > netLoans) debt = netLoans;
+        if (debt > netLoans) debt = netLoans;
         vm.startPrank(repayer);
         token.approve(address(vault), repaid);
         vm.stopPrank();
         vault.repay(repaid, debt, repayer);
-        
+
         uint256 newProfits;
         uint256 newLosses;
-        if(debt > repaid) newLosses = debt - repaid;
+        if (debt > repaid) newLosses = debt - repaid;
         else newProfits = repaid - debt;
 
         _nativeStateCheck(
