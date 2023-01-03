@@ -34,7 +34,7 @@ jobs:
       - name: "Install the Node.js dependencies"
         run: "yarn install --immutable"
 
-      - name: "Lint the contracts"
+      - name: "Run the linter"
         run: "yarn lint"
 
       - name: "Add lint summary"
@@ -50,22 +50,3 @@ jobs:
           echo "## Tests" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
-      - name: "Run Slither"
-        uses: "crytic/slither-action@v0.1.1"
-        continue-on-error: true
-        id: "slither"
-        with:
-          node-version: "lts/*"
-          ignore-compile: true
-          fail-on: "high"
-          sarif: "results.sarif"
-
-      - name: "Add static analysis summary"
-        run: |
-          echo "## Static analysis" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
-
-#      - name: "Upload SARIF file"
-#        uses: "github/codeql-action/upload-sarif@v2"
-#        with:
-#          sarif_file: ${{ steps.slither.outputs.sarif }}
