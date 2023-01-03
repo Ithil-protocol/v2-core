@@ -4,6 +4,9 @@ env:
   FOUNDRY_PROFILE: "ci"
 
 on:
+  pull_request:
+    branches:
+      - "master"
   push:
     branches: [master]
   workflow_dispatch:
@@ -16,7 +19,7 @@ jobs:
         contracts:
           - Vault
           - Manager
-  
+
     steps:
       - name: "Check out the repo"
         uses: "actions/checkout@v3"
@@ -52,10 +55,10 @@ jobs:
           echo "## Static analysis" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
-#      - name: "Upload SARIF file"
-#        uses: "github/codeql-action/upload-sarif@v2"
-#        with:
-#          sarif_file: ${{ steps.slither.outputs.sarif }}
+      #      - name: "Upload SARIF file"
+      #        uses: "github/codeql-action/upload-sarif@v2"
+      #        with:
+      #          sarif_file: ${{ steps.slither.outputs.sarif }}
 
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
