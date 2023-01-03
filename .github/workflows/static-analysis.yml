@@ -66,8 +66,5 @@ jobs:
       - name: Install mythril
         run: pip3 install mythril
 
-      - name: Run mythril
-        run: python3 install mythril
-
       - name: Analyse
         run: myth analyze src/*.sol --solc-json mythril.config.json --execution-timeout 90 
