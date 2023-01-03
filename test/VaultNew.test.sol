@@ -131,9 +131,9 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 latestRepay,
         uint256 currentProfits,
         uint256 currentLosses
-    ) internal {
-        // Set fee unlock time
-        vm.assume(feeUnlockTime > 30 && feeUnlockTime < 7 days);
+    ) internal returns (uint256, uint256) {
+        // Force fee unlock time to be within range
+        feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         vault.setFeeUnlockTime(feeUnlockTime);
 
         // Set totalSupply by depositing
@@ -148,7 +148,7 @@ contract VaultTest is PRBTest, StdCheats {
         vault.repay(0, 0, repayer);
 
         // Set currentProfits (assume this otherwise there are no tokens available)
-        vm.assume(currentProfits <= token.totalSupply() - totalSupply);
+        currentProfits = GeneralMath.min(currentProfits, token.totalSupply() - totalSupply);
         vm.prank(tokenSink);
         token.transfer(repayer, currentProfits);
         vm.prank(repayer);
@@ -173,6 +173,7 @@ contract VaultTest is PRBTest, StdCheats {
         token.transfer(address(vault), balanceOf - initialBalance);
 
         _nativeStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        return (feeUnlockTime, currentProfits);
     }
 
     function testFeeUnlockTime(
@@ -185,7 +186,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 feeUnlockTimeSet
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -216,7 +217,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 spuriousAmount
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -247,7 +248,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 deposited
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -301,7 +302,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 minted
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -360,7 +361,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 withdrawn
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -412,7 +413,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 redeemed
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -466,7 +467,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 minted,
         uint256 newTimestamp
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -519,7 +520,7 @@ contract VaultTest is PRBTest, StdCheats {
     ) public {
         // 30 billion years and not going backwards in time
         vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -568,7 +569,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentLosses,
         uint256 borrowed
     ) public {
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -609,7 +610,7 @@ contract VaultTest is PRBTest, StdCheats {
     ) public {
         // 30 billion years and not going backwards in time
         vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
-        _setupArbitraryState(
+        (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
