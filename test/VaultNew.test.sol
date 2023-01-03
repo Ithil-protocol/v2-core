@@ -465,7 +465,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentProfits,
         uint256 currentLosses,
         uint256 minted,
-        uint256 newTimestamp
+        uint256 timePast
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
@@ -477,8 +477,7 @@ contract VaultTest is PRBTest, StdCheats {
             currentLosses
         );
 
-        // 30 billion years and not going backwards in time
-        vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
+        uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
         uint256 lockedProfits = currentProfits.safeMulDiv(
             feeUnlockTime.positiveSub(newTimestamp - latestRepay),
@@ -489,7 +488,7 @@ contract VaultTest is PRBTest, StdCheats {
             feeUnlockTime
         );
         // Necessary to avoid overflow
-        vm.assume(minted <= type(uint256).max - vault.totalSupply());
+        minted = minted.safeAdd(vault.totalSupply()) - vault.totalSupply();
         if (vault.totalAssets() > 0 && vault.totalSupply() > 0)
             vm.assume(minted / vault.totalSupply() < (type(uint256).max / vault.totalAssets()));
         uint256 initialShares = vault.balanceOf(anyAddress);
@@ -516,10 +515,8 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 currentProfits,
         uint256 currentLosses,
         uint256 burned,
-        uint256 newTimestamp
+        uint256 timePast
     ) public {
-        // 30 billion years and not going backwards in time
-        vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
@@ -532,6 +529,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 initialShares = vault.balanceOf(anyAddress);
         if (burned > initialShares) burned = initialShares;
 
+        uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
         uint256 lockedProfits = currentProfits.safeMulDiv(
             feeUnlockTime.positiveSub(newTimestamp - latestRepay),
@@ -604,12 +602,10 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 latestRepay,
         uint256 currentProfits,
         uint256 currentLosses,
-        uint256 newTimestamp,
+        uint256 timePast,
         uint256 debt,
         uint256 repaid
     ) public {
-        // 30 billion years and not going backwards in time
-        vm.assume(newTimestamp <= 1e18 && newTimestamp >= latestRepay);
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
@@ -620,6 +616,7 @@ contract VaultTest is PRBTest, StdCheats {
             currentLosses
         );
 
+        uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
         uint256 lockedProfits = currentProfits.safeMulDiv(
             feeUnlockTime.positiveSub(newTimestamp - latestRepay),
@@ -642,19 +639,14 @@ contract VaultTest is PRBTest, StdCheats {
         vm.stopPrank();
         vault.repay(repaid, debt, repayer);
 
-        uint256 newProfits;
-        uint256 newLosses;
-        if (debt > repaid) newLosses = debt - repaid;
-        else newProfits = repaid - debt;
-
         _nativeStateCheck(
             feeUnlockTime,
             totalSupply,
             balanceOf + repaid,
             netLoans - debt,
             newTimestamp,
-            lockedProfits + newProfits,
-            lockedLosses + newLosses
+            lockedProfits + (debt < repaid ? repaid - debt : 0),
+            lockedLosses + (debt > repaid ? debt - repaid : 0)
         );
     }
 }
