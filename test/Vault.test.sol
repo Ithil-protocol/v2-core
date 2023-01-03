@@ -649,7 +649,7 @@ contract VaultTest is PRBTest, StdCheats {
             lockedLosses + (debt > repaid ? debt - repaid : 0)
         );
     }
-    
+
     function testCannotWithdrawMoreThanFreeLiquidity(uint256 amount) public {
         vm.prank(tokenSink);
         token.approve(address(vault), amount);
