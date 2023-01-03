@@ -14,12 +14,7 @@ on:
 jobs:
   ci:
     runs-on: "ubuntu-latest"
-    strategy:
-      matrix:
-        contracts:
-          - Vault
-          - Manager
-
+  
     steps:
       - name: "Check out the repo"
         uses: "actions/checkout@v3"
@@ -74,6 +69,5 @@ jobs:
       - name: Run mythril
         run: python3 install mythril
 
-      - name: Analyse ${{ matrix.testName }}
-        if: always()
-        run: myth analyze src/${{ matrix.testName }} --solc-json mythril.config.json
+      - name: Analyse
+        run: myth analyze src/*.sol --solc-json mythril.config.json --execution-timeout 90 
