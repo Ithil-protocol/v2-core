@@ -101,6 +101,7 @@ contract ManagerTest is PRBTest, StdCheats {
     function testBorrow(uint256 deposited, uint256 borrowed) public {
         vm.assume(borrowed < deposited);
 
+        uint256 initialNetLoans = vault.netLoans();
         token.transfer(address(2), deposited);
         uint256 balanceBefore = token.balanceOf(address(2));
         vm.startPrank(address(2));
@@ -115,7 +116,7 @@ contract ManagerTest is PRBTest, StdCheats {
 
         service.pull(borrowed);
         // Net loans increased
-        assertTrue(vault.netLoans() == borrowed);
+        assertTrue(vault.netLoans() == initialNetLoans + borrowed);
         // Vault balance decreased
         assertTrue(initialVaultBalance - token.balanceOf(address(vault)) == borrowed);
         // Vault assets stay constant

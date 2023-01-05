@@ -33,7 +33,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     modifier onlyOwner() {
-        assert(manager == msg.sender);
+        if (manager != msg.sender) revert Not_Owner();
         _;
     }
 
@@ -127,8 +127,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         returns (uint256)
     {
         uint256 freeLiq = freeLiquidity();
-        uint256 assets = super.redeem(shares, receiver, owner);
+        uint256 assets = previewRedeem(shares);
         if (assets >= freeLiq) revert Insufficient_Liquidity();
+        super.redeem(shares, receiver, owner);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
 
@@ -147,6 +148,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 increasedAssets = convertToAssets(shares);
         _mint(receiver, shares);
 
+        currentProfits = _calculateLockedProfits();
         currentLosses = _calculateLockedLosses() + increasedAssets;
         latestRepay = block.timestamp;
 
@@ -175,6 +177,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Since this is onlyOwner we are not worried about reentrancy
         // So we can modify the state here
         currentProfits = _calculateLockedProfits() + distributedAssets;
+        currentLosses = _calculateLockedLosses();
         latestRepay = block.timestamp;
 
         emit DirectBurn(owner, shares, distributedAssets);
@@ -213,10 +216,15 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         netLoans -= debt;
 
         // Since assets are transferred, this is always less than totalSupply() so no overflow
-        if (assets > debt)
+        if (assets > debt) {
             currentProfits = _calculateLockedProfits() + (assets - debt);
-            // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
-        else currentLosses = _calculateLockedLosses() + (debt - assets);
+            currentLosses = _calculateLockedLosses();
+        }
+        // Since debt was transferred from vault, this is always less than totalSupply() so no overflow
+        else {
+            currentProfits = _calculateLockedProfits();
+            currentLosses = _calculateLockedLosses() + (debt - assets);
+        }
         latestRepay = block.timestamp;
 
         // the vault is not responsible for any payoff
