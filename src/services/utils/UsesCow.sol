@@ -4,7 +4,7 @@ pragma solidity =0.8.17;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import { ICoWSwapSettlement } from "../../interfaces/external/ICowSwapSettlement.sol";
+import { ICoWSwapSettlement } from "../../interfaces/external/ICoWSwapSettlement.sol";
 import { ICoWSwapOnchainOrders } from "../../interfaces/external/ICoWSwapOnchainOrders.sol";
 import { GPv2Order } from "../../libraries/GPv2Order.sol";
 import { CoWSwapEip712 } from "../../libraries/CoWSwapEip712.sol";
