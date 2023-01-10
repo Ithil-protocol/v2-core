@@ -38,8 +38,13 @@ contract UsesChainlink is Ownable {
 
         ) = registry.latestRoundData(base, quote);
 
-        if (block.timestamp - timestamp > timestamp) revert MaxDeviationError();
+        if (block.timestamp - timestamp > timestamp) _priceFallback(base, quote);
 
         return price;
+    }
+
+    /// @dev can be overridden to implement custom logic
+    function _priceFallback(address base, address quote) internal view returns (int256) {
+        revert MaxDeviationError();
     }
 }
