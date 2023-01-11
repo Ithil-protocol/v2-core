@@ -62,7 +62,7 @@ contract InterestRateTest is PRBTest, StdCheats {
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
-        manager = new Manager(address(0));
+        manager = new Manager();
         vault = IVault(manager.create(address(token)));
         service = new MockService(manager, address(token));
         manager.setSpread(address(service), address(token), 1e15);

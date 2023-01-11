@@ -15,6 +15,8 @@ interface IManager {
 
     function vaults(address token) external view returns (address);
 
+    function riskParams(address service, address token) external view returns (uint256, uint256, uint256);
+
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
 
     function deposit(address token, uint256 assets, address receiver, address owner) external returns (uint256);
