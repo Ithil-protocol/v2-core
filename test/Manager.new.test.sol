@@ -31,6 +31,8 @@ contract ManagerTest is PRBTest, StdCheats {
     address internal immutable tokenSink;
     address internal immutable notOwner;
     address internal immutable anyAddress;
+    address internal immutable creditCustody;
+    address internal immutable debitCustody;
     address internal immutable debitServiceOne;
     address internal immutable debitServiceTwo;
     address internal immutable creditServiceOne;
@@ -46,6 +48,8 @@ contract ManagerTest is PRBTest, StdCheats {
         tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
         notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
         anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
+        creditCustody = address(uint160(uint(keccak256(abi.encodePacked("Credit Custody")))));
+        debitCustody = address(uint160(uint(keccak256(abi.encodePacked("Debit Custody")))));
         debitServiceOne = address(uint160(uint(keccak256(abi.encodePacked("debitServiceOne")))));
         debitServiceTwo = address(uint160(uint(keccak256(abi.encodePacked("debitServiceTwo")))));
         creditServiceOne = address(uint160(uint(keccak256(abi.encodePacked("creditServiceOne")))));
@@ -80,6 +84,87 @@ contract ManagerTest is PRBTest, StdCheats {
     function testCreate() public {
         address spuriousVault = manager.create(address(spuriousToken));
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
+    }
+
+    function _setupArbitraryState(
+        uint256 previousDeposit,
+        uint256 creditCap,
+        uint256 debitCap,
+        uint256 creditExposure,
+        uint256 debitExposure
+    ) private returns (uint256, uint256, uint256, uint256) {
+        vm.assume(creditExposure <= type(uint256).max - previousDeposit);
+        vm.assume(debitExposure < previousDeposit + creditExposure);
+        address vaultAddress = manager.vaults(address(firstToken));
+        vm.prank(tokenSink);
+        firstToken.approve(vaultAddress, previousDeposit + creditExposure);
+        IVault(vaultAddress).deposit(previousDeposit, anyAddress, tokenSink);
+
+        // Take only meaningful caps
+        creditCap = (creditCap % GeneralMath.RESOLUTION) + 1;
+        debitCap = (debitCap % GeneralMath.RESOLUTION) + 1;
+
+        manager.setCap(creditServiceOne, address(firstToken), creditCap);
+        manager.setCap(debitServiceOne, address(firstToken), debitCap);
+
+        // Setup credit exposure
+        // Avoid failures due to too high exposure
+        uint256 maxCreditExposure = creditCap == GeneralMath.RESOLUTION
+            ? type(uint256).max
+            : IVault(vaultAddress).totalSupply().safeMulDiv(creditCap, GeneralMath.RESOLUTION - creditCap);
+        creditExposure = maxCreditExposure == 0 ? 0 : creditExposure % maxCreditExposure;
+
+        if(GeneralMath.RESOLUTION.safeMulDiv(
+            creditExposure,
+            IVault(vaultAddress).totalSupply()
+        ) > creditCap) {
+            creditCap = GeneralMath.RESOLUTION.safeMulDiv(
+            creditExposure,
+            IVault(vaultAddress).totalSupply()
+            );
+            manager.setCap(creditServiceOne, address(firstToken), creditCap);
+        }
+        vm.prank(creditServiceOne);
+        manager.deposit(address(firstToken), creditExposure, creditCustody, tokenSink);
+
+        (, uint256 storedCreditCap, uint256 storedCreditExposure) = manager.riskParams(
+            creditServiceOne,
+            address(firstToken)
+        );
+
+        // Setup debit exposure
+        uint256 maxDebitExposure = IVault(vaultAddress).freeLiquidity().safeMulDiv(
+            debitCap,
+            GeneralMath.RESOLUTION
+        );
+        debitExposure = maxDebitExposure == 0 ? 0 : debitExposure % maxDebitExposure;
+
+        // Check because safeMulDiv is not invertible in the overflow region
+        // In case we overflow the cap, increase the cap
+        if(GeneralMath.RESOLUTION.safeMulDiv(
+            debitExposure,
+            IVault(vaultAddress).freeLiquidity()
+        ) > debitCap) {
+            debitCap = GeneralMath.RESOLUTION.safeMulDiv(
+            debitExposure,
+            IVault(vaultAddress).freeLiquidity()
+            );
+            manager.setCap(debitServiceOne, address(firstToken), debitCap);
+        }
+
+        vm.prank(debitServiceOne);
+        if (debitExposure > 0) manager.borrow(address(firstToken), debitExposure, debitCustody);
+
+        (, uint256 storedDebitCap, uint256 storedDebitExposure) = manager.riskParams(
+            debitServiceOne,
+            address(firstToken)
+        );
+
+        assertTrue(storedCreditCap == creditCap);
+        assertTrue(storedCreditExposure == creditExposure);
+        assertTrue(storedDebitCap == debitCap);
+        assertTrue(storedDebitExposure == debitExposure);
+        return (creditCap, debitCap, creditExposure, debitExposure);
     }
 
     function testSetSpread(uint256 spread) public {
@@ -141,10 +226,7 @@ contract ManagerTest is PRBTest, StdCheats {
             manager.deposit(address(firstToken), amount, anyAddress, tokenSink);
         } else {
             uint256 newShares = IVault(vaultAddress).previewDeposit(amount);
-            uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
-                amount,
-                IVault(vaultAddress).totalSupply() + newShares
-            );
+            uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(amount, previouslyDeposited + newShares);
             if (investedPortion > cap) {
                 ///@dev TODO: how to encode an error with parameters inside?
                 vm.expectRevert();
@@ -160,4 +242,21 @@ contract ManagerTest is PRBTest, StdCheats {
             }
         }
     }
+
+    // function testWithdraw(
+    //     uint256 previousDeposit,
+    //     uint256 creditCap,
+    //     uint256 debitCap,
+    //     uint256 creditExposure,
+    //     uint256 debitExposure,
+    //     uint256 withdrawn
+    // ) public {
+    //     address vaultAddress = manager.vaults(address(firstToken));
+    //     _setupArbitraryState(previousDeposit, creditCap, debitCap, creditExposure, debitExposure);
+    //     if(withdrawn >= IVault(vaultAddress).freeLiquidity()) withdrawn = IVault(vaultAddress).freeLiquidity() == 0 ? 0 : withdrawn % IVault(vaultAddress).freeLiquidity();
+    //     vm.prank(creditCustody);
+    //     IVault(vaultAddress).approve(vaultAddress, IVault(vaultAddress).previewWithdraw(withdrawn));
+    //     vm.startPrank(creditServiceOne);
+    //     if(withdrawn > 0) manager.withdraw(address(firstToken), withdrawn, creditCustody, anyAddress);
+    // }
 }
