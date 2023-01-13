@@ -86,11 +86,10 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
-    function _setupArbitraryState(
-        uint256 previousDeposit,
-        uint256 debitCap,
-        uint256 debitExposure
-    ) private returns (uint256,uint256) {
+    function _setupArbitraryState(uint256 previousDeposit, uint256 debitCap, uint256 debitExposure)
+        private
+        returns (uint256, uint256)
+    {
         vm.assume(debitExposure < previousDeposit);
         address vaultAddress = manager.vaults(address(firstToken));
         vm.startPrank(tokenSink);
@@ -104,22 +103,13 @@ contract ManagerTest is PRBTest, StdCheats {
         manager.setCap(debitServiceOne, address(firstToken), debitCap);
 
         // Setup debit exposure
-        uint256 maxDebitExposure = IVault(vaultAddress).freeLiquidity().safeMulDiv(
-            debitCap,
-            GeneralMath.RESOLUTION
-        );
+        uint256 maxDebitExposure = IVault(vaultAddress).freeLiquidity().safeMulDiv(debitCap, GeneralMath.RESOLUTION);
         debitExposure = maxDebitExposure == 0 ? 0 : debitExposure % maxDebitExposure;
 
         // Check because safeMulDiv is not invertible in the overflow region
         // In case we overflow the cap, increase the cap
-        if(GeneralMath.RESOLUTION.safeMulDiv(
-            debitExposure,
-            IVault(vaultAddress).freeLiquidity()
-        ) > debitCap) {
-            debitCap = GeneralMath.RESOLUTION.safeMulDiv(
-            debitExposure,
-            IVault(vaultAddress).freeLiquidity()
-            );
+        if (GeneralMath.RESOLUTION.safeMulDiv(debitExposure, IVault(vaultAddress).freeLiquidity()) > debitCap) {
+            debitCap = GeneralMath.RESOLUTION.safeMulDiv(debitExposure, IVault(vaultAddress).freeLiquidity());
             manager.setCap(debitServiceOne, address(firstToken), debitCap);
         }
 
