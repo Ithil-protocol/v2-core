@@ -11,275 +11,168 @@ import { IVault } from "../src/interfaces/IVault.sol";
 import { Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 
-contract VanillaCreditService {
-    IManager internal immutable manager;
-    address internal immutable token;
+/// @dev Manager native state:
+/// bytes32 public constant override salt = "ithil";
+/// mapping(address => address) public override vaults;
+/// mapping(address => mapping(address => RiskParams)) public riskParams;
 
-    constructor(IManager _manager, address _token) {
-        manager = _manager;
-        token = _token;
-    }
-
-    function deposit(uint256 amount) external {
-        manager.deposit(token, amount, address(this), msg.sender);
-    }
-
-    function withdraw(uint256 amount, address receiver, address owner) external {
-        manager.withdraw(token, amount, receiver, owner);
-    }
-}
-
-contract MockService {
-    IManager internal immutable manager;
-    address internal immutable token;
-
-    constructor(IManager _manager, address _token) {
-        manager = _manager;
-        token = _token;
-
-        IERC20(token).approve(manager.vaults(token), type(uint256).max);
-    }
-
-    function pull(uint256 amount) external {
-        manager.borrow(token, amount, address(this));
-    }
-
-    function push(uint256 amount, uint256 debt) external {
-        manager.repay(token, amount, debt, address(this));
-    }
-}
+/// @dev Manager underlying Vault state
+/// --> see Vault test
 
 contract ManagerTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
 
-    ERC20PresetMinterPauser internal immutable token;
     Manager internal immutable manager;
-    MockService internal immutable service;
-    VanillaCreditService internal immutable vanillaCreditService;
-    IVault internal immutable vault;
+    ERC20PresetMinterPauser internal immutable firstToken;
+    ERC20PresetMinterPauser internal immutable secondToken;
+    ERC20PresetMinterPauser internal immutable spuriousToken;
+    address internal immutable firstVault;
+    address internal immutable secondVault;
+    address internal immutable tokenSink;
+    address internal immutable notOwner;
+    address internal immutable anyAddress;
+    address internal immutable creditCustody;
+    address internal immutable debitCustody;
+    address internal immutable debitServiceOne;
+    address internal immutable debitServiceTwo;
+    address internal immutable creditServiceOne;
+    address internal immutable creditServiceTwo;
 
     constructor() {
-        token = new ERC20PresetMinterPauser("test", "TEST");
         manager = new Manager();
-        vault = IVault(manager.create(address(token)));
-        service = new MockService(manager, address(token));
-        vanillaCreditService = new VanillaCreditService(manager, address(token));
-        manager.setSpread(address(service), address(token), 1e15);
-        manager.setCap(address(service), address(token), 1e18);
-        manager.setCap(address(vanillaCreditService), address(token), 1e18);
+        firstToken = new ERC20PresetMinterPauser("firstToken", "FIRSTTOKEN");
+        secondToken = new ERC20PresetMinterPauser("secondToken", "SECONDTOKEN");
+        spuriousToken = new ERC20PresetMinterPauser("spuriousToken", "THIRDTOKEN");
+        firstVault = manager.create(address(firstToken));
+        secondVault = manager.create(address(secondToken));
+        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
+        notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
+        anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
+        creditCustody = address(uint160(uint(keccak256(abi.encodePacked("Credit Custody")))));
+        debitCustody = address(uint160(uint(keccak256(abi.encodePacked("Debit Custody")))));
+        debitServiceOne = address(uint160(uint(keccak256(abi.encodePacked("debitServiceOne")))));
+        debitServiceTwo = address(uint160(uint(keccak256(abi.encodePacked("debitServiceTwo")))));
+        creditServiceOne = address(uint160(uint(keccak256(abi.encodePacked("creditServiceOne")))));
+        creditServiceTwo = address(uint160(uint(keccak256(abi.encodePacked("creditServiceTwo")))));
     }
 
     function setUp() public {
-        token.mint(address(this), type(uint256).max);
-        token.approve(address(vault), type(uint256).max);
+        firstToken.mint(tokenSink, type(uint256).max);
+        secondToken.mint(tokenSink, type(uint256).max);
+        spuriousToken.mint(tokenSink, type(uint256).max);
     }
 
-    function _depositAndBorrow(uint256 amount) internal {
-        vanillaCreditService.deposit(amount);
-        service.pull(amount);
+    function testBase() public {
+        assertTrue(manager.vaults(address(firstToken)) == firstVault);
+        assertTrue(manager.vaults(address(secondToken)) == secondVault);
     }
 
-    function _repayWithProfit(uint256 amount, uint256 generatedFees) internal {
-        token.transfer(address(service), generatedFees);
-        service.push(amount + generatedFees, amount);
+    function testAccess(uint256 spread, uint256 cap, uint256 feeUnlockTime) public {
+        vm.startPrank(anyAddress);
+        vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
+        manager.create(address(spuriousToken));
+        vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
+        manager.setSpread(debitServiceOne, address(firstToken), spread);
+        vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
+        manager.setCap(debitServiceOne, address(firstToken), cap);
+        vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
+        manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
+        vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
+        manager.sweep(anyAddress, address(spuriousToken), firstVault);
     }
 
-    function _repayWithLoss(uint256 amount, uint256 loss) internal {
-        service.push(amount - loss, amount);
+    function testCreate() public {
+        address spuriousVault = manager.create(address(spuriousToken));
+        assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
-    function testCreateVaultSuccessful() public {
-        assertTrue(address(vault) != address(0));
-        assertTrue(address(vault) == manager.vaults(address(token)));
-    }
-
-    function testCreateVaultTwiceReverts() public {
-        vm.expectRevert();
-        manager.create(address(token));
-    }
-
-    function testBorrow(uint256 deposited, uint256 borrowed) public {
-        vm.assume(borrowed < deposited);
-
-        uint256 initialNetLoans = vault.netLoans();
-        token.transfer(address(2), deposited);
-        uint256 balanceBefore = token.balanceOf(address(2));
-        vm.startPrank(address(2));
-        token.approve(address(vault), deposited);
-        vanillaCreditService.deposit(deposited);
+    function _setupArbitraryState(
+        uint256 previousDeposit,
+        uint256 debitCap,
+        uint256 debitExposure
+    ) private returns (uint256,uint256) {
+        vm.assume(debitExposure < previousDeposit);
+        address vaultAddress = manager.vaults(address(firstToken));
+        vm.startPrank(tokenSink);
+        firstToken.approve(vaultAddress, previousDeposit);
+        IVault(vaultAddress).deposit(previousDeposit, anyAddress);
         vm.stopPrank();
-        uint256 change = balanceBefore - token.balanceOf(address(2));
-        assertTrue(change == deposited);
 
-        uint256 initialVaultBalance = token.balanceOf(address(vault));
-        uint256 initialTotalAssets = vault.totalAssets();
+        // Take only meaningful caps
+        debitCap = (debitCap % GeneralMath.RESOLUTION) + 1;
 
-        service.pull(borrowed);
-        // Net loans increased
-        assertTrue(vault.netLoans() == initialNetLoans + borrowed);
-        // Vault balance decreased
-        assertTrue(initialVaultBalance - token.balanceOf(address(vault)) == borrowed);
-        // Vault assets stay constant
-        assertTrue(vault.totalAssets() == initialTotalAssets);
-    }
+        manager.setCap(debitServiceOne, address(firstToken), debitCap);
 
-    function testBorrowRepay(uint256 deposited, uint256 borrowed, uint256 repaid, uint256 debt) public {
-        // So that pull does not fail for free liquidity
-        vm.assume(borrowed < deposited);
-
-        // Because the total token supply is capped by type(uint256).max
-        // deposited - borrowed + repaid <= type(uint256).max
-        vm.assume(deposited - borrowed <= type(uint256).max - repaid);
-
-        token.approve(address(vanillaCreditService), deposited);
-        vanillaCreditService.deposit(deposited);
-        service.pull(borrowed);
-
-        token.transfer(address(service), repaid.positiveSub(borrowed));
-        uint256 initialAssets = vault.totalAssets();
-        uint256 netLoans = vault.netLoans();
-        uint256 debtRepaid = debt.min(borrowed);
-        service.push(repaid, debt);
-        assertTrue(vault.netLoans() == netLoans - debtRepaid);
-        assertTrue(vault.currentProfits() == repaid.positiveSub(debtRepaid));
-        assertTrue(vault.currentLosses() == debtRepaid.positiveSub(repaid));
-        assertTrue(vault.totalAssets() == initialAssets);
-
-        // Unlock fees
-        vm.warp(block.timestamp + vault.feeUnlockTime());
-
-        assertTrue(
-            vault.totalAssets() ==
-                (initialAssets - debtRepaid.positiveSub(repaid)).safeAdd(repaid.positiveSub(debtRepaid))
+        // Setup debit exposure
+        uint256 maxDebitExposure = IVault(vaultAddress).freeLiquidity().safeMulDiv(
+            debitCap,
+            GeneralMath.RESOLUTION
         );
-    }
+        debitExposure = maxDebitExposure == 0 ? 0 : debitExposure % maxDebitExposure;
 
-    function testFeesUnlockTime(uint256 amount, uint256 fees, uint256 timePast) public {
-        vm.assume(fees > 0 && amount > 0 && timePast < 1e9 && amount < type(uint256).max - fees);
-
-        token.approve(address(vanillaCreditService), amount);
-        vanillaCreditService.deposit(amount);
-        service.pull(amount - 1);
-        _repayWithProfit(amount - 1, fees);
-
-        uint256 unlockTime = vault.feeUnlockTime();
-        uint256 latestRepay = vault.latestRepay();
-
-        uint256 nextTimestamp = block.timestamp + timePast;
-        vm.warp(nextTimestamp);
-
-        uint256 expectedLocked = fees.safeMulDiv(unlockTime.positiveSub(nextTimestamp - latestRepay), unlockTime);
-        assertTrue(vault.totalAssets() == token.balanceOf(address(vault)).positiveSub(expectedLocked));
-    }
-
-    function testRepayWithLossCoverableByFees() public {
-        uint256 amount = 100e18;
-        uint256 fees = 1e18;
-        uint256 loss = 5e17;
-        // This generates fees which are not yet unlocked
-        vanillaCreditService.deposit(amount);
-        service.pull(amount - 1);
-        _repayWithProfit(amount - 1, fees);
-
-        uint256 initialProfits = vault.currentProfits();
-        // Make a bad repay
-        _depositAndBorrow(amount);
-        _repayWithLoss(amount, loss);
-
-        // Current profits are invariate
-        assertTrue(vault.currentProfits() == initialProfits);
-        // Current losses are correctly updated
-        assertTrue(vault.currentLosses() == loss);
-    }
-
-    function testGenerateFeesWithNoLoans(uint256 amount) public {
-        vm.assume(amount > 0);
-        token.approve(address(vanillaCreditService), amount);
-        vanillaCreditService.deposit(amount);
-
-        // Everything is free liquidity
-        uint256 initialFreeLiquidity = vault.freeLiquidity();
-        assertTrue(initialFreeLiquidity == amount);
-        uint256 initialVaultAssets = vault.totalAssets();
-
-        service.pull(amount - 1);
-        _repayWithProfit(amount - 1, 0);
-
-        // Assets stay constant (fees still locked)
-        assertTrue(vault.totalAssets() == initialVaultAssets);
-        // Free liquidity is constant
-        assertTrue(vault.freeLiquidity() == initialFreeLiquidity);
-        // Check there is no dust
-        assertTrue(vault.netLoans() == 0);
-        assertTrue(vault.currentProfits() == 0);
-        // Latest repay is time
-        assertTrue(vault.latestRepay() == block.timestamp);
-    }
-
-    function testSetupArbitraryState(
-        uint256 feeUnlockTime,
-        uint256 totalSupply,
-        uint256 balanceOf,
-        uint256 netLoans,
-        uint256 latestRepay,
-        uint256 currentProfits,
-        uint256 currentLosses
-    ) public {
-        // Set fee unlock time
-        vm.assume(feeUnlockTime > 30 && feeUnlockTime < 7 days);
-        manager.setFeeUnlockTime(address(token), feeUnlockTime);
-
-        // Set totalSupply by depositing
-        vanillaCreditService.deposit(totalSupply);
-
-        // Set latestRepay
-        vm.warp(latestRepay);
-        service.push(0, 0);
-
-        // Set currentProfits (assume this otherwise there are no tokens available)
-        vm.assume(currentProfits.positiveSub(token.balanceOf(address(service))) <= token.balanceOf(address(this)));
-        if (currentProfits > token.balanceOf(address(service))) {
-            token.transfer(address(service), currentProfits - token.balanceOf(address(service)));
+        // Check because safeMulDiv is not invertible in the overflow region
+        // In case we overflow the cap, increase the cap
+        if(GeneralMath.RESOLUTION.safeMulDiv(
+            debitExposure,
+            IVault(vaultAddress).freeLiquidity()
+        ) > debitCap) {
+            debitCap = GeneralMath.RESOLUTION.safeMulDiv(
+            debitExposure,
+            IVault(vaultAddress).freeLiquidity()
+            );
+            manager.setCap(debitServiceOne, address(firstToken), debitCap);
         }
-        service.push(currentProfits, 0);
 
-        // Set currentLosses
-        // TODO: remove this assumption
-        vm.assume(currentLosses < vault.freeLiquidity() && currentLosses <= token.balanceOf(address(this)));
-        service.pull(currentLosses);
-        service.push(0, currentLosses);
+        vm.prank(debitServiceOne);
+        if (debitExposure > 0) manager.borrow(address(firstToken), debitExposure, debitCustody);
 
-        // Set netLoans
-        vm.assume(netLoans < vault.freeLiquidity());
-        service.pull(netLoans);
+        (, uint256 storedDebitCap, uint256 storedDebitExposure) = manager.riskParams(
+            debitServiceOne,
+            address(firstToken)
+        );
 
-        // Set balanceOf by adjusting
-        vm.assume(balanceOf > 0); // Otherwise it fails due to unhealthy vault
-        // Assume this otherwise there are no tokens available
-        uint256 initialBalance = token.balanceOf(address(vault));
-        // TODO: remove this assumption
-        vm.assume(balanceOf > initialBalance && balanceOf - initialBalance <= token.balanceOf(address(this)));
-        token.transfer(address(vault), balanceOf - initialBalance);
-
-        assertTrue(vault.feeUnlockTime() == feeUnlockTime);
-        assertTrue(vault.totalSupply() == totalSupply);
-        assertTrue(token.balanceOf(address(vault)) == balanceOf);
-        assertTrue(vault.netLoans() == netLoans);
-        assertTrue(vault.latestRepay() == latestRepay);
-        assertTrue(vault.currentProfits() == currentProfits);
-        assertTrue(vault.currentLosses() == currentLosses);
+        assertTrue(storedDebitCap == debitCap);
+        assertTrue(storedDebitExposure == debitExposure);
+        return (debitCap, debitExposure);
     }
 
-    function testSweep(uint256 value) public {
-        ERC20PresetMinterPauser otherToken = new ERC20PresetMinterPauser("other", "OTHER");
-        otherToken.mint(address(this), value);
-        otherToken.transfer(address(vault), value);
+    function testSetSpread(uint256 spread) public {
+        manager.setSpread(debitServiceOne, address(firstToken), spread);
+        (uint256 storedSpread, uint256 storedCap, uint256 storedExposure) = manager.riskParams(
+            debitServiceOne,
+            address(firstToken)
+        );
+        assertTrue(storedSpread == spread);
+        assertTrue(storedCap == 0);
+        assertTrue(storedExposure == 0);
+    }
 
-        manager.sweep(address(this), address(otherToken), address(vault));
-        assertTrue(otherToken.balanceOf(address(this)) == value);
+    function testSetCap(uint256 cap) public {
+        manager.setCap(debitServiceOne, address(firstToken), cap);
+        (uint256 storedSpread, uint256 storedCap, uint256 storedExposure) = manager.riskParams(
+            debitServiceOne,
+            address(firstToken)
+        );
+        assertTrue(storedSpread == 0);
+        assertTrue(storedCap == cap);
+        assertTrue(storedExposure == 0);
+    }
 
-        vanillaCreditService.deposit(value);
-        vm.expectRevert();
-        manager.sweep(address(vault), address(token), address(this));
+    function testFeeUnlockTime(uint256 feeUnlockTime) public {
+        feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
+        manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
+        assertTrue(IVault(manager.vaults(address(firstToken))).feeUnlockTime() == feeUnlockTime);
+    }
+
+    function testSweep(uint256 spuriousAmount) public {
+        vm.prank(tokenSink);
+        spuriousToken.transfer(firstVault, spuriousAmount);
+        assertTrue(spuriousToken.balanceOf(firstVault) == spuriousAmount);
+
+        uint256 firstBalance = spuriousToken.balanceOf(anyAddress);
+        manager.sweep(anyAddress, address(spuriousToken), firstVault);
+
+        assertTrue(spuriousToken.balanceOf(anyAddress) == firstBalance + spuriousAmount);
+        assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 }

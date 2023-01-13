@@ -139,9 +139,10 @@ contract VaultTest is PRBTest, StdCheats {
         // Set totalSupply by depositing
         vm.prank(tokenSink);
         token.transfer(depositor, totalSupply);
-        vm.prank(depositor);
+        vm.startPrank(depositor);
         token.approve(address(vault), totalSupply);
-        vault.deposit(totalSupply, receiver, depositor);
+        vault.deposit(totalSupply, receiver);
+        vm.stopPrank();
 
         // Set latestRepay
         vm.warp(latestRepay);
@@ -273,7 +274,7 @@ contract VaultTest is PRBTest, StdCheats {
 
         vm.startPrank(depositor);
         token.approve(address(vault), deposited);
-        uint256 shares = vault.deposit(deposited, receiver, depositor);
+        uint256 shares = vault.deposit(deposited, receiver);
         vm.stopPrank();
 
         // Specific addresses' state changes
@@ -332,7 +333,7 @@ contract VaultTest is PRBTest, StdCheats {
 
         vm.startPrank(depositor);
         token.approve(address(vault), deposited);
-        vault.mint(minted, receiver, depositor);
+        vault.mint(minted, receiver);
         vm.stopPrank();
 
         // Specific addresses' state changes
@@ -651,9 +652,10 @@ contract VaultTest is PRBTest, StdCheats {
     }
 
     function testCannotWithdrawMoreThanFreeLiquidity(uint256 amount) public {
-        vm.prank(tokenSink);
+        vm.startPrank(tokenSink);
         token.approve(address(vault), amount);
-        vault.deposit(amount, receiver, tokenSink);
+        vault.deposit(amount, receiver);
+        vm.stopPrank();
 
         // withdraw without leaving 1 token unit
         uint256 vaultBalance = token.balanceOf(address(vault));
@@ -662,9 +664,10 @@ contract VaultTest is PRBTest, StdCheats {
     }
 
     function testCannotBorrowMoreThanFreeLiquidity(uint256 amount) public {
-        vm.prank(tokenSink);
+        vm.startPrank(tokenSink);
         token.approve(address(vault), amount);
-        vault.deposit(amount, receiver, tokenSink);
+        vault.deposit(amount, receiver);
+        vm.stopPrank();
 
         uint256 vaultBalance = token.balanceOf(address(vault));
         vm.expectRevert(IVault.Insufficient_Free_Liquidity.selector);

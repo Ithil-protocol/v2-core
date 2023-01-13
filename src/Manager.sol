@@ -60,37 +60,6 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function deposit(address token, uint256 amount, address receiver, address owner)
-        external
-        override
-        supported(token)
-        returns (uint256)
-    {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
-        uint256 shares = IVault(vaults[token]).deposit(amount, receiver, owner);
-        uint256 currentExposure = riskParams[msg.sender][token].exposure + shares;
-        riskParams[msg.sender][token].exposure = currentExposure;
-        uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
-            currentExposure,
-            IVault(vaults[token]).totalSupply()
-        );
-        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
-        return shares;
-    }
-
-    /// @inheritdoc IManager
-    function withdraw(address token, uint256 amount, address receiver, address owner)
-        external
-        override
-        supported(token)
-        returns (uint256)
-    {
-        uint256 shares = IVault(vaults[token]).withdraw(amount, receiver, owner);
-        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(shares);
-        return shares;
-    }
-
-    /// @inheritdoc IManager
     function borrow(address token, uint256 amount, address receiver)
         external
         override
