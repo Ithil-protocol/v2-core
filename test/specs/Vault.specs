@@ -1,0 +1,6 @@
+rule startBeforeEnd(method f, uint256 meetingId, uint256 startTime, uint256 endTime) {
+	env e;
+    scheduleMeeting(e, meetingId, startTime, endTime);
+
+	assert getStartTimeById(e, meetingId) < getEndTimeById(e, meetingId), "the created meeting's start time is not before its end time";
+}

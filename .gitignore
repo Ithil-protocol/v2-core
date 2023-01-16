@@ -22,3 +22,6 @@ yarn-error.log*
 !/broadcast
 /broadcast/*
 /broadcast/*/31337/
+
+# certora
+.certora_internal/*
