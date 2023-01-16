@@ -81,26 +81,6 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return freeLiquidity().min(super.maxWithdraw(owner));
     }
 
-    /** @dev See {IERC4626-deposit}. */
-    function deposit(uint256 assets, address receiver, address owner) public returns (uint256) {
-        require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
-
-        uint256 shares = previewDeposit(assets);
-        _deposit(owner, receiver, assets, shares);
-
-        return shares;
-    }
-
-    /** @dev See {IERC4626-mint}. */
-    function mint(uint256 shares, address receiver, address owner) public returns (uint256) {
-        require(shares <= maxMint(receiver), "ERC4626: mint more than max");
-
-        uint256 assets = previewMint(shares);
-        _deposit(owner, receiver, assets, shares);
-
-        return assets;
-    }
-
     // Throws 'ERC20: transfer amount exceeds balance
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner

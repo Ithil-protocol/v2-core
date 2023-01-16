@@ -4,23 +4,21 @@ pragma solidity =0.8.17;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { ETHWrapper } from "./utils/ETHWrapper.sol";
-import { Multicall } from "./utils/Multicall.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
 import { GeneralMath } from "./libraries/GeneralMath.sol";
 
-contract Manager is IManager, Ownable, ETHWrapper, Multicall {
+contract Manager is IManager, Ownable {
     using GeneralMath for uint256;
 
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
     // service => token => RiskParams
-    mapping(address => mapping(address => RiskParams)) public riskParams;
+    mapping(address => mapping(address => RiskParams)) public override riskParams;
 
     // solhint-disable-next-line no-empty-blocks
-    constructor(address weth) ETHWrapper(weth) {}
+    constructor() {}
 
     modifier supported(address token) {
         if (riskParams[msg.sender][token].cap == 0) revert Restricted_To_Whitelisted_Services();
@@ -58,37 +56,6 @@ contract Manager is IManager, Ownable, ETHWrapper, Multicall {
 
     function sweep(address to, address token, address vault) external onlyOwner {
         IVault(vault).sweep(to, token);
-    }
-
-    /// @inheritdoc IManager
-    function deposit(address token, uint256 amount, address receiver, address owner)
-        external
-        override
-        supported(token)
-        returns (uint256)
-    {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
-        uint256 shares = IVault(vaults[token]).deposit(amount, receiver, owner);
-        uint256 currentExposure = riskParams[msg.sender][token].exposure + shares;
-        riskParams[msg.sender][token].exposure = currentExposure;
-        uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
-            currentExposure,
-            IVault(vaults[token]).totalSupply()
-        );
-        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
-        return shares;
-    }
-
-    /// @inheritdoc IManager
-    function withdraw(address token, uint256 amount, address receiver, address owner)
-        external
-        override
-        supported(token)
-        returns (uint256)
-    {
-        uint256 shares = IVault(vaults[token]).withdraw(amount, receiver, owner);
-        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(shares);
-        return shares;
     }
 
     /// @inheritdoc IManager
