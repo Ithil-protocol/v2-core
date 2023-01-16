@@ -9,8 +9,6 @@ import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
 import { GeneralMath } from "./libraries/GeneralMath.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract Manager is IManager, Ownable {
     using GeneralMath for uint256;
 
