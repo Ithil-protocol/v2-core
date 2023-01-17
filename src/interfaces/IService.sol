@@ -8,4 +8,5 @@ interface IService is IERC721Enumerable {
     event LockWasToggled(bool status);
     event GuardianWasUpdated(address indexed newGuardian);
     error Locked();
+    error RestrictedToOwner();
 }
