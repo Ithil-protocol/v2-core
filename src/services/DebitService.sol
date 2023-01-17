@@ -50,6 +50,12 @@ abstract contract DebitService is Service {
         return score;
     }
 
+    function close(uint256 tokenID, bytes calldata data) public override {
+        if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
+
+        super.close(tokenID, data);
+    }
+
     /// @dev When quoting we need to return values for all owed items
     /// how: for first to last index, calculate minimum obtained >= loan amount + fees
     function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory);

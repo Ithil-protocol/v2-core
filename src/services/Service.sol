@@ -40,6 +40,11 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         uint256 createdAt;
     }
 
+    struct Order {
+        Agreement agreement;
+        bytes32 data;
+    }
+
     IManager public immutable manager;
     address public guardian;
     mapping(uint256 => Agreement) public agreements;
@@ -78,9 +83,10 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     ///// Service functions /////
 
-    function open(bytes calldata order) external unlocked {
-        (Agreement memory agreement, bytes calldata data) = _decodeOpenArgs(order);
-
+    /// @notice creates a new service agreement
+    /// @param agreement a struct containing data on loan, collateral and item type
+    /// @param data extra custom data required by the specific service
+    function open(Agreement memory agreement, bytes calldata data) public virtual unlocked {
         // Hook
         _beforeOpening(agreement, data);
 
@@ -92,13 +98,17 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         // Hook
         _afterOpening(agreement, data);
     }
+
     function _open(Agreement memory agreement, bytes calldata data) internal virtual;
+
     function _beforeOpening(Agreement memory agreement, bytes calldata data) internal virtual;
+
     function _afterOpening(Agreement memory agreement, bytes calldata data) internal virtual;
 
-    function close(bytes calldata order) external {
-        (uint256 tokenID, bytes calldata data) = _decodeCloseArgs(order);
-        assert(ownerOf(tokenID) == msg.sender);
+    /// @notice closes an existing service agreement
+    /// @param tokenID used to pull the agreement data and its owner
+    /// @param data extra custom data required by the specific service
+    function close(uint256 tokenID, bytes calldata data) public virtual {
         Agreement memory agreement = agreements[tokenID];
 
         // Hook
@@ -110,16 +120,18 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _close(agreement, data);
 
         // Hook
-        _afterClosing(agreement, data);  
+        _afterClosing(agreement, data);
     }
+
     function _close(Agreement memory agreement, bytes calldata data) internal virtual;
+
     function _beforeClosing(Agreement memory agreement, bytes calldata data) internal virtual;
+
     function _afterClosing(Agreement memory agreement, bytes calldata data) internal virtual;
 
-    function _decodeOpenArgs(bytes calldata order) internal virtual returns (Agreement memory, bytes calldata);
-    function _decodeCloseArgs(bytes calldata order) internal virtual returns (uint256, bytes calldata);
-
-    function _approve(IERC20 token, address to) internal {
-        if (token.allowance(address(this), to) == 0) token.safeApprove(to, type(uint256).max);
-    }
+    /// @notice modifies an existing service agreement
+    /// @param tokenID used to pull the agreement data and its owner
+    /// @param agreement a struct containing new data on loan, collateral and item type
+    /// @param data extra custom data required by the specific service
+    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public virtual;
 }
