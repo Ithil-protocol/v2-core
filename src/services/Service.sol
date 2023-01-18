@@ -26,7 +26,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     }
 
     modifier onlyGuardian() {
-        if(guardian != msg.sender && owner() != msg.sender) revert RestrictedAccess();
+        if (guardian != msg.sender && owner() != msg.sender) revert RestrictedAccess();
         _;
     }
 
@@ -36,7 +36,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     }
 
     modifier editable(uint256 tokenID) {
-        if(agreements[tokenID].status == Status.OPEN) revert InvalidStatus();
+        if (agreements[tokenID].status == Status.OPEN) revert InvalidStatus();
         _;
     }
 
@@ -107,5 +107,10 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public virtual unlocked editable(tokenID) {}
+    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data)
+        public
+        virtual
+        unlocked
+        editable(tokenID)
+    {}
 }
