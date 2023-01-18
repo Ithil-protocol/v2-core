@@ -13,41 +13,9 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
-    // Owed is forcefully ERC20: the Manager only deals with ERC20/ERC4626
-    struct Loan {
-        address token;
-        uint256 amount;
-        uint256 margin;
-        uint256 interestAndSpread;
-    }
-
-    enum ItemType {
-        ERC20,
-        ERC721,
-        ERC1155
-    }
-
-    struct Collateral {
-        ItemType itemType;
-        address token;
-        uint256 identifier;
-        uint256 amount;
-    }
-
-    struct Agreement {
-        Loan[] loans;
-        Collateral[] collaterals;
-        uint256 createdAt;
-    }
-
-    struct Order {
-        Agreement agreement;
-        bytes data;
-    }
-
     IManager public immutable manager;
     address public guardian;
-    mapping(uint256 => Agreement) public agreements;
+    Agreement[] public agreements;
     bool public locked;
     uint256 public id;
 
@@ -58,12 +26,17 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     }
 
     modifier onlyGuardian() {
-        assert(guardian == msg.sender || owner() == msg.sender);
+        if(guardian != msg.sender && owner() != msg.sender) revert RestrictedAccess();
         _;
     }
 
     modifier unlocked() {
         if (locked) revert Locked();
+        _;
+    }
+
+    modifier editable(uint256 tokenID) {
+        if(agreements[tokenID].status == Status.OPEN) revert InvalidStatus();
         _;
     }
 
@@ -90,17 +63,14 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _beforeOpening(order.agreement, order.data);
 
         // Body
-        Agreement storage agreement = agreements[++id];
-        for (uint256 i = 0; i < agreement.loans.length; i++) agreement.loans[i] = order.agreement.loans[i];
-        for (uint256 j = 0; j < agreement.collaterals.length; j++)
-            agreement.collaterals[j] = order.agreement.collaterals[j];
-        agreement.createdAt = order.agreement.createdAt;
+        assert(order.agreement.status == Status.OPEN); // @todo should we validate more params here?
+        agreements.push(order.agreement);
 
-        _open(agreement, order.data);
+        _open(order.agreement, order.data);
         _safeMint(msg.sender, id);
 
         // Hook
-        _afterOpening(agreement, order.data);
+        _afterOpening(order.agreement, order.data);
     }
 
     function _open(Agreement memory agreement, bytes calldata data) internal virtual {}
@@ -112,14 +82,14 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @notice closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param data extra custom data required by the specific service
-    function close(uint256 tokenID, bytes calldata data) public virtual {
+    function close(uint256 tokenID, bytes calldata data) public virtual editable(tokenID) {
         Agreement memory agreement = agreements[tokenID];
 
         // Hook
         _beforeClosing(agreement, data);
 
         // Body
-        delete agreements[tokenID];
+        agreements[tokenID].status = Status.CLOSED;
         _burn(tokenID);
         _close(agreement, data);
 
@@ -137,5 +107,5 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public virtual unlocked {}
+    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public virtual unlocked editable(tokenID) {}
 }

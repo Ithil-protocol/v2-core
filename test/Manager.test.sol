@@ -6,9 +6,8 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { PRBTest } from "@prb/test/PRBTest.sol";
 import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
-import { IManager } from "../src/interfaces/IManager.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
-import { Manager } from "../src/Manager.sol";
+import { IManager, Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 
 /// @dev Manager native state:
