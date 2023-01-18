@@ -42,7 +42,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     struct Order {
         Agreement agreement;
-        bytes32 data;
+        bytes data;
     }
 
     IManager public immutable manager;
@@ -84,26 +84,30 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     ///// Service functions /////
 
     /// @notice creates a new service agreement
-    /// @param agreement a struct containing data on loan, collateral and item type
-    /// @param data extra custom data required by the specific service
-    function open(Agreement memory agreement, bytes calldata data) public virtual unlocked {
+    /// @param order a struct containing data on the agreement and extra params
+    function open(Order calldata order) public virtual unlocked {
         // Hook
-        _beforeOpening(agreement, data);
+        _beforeOpening(order.agreement, order.data);
 
         // Body
-        agreements[++id] = agreement;
-        _open(agreement, data);
+        Agreement storage agreement = agreements[++id];
+        for (uint256 i = 0; i < agreement.loans.length; i++) agreement.loans[i] = order.agreement.loans[i];
+        for (uint256 j = 0; j < agreement.collaterals.length; j++)
+            agreement.collaterals[j] = order.agreement.collaterals[j];
+        agreement.createdAt = order.agreement.createdAt;
+
+        _open(agreement, order.data);
         _safeMint(msg.sender, id);
 
         // Hook
-        _afterOpening(agreement, data);
+        _afterOpening(agreement, order.data);
     }
 
-    function _open(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _open(Agreement memory agreement, bytes calldata data) internal virtual {}
 
-    function _beforeOpening(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _beforeOpening(Agreement memory agreement, bytes calldata data) internal virtual {}
 
-    function _afterOpening(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _afterOpening(Agreement memory agreement, bytes calldata data) internal virtual {}
 
     /// @notice closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
@@ -123,15 +127,15 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _afterClosing(agreement, data);
     }
 
-    function _close(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _close(Agreement memory agreement, bytes calldata data) internal virtual {}
 
-    function _beforeClosing(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _beforeClosing(Agreement memory agreement, bytes calldata data) internal virtual {}
 
-    function _afterClosing(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _afterClosing(Agreement memory agreement, bytes calldata data) internal virtual {}
 
     /// @notice modifies an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public virtual;
+    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public virtual unlocked {}
 }
