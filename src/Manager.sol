@@ -59,14 +59,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, address receiver)
+    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
         external
         override
         supported(token)
         returns (uint256, uint256)
     {
-        uint256 currentExposure = riskParams[msg.sender][token].exposure + amount;
-        riskParams[msg.sender][token].exposure = currentExposure;
         uint256 investmentCap = riskParams[msg.sender][token].cap;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
@@ -79,17 +77,22 @@ contract Manager is IManager, Ownable {
 
     /// @inheritdoc IManager
     function repay(address token, uint256 amount, uint256 debt, address repayer) external override supported(token) {
-        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(debt);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 
     /// @inheritdoc IManager
-    function directMint(address token, address to, uint256 shares, uint256 maxAmountIn)
+    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
         external
         override
         supported(token)
         returns (uint256)
     {
+        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 totalSupply = IVault(vaults[token]).totalSupply();
+        uint256 investedPortion = totalSupply == 0
+            ? GeneralMath.RESOLUTION
+            : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
+        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
         if (amountIn > maxAmountIn) revert Max_Amount_Exceeded();
 
