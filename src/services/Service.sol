@@ -48,6 +48,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     IManager public immutable manager;
     address public guardian;
     mapping(uint256 => Agreement) public agreements;
+    mapping(address => uint256) public exposures;
     bool public locked;
     uint256 public id;
 
@@ -112,22 +113,22 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         Agreement memory agreement = agreements[tokenID];
 
         // Hook
-        _beforeClosing(agreement, data);
+        _beforeClosing(tokenID, agreement, data);
 
         // Body
         delete agreements[tokenID];
         _burn(tokenID);
-        _close(agreement, data);
+        _close(tokenID, agreement, data);
 
         // Hook
-        _afterClosing(agreement, data);
+        _afterClosing(tokenID, agreement, data);
     }
 
-    function _close(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual;
 
-    function _beforeClosing(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual;
 
-    function _afterClosing(Agreement memory agreement, bytes calldata data) internal virtual;
+    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual;
 
     /// @notice modifies an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner

@@ -2,11 +2,14 @@
 pragma solidity =0.8.17;
 
 import { Service } from "./Service.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 abstract contract DebitService is Service {
     using GeneralMath for uint256;
+    using SafeERC20 for IERC20;
+
+    error Too_Risky();
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
     /// Throws if margin = 0
@@ -56,7 +59,52 @@ abstract contract DebitService is Service {
         super.close(tokenID, data);
     }
 
+    function _beforeOpening(Agreement memory agreement, bytes calldata data) internal virtual override {
+        // Transfers margins and borrows loans to this address
+        for (uint256 index = 0; index < agreement.loans.length; index++) {
+            exposures[agreement.loans[index].token] += agreement.loans[index].amount;
+            IERC20(agreement.loans[index].token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                agreement.loans[index].margin
+            );
+            (uint256 freeLiquidity, ) = manager.borrow(
+                agreement.loans[index].token,
+                agreement.loans[index].amount,
+                exposures[agreement.loans[index].token],
+                address(this)
+            );
+
+            (uint256 computedIR, uint256 computedSpread) = _baseInterestRateAndSpread(agreement, freeLiquidity);
+            (uint256 requestedIR, uint256 requestedSpread) = agreement.loans[index].interestAndSpread.unpackUint();
+            if (computedIR > requestedIR || computedSpread > requestedSpread) revert Too_Risky();
+        }
+    }
+
+    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual override {
+        for (uint256 index = 0; index < agreement.loans.length; index++) {
+            exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
+                agreement.loans[index].amount
+            );
+
+            manager.repay(
+                agreement.loans[index].token,
+                _computeDuePayment(agreement, data),
+                agreement.loans[index].amount,
+                address(this)
+            );
+        }
+    }
+
     /// @dev When quoting we need to return values for all owed items
     /// how: for first to last index, calculate minimum obtained >= loan amount + fees
     function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory);
+
+    function _baseInterestRateAndSpread(Agreement memory agreement, uint256 freeLiquidity)
+        internal
+        virtual
+        returns (uint256, uint256);
+
+    // Computes the payment due to the vault or lender
+    function _computeDuePayment(Agreement memory agreement, bytes calldata data) internal virtual returns (uint256);
 }
