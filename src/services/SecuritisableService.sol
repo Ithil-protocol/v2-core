@@ -38,10 +38,12 @@ abstract contract SecuritisableService is DebitService {
         emit LenderWasUpdated(id, purchaser);
     }
 
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual override {
-        // In this case the debit has not been purchased
-        if(lenders[tokenID] == address(0)) super._afterClosing(tokenID, agreement, data);
-        else {
+    function close(uint256 tokenID, bytes calldata data) public override {
+        super.close(tokenID, data);
+
+        Agreement memory agreement = agreements[tokenID];
+        // In this case the debit has been purchased
+        if (lenders[tokenID] != address(0)) {
             // Debit was purchased: the payoff should be transferred to the new lender
             for (uint256 index = 0; index < agreement.loans.length; index++) {
                 IERC20(agreement.loans[index].token).safeTransfer(
