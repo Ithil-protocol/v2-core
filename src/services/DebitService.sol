@@ -103,8 +103,8 @@ abstract contract DebitService is Service {
     function _baseInterestRateAndSpread(Agreement memory agreement, uint256 freeLiquidity)
         internal
         virtual
-        returns (uint256, uint256);
+        returns (uint256, uint256) {}
 
     // Computes the payment due to the vault or lender
-    function _computeDuePayment(Agreement memory agreement, bytes calldata data) internal virtual returns (uint256);
+    function _computeDuePayment(Agreement memory agreement, bytes calldata data) internal virtual returns (uint256) {}
 }
