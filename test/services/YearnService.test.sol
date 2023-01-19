@@ -49,7 +49,7 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
         uint256 amount = 10 * 1e18;
         uint256 loan = 9 * 1e18;
         uint256 margin = 1e18;
-        
+
         IVault vault = IVault(manager.vaults(address(dai)));
         vm.startPrank(daiWhale);
         // Transfers margin to the user
@@ -60,7 +60,8 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vault.deposit(amount, daiWhale);
         vm.stopPrank();
 
-        uint256 collateral = 1;
+        // This is actually the minimum amount of shares to be obtained (slippage protection)
+        uint256 collateral = 9 * 1e18;
 
         IService.Order memory order = Helper.createSimpleERC20Order(
             address(dai),
@@ -73,5 +74,18 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
 
         vm.prank(user);
         service.open(order);
+
+        assertTrue(service.id() == 1);
+
+        (
+            IService.Loan[] memory loans,
+            IService.Collateral[] memory collaterals,
+            uint256 createdAt,
+            IService.Status status
+        ) = service.getAgreement(1);
+        assertTrue(loans.length == 1);
+        assertTrue(collaterals.length == 1);
+        assertTrue(createdAt == block.timestamp);
+        assertTrue(status == IService.Status.OPEN);
     }
 }

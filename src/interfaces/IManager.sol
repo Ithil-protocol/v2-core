@@ -15,7 +15,7 @@ interface IManager {
     function vaults(address token) external view returns (address);
 
     function riskParams(address service, address token) external view returns (uint256, uint256);
-    
+
     function create(address token) external returns (address);
 
     function setSpread(address service, address token, uint256 spread) external;

@@ -65,13 +65,14 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
         // Body
         assert(order.agreement.status == Status.OPEN); // @todo should we validate more params here?
-        agreements.push(order.agreement);
-
         _open(order.agreement, order.data);
-        _safeMint(msg.sender, id);
+        _safeMint(msg.sender, id++);
 
         // Hook
         _afterOpening(order.agreement, order.data);
+
+        // It must be here, since the _open function may modify some fields
+        agreements.push(order.agreement);
     }
 
     function _open(Agreement memory agreement, bytes calldata data) internal virtual {}
@@ -114,4 +115,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         unlocked
         editable(tokenID)
     {}
+
+    function getAgreement(uint256 tokenID)
+        public
+        returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status)
+    {
+        Agreement memory agreement = agreements[tokenID - 1];
+        return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
+    }
 }
