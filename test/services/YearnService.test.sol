@@ -6,6 +6,7 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { PRBTest } from "@prb/test/PRBTest.sol";
 import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { YearnService } from "../../src/services/examples/YearnService.sol";
@@ -14,46 +15,63 @@ import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
 contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
-    Manager internal immutable manager;
+    IManager internal immutable manager;
     YearnService internal immutable service;
     address internal constant registry = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804;
     IERC20 internal constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 internal constant ydai = IERC20(0xdA816459F1AB5631232FE5e97a05BBBb94970c95);
     address internal constant daiWhale = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
+    address internal immutable user;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16433647);
         vm.selectFork(forkId);
 
-        manager = new Manager();
+        manager = IManager(new Manager());
         service = new YearnService(address(manager), registry);
+        user = address(uint160(uint(keccak256(abi.encodePacked("User")))));
     }
 
     function setUp() public {
+        vm.prank(user);
         dai.approve(address(service), type(uint256).max);
         vm.deal(daiWhale, 1 ether);
+
+        // Create Vault
+        manager.create(address(dai));
+        // No cap for this service -> 100% of the liquidity can be used initially
+        manager.setCap(address(service), address(dai), GeneralMath.RESOLUTION);
     }
 
     function testStake() public {
         //vm.assume(amount < dai.balanceOf(daiWhale));
         //vm.assume(margin < amount);
         uint256 amount = 10 * 1e18;
+        uint256 loan = 9 * 1e18;
         uint256 margin = 1e18;
-
-        vm.prank(daiWhale);
-        dai.transfer(address(service), amount);
+        
+        IVault vault = IVault(manager.vaults(address(dai)));
+        vm.startPrank(daiWhale);
+        // Transfers margin to the user
+        dai.transfer(user, margin);
+        // Deposits amount to the vault
+        // Amount must be higher than loan: due to ERC4626 standard vault cannot be emptied
+        dai.approve(address(vault), amount);
+        vault.deposit(amount, daiWhale);
+        vm.stopPrank();
 
         uint256 collateral = 1;
 
         IService.Order memory order = Helper.createSimpleERC20Order(
             address(dai),
-            amount,
+            loan,
             margin,
             address(ydai),
             collateral,
             block.timestamp
         );
 
+        vm.prank(user);
         service.open(order);
     }
 }

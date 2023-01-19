@@ -25,6 +25,11 @@ contract Manager is IManager, Ownable {
         _;
     }
 
+    modifier vaultExists(address token) {
+        if (vaults[token] == address(0)) revert Vault_Missing();
+        _;
+    }
+
     function create(address token) external onlyOwner returns (address) {
         assert(vaults[token] == address(0));
 
@@ -38,13 +43,13 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function setSpread(address service, address token, uint256 spread) external onlyOwner {
+    function setSpread(address service, address token, uint256 spread) external override onlyOwner {
         riskParams[service][token].spread = spread;
 
         emit SpreadWasUpdated(service, token, spread);
     }
 
-    function setCap(address service, address token, uint256 cap) external onlyOwner {
+    function setCap(address service, address token, uint256 cap) external override onlyOwner {
         riskParams[service][token].cap = cap;
 
         emit CapWasUpdated(service, token, cap);
@@ -63,6 +68,7 @@ contract Manager is IManager, Ownable {
         external
         override
         supported(token)
+        vaultExists(token)
         returns (uint256, uint256)
     {
         uint256 investmentCap = riskParams[msg.sender][token].cap;
@@ -76,7 +82,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer) external override supported(token) {
+    function repay(address token, uint256 amount, uint256 debt, address repayer)
+        external
+        override
+        supported(token)
+        vaultExists(token)
+    {
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 
@@ -85,6 +96,7 @@ contract Manager is IManager, Ownable {
         external
         override
         supported(token)
+        vaultExists(token)
         returns (uint256)
     {
         uint256 investmentCap = riskParams[msg.sender][token].cap;
@@ -104,6 +116,7 @@ contract Manager is IManager, Ownable {
         external
         override
         supported(token)
+        vaultExists(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);
