@@ -53,13 +53,7 @@ abstract contract DebitService is Service {
         return score;
     }
 
-    function close(uint256 tokenID, bytes calldata data) public override {
-        if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
-
-        super.close(tokenID, data);
-    }
-
-    function _beforeOpening(Agreement memory agreement, bytes calldata data) internal virtual override {
+    function open(Agreement memory agreement, bytes calldata data) public virtual override unlocked {
         // Transfers margins and borrows loans to this address
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] += agreement.loans[index].amount;
@@ -79,9 +73,16 @@ abstract contract DebitService is Service {
             (uint256 requestedIR, uint256 requestedSpread) = agreement.loans[index].interestAndSpread.unpackUint();
             if (computedIR > requestedIR || computedSpread > requestedSpread) revert Too_Risky();
         }
+
+        super.open(agreement, data);
     }
 
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual override {
+    function close(uint256 tokenID, bytes calldata data) public virtual override {
+        if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
+
+        super.close(tokenID, data);
+
+        Agreement memory agreement = agreements[tokenID];
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.loans[index].amount
