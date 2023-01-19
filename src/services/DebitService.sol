@@ -53,8 +53,9 @@ abstract contract DebitService is Service {
         return score;
     }
 
-    function open(Agreement memory agreement, bytes calldata data) public virtual override unlocked {
+    function open(Order calldata order) public virtual override unlocked {
         // Transfers margins and borrows loans to this address
+        Agreement memory agreement = order.agreement;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] += agreement.loans[index].amount;
             IERC20(agreement.loans[index].token).safeTransferFrom(
@@ -74,7 +75,7 @@ abstract contract DebitService is Service {
             if (computedIR > requestedIR || computedSpread > requestedSpread) revert Too_Risky();
         }
 
-        super.open(agreement, data);
+        super.open(order);
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
