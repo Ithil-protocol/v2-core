@@ -71,7 +71,7 @@ contract ManagerTest is PRBTest, StdCheats {
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
-        manager.sweep(anyAddress, address(spuriousToken), firstVault);
+        manager.sweep(address(firstToken), address(spuriousToken), anyAddress);
     }
 
     function testCreate() public {
@@ -132,7 +132,7 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(spuriousToken.balanceOf(firstVault) == spuriousAmount);
 
         uint256 firstBalance = spuriousToken.balanceOf(anyAddress);
-        manager.sweep(anyAddress, address(spuriousToken), firstVault);
+        manager.sweep(address(firstToken), address(spuriousToken), anyAddress);
 
         assertTrue(spuriousToken.balanceOf(anyAddress) == firstBalance + spuriousAmount);
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
