@@ -100,7 +100,7 @@ abstract contract DebitService is Service {
 
     /// @dev When quoting we need to return values for all owed items
     /// how: for first to last index, calculate minimum obtained >= loan amount + fees
-    function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory);
+    function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory) {}
 
     function _baseInterestRateAndSpread(Agreement memory agreement, uint256 freeLiquidity)
         internal
