@@ -55,19 +55,14 @@ cp .env.example .env
 and add the following content:
 
 ```text
-ALCHEMY_API_KEY="ABC..." needed to run mainnet fork tests
-FORKING="true" to enable mainnet fork
-REPORT_GAS="true" to enable gas report at the end of tests, otherwise leave blank
+MAINNET_RPC_URL="https://..." needed to run mainnet fork tests
 ```
 
 Load it in your local env with `source .env` and finally you can compile the contracts:
 
 ```bash
-npx hardhat compile
+forge build
 ```
-
-This project uses `hardhat`, `typechain` to produce TypeScript bindings and `waffle` for tests, you can find the
-compiler configurations in `hardhat.config.ts`.
 
 ## Test
 
@@ -78,13 +73,7 @@ forge test
 and to view in details the specific transactions happening
 
 ```bash
-yarn test --trace
-```
-
-You can also check code coverage with the following command:
-
-```bash
-yarn coverage
+forge test -vvvv
 ```
 
 ## Security
