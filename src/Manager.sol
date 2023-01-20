@@ -59,8 +59,8 @@ contract Manager is IManager, Ownable {
         IVault(vaults[token]).setFeeUnlockTime(feeUnlockTime);
     }
 
-    function sweep(address to, address token, address vault) external onlyOwner {
-        IVault(vault).sweep(to, token);
+    function sweep(address vaultToken, address spuriousToken, address to) external onlyOwner {
+        IVault(vaults[vaultToken]).sweep(to, spuriousToken);
     }
 
     /// @inheritdoc IManager
