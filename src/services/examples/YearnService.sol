@@ -11,6 +11,7 @@ contract YearnService is SecuritisableService {
     IYearnRegistry public immutable registry;
 
     error YVaultMismatch();
+    error Slippage_Exceeded();
 
     constructor(address manager, address yearnRegistry) Service("YearnService", "YEARN-SERVICE", manager) {
         registry = IYearnRegistry(yearnRegistry);
@@ -21,14 +22,19 @@ contract YearnService is SecuritisableService {
         if (yvault != agreement.collaterals[0].token) revert YVaultMismatch();
 
         IERC20 token = IERC20(agreement.loans[0].token);
-        token.approve(yvault, agreement.loans[0].amount);
+        token.approve(yvault, agreement.loans[0].amount + agreement.loans[0].margin);
 
-        IYearnVault(yvault).deposit(agreement.loans[0].amount, address(this));
+        uint256 shares = IYearnVault(yvault).deposit(
+            agreement.loans[0].amount + agreement.loans[0].margin,
+            address(this)
+        );
+        if (agreement.collaterals[0].amount > shares) revert Slippage_Exceeded();
+        agreement.collaterals[0].amount = shares;
     }
 
     function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public override {}
 
-    function _close(Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {
         uint256 acceptedLoss = abi.decode(data, (uint256));
 
         IYearnVault yvault = IYearnVault(agreement.collaterals[0].token);

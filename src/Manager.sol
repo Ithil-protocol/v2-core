@@ -25,6 +25,11 @@ contract Manager is IManager, Ownable {
         _;
     }
 
+    modifier vaultExists(address token) {
+        if (vaults[token] == address(0)) revert Vault_Missing();
+        _;
+    }
+
     function create(address token) external onlyOwner returns (address) {
         assert(vaults[token] == address(0));
 
@@ -38,13 +43,13 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function setSpread(address service, address token, uint256 spread) external onlyOwner {
+    function setSpread(address service, address token, uint256 spread) external override onlyOwner {
         riskParams[service][token].spread = spread;
 
         emit SpreadWasUpdated(service, token, spread);
     }
 
-    function setCap(address service, address token, uint256 cap) external onlyOwner {
+    function setCap(address service, address token, uint256 cap) external override onlyOwner {
         riskParams[service][token].cap = cap;
 
         emit CapWasUpdated(service, token, cap);
@@ -59,14 +64,13 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, address receiver)
+    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
         external
         override
         supported(token)
+        vaultExists(token)
         returns (uint256, uint256)
     {
-        uint256 currentExposure = riskParams[msg.sender][token].exposure + amount;
-        riskParams[msg.sender][token].exposure = currentExposure;
         uint256 investmentCap = riskParams[msg.sender][token].cap;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
@@ -78,18 +82,29 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer) external override supported(token) {
-        riskParams[msg.sender][token].exposure = riskParams[msg.sender][token].exposure.positiveSub(debt);
+    function repay(address token, uint256 amount, uint256 debt, address repayer)
+        external
+        override
+        supported(token)
+        vaultExists(token)
+    {
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 
     /// @inheritdoc IManager
-    function directMint(address token, address to, uint256 shares, uint256 maxAmountIn)
+    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
         external
         override
         supported(token)
+        vaultExists(token)
         returns (uint256)
     {
+        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 totalSupply = IVault(vaults[token]).totalSupply();
+        uint256 investedPortion = totalSupply == 0
+            ? GeneralMath.RESOLUTION
+            : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
+        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
         if (amountIn > maxAmountIn) revert Max_Amount_Exceeded();
 
@@ -101,6 +116,7 @@ contract Manager is IManager, Ownable {
         external
         override
         supported(token)
+        vaultExists(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);

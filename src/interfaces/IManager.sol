@@ -8,22 +8,31 @@ interface IManager {
     struct RiskParams {
         uint256 spread;
         uint256 cap;
-        uint256 exposure;
     }
 
     function salt() external pure returns (bytes32);
 
     function vaults(address token) external view returns (address);
 
-    function riskParams(address service, address token) external view returns (uint256, uint256, uint256);
+    function riskParams(address service, address token) external view returns (uint256, uint256);
+
+    function create(address token) external returns (address);
+
+    function setSpread(address service, address token, uint256 spread) external;
+
+    function setCap(address service, address token, uint256 cap) external;
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
 
-    function borrow(address token, uint256 amount, address receiver) external returns (uint256, uint256);
+    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
+        external
+        returns (uint256, uint256);
 
     function repay(address token, uint256 amount, uint256 debt, address repayer) external;
 
-    function directMint(address token, address to, uint256 shares, uint256 maxAmountIn) external returns (uint256);
+    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
+        external
+        returns (uint256);
 
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
 
