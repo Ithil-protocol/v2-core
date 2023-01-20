@@ -8,7 +8,7 @@ interface IBalancerPool is IERC20 {
     /**
      * @dev Returns all normalised weights, in the same order as the Pool's tokens.
      */
-    function getNormalisedWeights() external view returns (uint256[] memory);
+    function getNormalizedWeights() external view returns (uint256[] memory);
 
     function getSwapFeePercentage() external view returns (uint256);
 }

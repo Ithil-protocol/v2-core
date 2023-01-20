@@ -29,6 +29,9 @@ library Helper {
         return createAdvancedOrder(tokens, amounts, margins, itemTypes, collateralTokens, collateralAmounts, time);
     }
 
+    // tokens.length = amounts.length = margins.length
+    // itemTypes.length = collateralTokens.length = collateralAmounts.length
+    // In general the two set of lengths can be different (e.g. Balancer, Uniswap)
     function createAdvancedOrder(
         address[] memory tokens,
         uint256[] memory amounts,
@@ -46,7 +49,8 @@ library Helper {
             loan[i].token = tokens[i];
             loan[i].amount = amounts[i];
             loan[i].margin = margins[i];
-
+        }
+        for (uint256 i = 0; i < itemTypes.length; i++) {
             collateral[i].itemType = itemTypes[i];
             collateral[i].token = collateralTokens[i];
             collateral[i].amount = collateralAmounts[i];

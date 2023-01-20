@@ -4,18 +4,18 @@ pragma solidity >=0.8.12;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBalancerVault } from "../../interfaces/external/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/IBalancerPool.sol";
+import { console2 } from "forge-std/console2.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
 
-/// @title    BalancerStrategy contract
+/// @title    BalancerService contract
 /// @author   Ithil
-/// @notice   A strategy to perform leveraged lping on any Balancer pool
-contract BalancerStrategy is SecuritisableService {
+/// @notice   A service to perform leveraged lping on any Balancer pool
+contract BalancerService is SecuritisableService {
     using SafeERC20 for IERC20;
 
     struct PoolData {
         bytes32 balancerPoolID;
-        uint256 auraPoolID;
         address[] tokens;
         uint256[] weights;
         uint8 length;
@@ -24,7 +24,7 @@ contract BalancerStrategy is SecuritisableService {
 
     event PoolWasAdded(address indexed balancerPool);
     event PoolWasRemoved(address indexed balancerPool);
-    
+
     error BalancerStrategy__Inexistent_Pool(address balancerPool);
     error BalancerStrategy__Token_Index_Mismatch(uint256 tokenIndex);
 
@@ -40,8 +40,9 @@ contract BalancerStrategy is SecuritisableService {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert BalancerStrategy__Inexistent_Pool(agreement.collaterals[0].token);
 
-        uint256[] memory amountsIn;
-        address[] memory tokens;
+        uint256[] memory amountsIn = new uint256[](agreement.loans.length);
+        address[] memory tokens = new address[](agreement.loans.length);
+
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
             if (tokens[index] != pool.tokens[index]) revert BalancerStrategy__Token_Index_Mismatch(index);
@@ -87,21 +88,21 @@ contract BalancerStrategy is SecuritisableService {
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
     }
 
-    function addPool(address poolAddress, bytes32 balancerPoolID, uint256 auraPoolID) external onlyOwner {
+    function addPool(address poolAddress, bytes32 balancerPoolID) external onlyOwner {
         (address[] memory poolTokens, , ) = balancerVault.getPoolTokens(balancerPoolID);
         uint256 length = poolTokens.length;
         assert(length > 0);
 
         IBalancerPool bpool = IBalancerPool(poolAddress);
         uint256 fee = bpool.getSwapFeePercentage();
-        uint256[] memory weights = bpool.getNormalisedWeights();
+        uint256[] memory weights = bpool.getNormalizedWeights();
 
         for (uint8 i = 0; i < length; i++) {
             if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
                 IERC20(poolTokens[i]).safeApprove(address(balancerVault), type(uint256).max);
         }
 
-        pools[poolAddress] = PoolData(balancerPoolID, auraPoolID, poolTokens, weights, uint8(length), fee);
+        pools[poolAddress] = PoolData(balancerPoolID, poolTokens, weights, uint8(length), fee);
 
         emit PoolWasAdded(poolAddress);
     }
