@@ -21,7 +21,6 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
     IERC20 internal constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 internal constant ydai = IERC20(0xdA816459F1AB5631232FE5e97a05BBBb94970c95);
     address internal constant daiWhale = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-    address internal immutable user;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16433647);
@@ -29,7 +28,6 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
 
         manager = IManager(new Manager());
         service = new YearnService(address(manager), registry);
-        user = address(uint160(uint(keccak256(abi.encodePacked("User")))));
     }
 
     function setUp() public {
