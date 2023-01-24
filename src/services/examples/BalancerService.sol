@@ -27,8 +27,8 @@ contract BalancerService is SecuritisableService {
     event PoolWasAdded(address indexed balancerPool);
     event PoolWasRemoved(address indexed balancerPool);
 
-    error BalancerStrategy__Inexistent_Pool(address balancerPool);
-    error BalancerStrategy__Token_Index_Mismatch(uint256 tokenIndex);
+    error InexistentPool();
+    error TokenIndexMismatch();
 
     mapping(address => PoolData) public pools;
     IBalancerVault internal immutable balancerVault;
@@ -40,14 +40,14 @@ contract BalancerService is SecuritisableService {
 
     function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
-        if (pool.length == 0) revert BalancerStrategy__Inexistent_Pool(agreement.collaterals[0].token);
+        if (pool.length == 0) revert InexistentPool();
 
         uint256[] memory amountsIn = new uint256[](agreement.loans.length);
         address[] memory tokens = new address[](agreement.loans.length);
 
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
-            if (tokens[index] != pool.tokens[index]) revert BalancerStrategy__Token_Index_Mismatch(index);
+            if (tokens[index] != pool.tokens[index]) revert TokenIndexMismatch();
             amountsIn[index] = agreement.loans[index].amount + agreement.loans[index].margin;
         }
         IERC20 bpToken = IERC20(agreement.collaterals[0].token);
@@ -75,7 +75,7 @@ contract BalancerService is SecuritisableService {
         address[] memory tokens;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
-            if (tokens[index] != pool.tokens[index]) revert BalancerStrategy__Token_Index_Mismatch(index);
+            if (tokens[index] != pool.tokens[index]) revert TokenIndexMismatch();
         }
 
         uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
@@ -92,7 +92,7 @@ contract BalancerService is SecuritisableService {
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
         PoolData memory pool = pools[agreement.collaterals[0].token];
-        if (pool.length == 0) revert BalancerStrategy__Inexistent_Pool(agreement.collaterals[0].token);
+        if (pool.length == 0) revert InexistentPool();
         (address[] memory tokens, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
 
         uint256 collateral = agreement.collaterals[0].amount;
@@ -144,6 +144,8 @@ contract BalancerService is SecuritisableService {
     }
 
     function addPool(address poolAddress, bytes32 balancerPoolID) external onlyOwner {
+        assert(poolAddress != address(0));
+
         (address[] memory poolTokens, , ) = balancerVault.getPoolTokens(balancerPoolID);
         uint256 length = poolTokens.length;
         assert(length > 0);
@@ -164,12 +166,9 @@ contract BalancerService is SecuritisableService {
 
     function removePool(address poolAddress) external onlyOwner {
         PoolData memory pool = pools[poolAddress];
-        delete pools[poolAddress];
+        assert(pools[poolAddress].length != 0);
 
-        for (uint8 i = 0; i < pool.tokens.length; i++) {
-            IERC20 token = IERC20(pool.tokens[i]);
-            token.approve(address(balancerVault), 0);
-        }
+        delete pools[poolAddress];
 
         emit PoolWasRemoved(poolAddress);
     }
