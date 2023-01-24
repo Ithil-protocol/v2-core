@@ -120,4 +120,89 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vm.prank(user);
         service.open(order);
     }
+
+    function testQuote() public {
+        //vm.assume(amount < dai.balanceOf(daiWhale));
+        //vm.assume(margin < amount);
+        uint256 daiAmount = 4134 * 1e18;
+        uint256 daiLoan = 514 * 1e18;
+        uint256 daiMargin = 131 * 1e18;
+
+        uint256 wethAmount = 135 * 1e18;
+        uint256 wethLoan = 11 * 1e18;
+        uint256 wethMargin = 3 * 1e18;
+
+        // Fill DAI vault
+        IVault daiVault = IVault(manager.vaults(address(dai)));
+        vm.startPrank(daiWhale);
+        dai.transfer(user, daiMargin);
+        dai.approve(address(daiVault), daiAmount);
+        daiVault.deposit(daiAmount, daiWhale);
+        vm.stopPrank();
+
+        // Fill WETH vault
+        IVault wethVault = IVault(manager.vaults(address(weth)));
+        vm.startPrank(wethWhale);
+        weth.transfer(user, wethMargin);
+        weth.approve(address(wethVault), wethAmount);
+        wethVault.deposit(wethAmount, wethWhale);
+        vm.stopPrank();
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(dai);
+        tokens[1] = address(weth);
+
+        uint256[] memory loans = new uint256[](2);
+        loans[0] = daiLoan;
+        loans[1] = wethLoan;
+
+        uint256[] memory margins = new uint256[](2);
+        margins[0] = daiMargin;
+        margins[1] = wethMargin;
+
+        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
+        itemTypes[0] = IService.ItemType.ERC20;
+
+        address[] memory collateralTokens = new address[](1);
+        collateralTokens[0] = balancerPoolAddress;
+
+        uint256[] memory collateralAmounts = new uint256[](1);
+        collateralAmounts[0] = 0;
+
+        IService.Order memory order = Helper.createAdvancedOrder(
+            tokens,
+            loans,
+            margins,
+            itemTypes,
+            collateralTokens,
+            collateralAmounts,
+            block.timestamp
+        );
+
+        // Add balancer pool to the service
+        service.addPool(balancerPoolAddress, balancerPoolID);
+
+        vm.prank(user);
+        service.open(order);
+
+        (
+            IService.Loan[] memory loan,
+            IService.Collateral[] memory collateral,
+            uint256 createdAt,
+            IService.Status status
+        ) = service.getAgreement(1);
+
+        IService.Loan[] memory permutedLoan = new IService.Loan[](2);
+        permutedLoan[0] = loan[1];
+        permutedLoan[1] = loan[0];
+
+        IService.Agreement memory agreement = IService.Agreement(permutedLoan, collateral, createdAt, status);
+
+        (uint256[] memory quoted, uint256[] memory fees) = service.quote(agreement);
+        assertTrue(quoted[0] >= permutedLoan[0].amount);
+        assertTrue(quoted[1] >= permutedLoan[1].amount);
+        // Interest rate not set for now
+        assertTrue(fees[0] == 0);
+        assertTrue(fees[1] == 0);
+    }
 }

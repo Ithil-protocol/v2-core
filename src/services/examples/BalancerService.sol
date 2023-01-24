@@ -4,6 +4,8 @@ pragma solidity >=0.8.12;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBalancerVault } from "../../interfaces/external/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/IBalancerPool.sol";
+import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
 
@@ -11,6 +13,7 @@ import { Service } from "../Service.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
 contract BalancerService is SecuritisableService {
+    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
     struct PoolData {
@@ -85,6 +88,59 @@ contract BalancerService is SecuritisableService {
         });
 
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
+    }
+
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
+        PoolData memory pool = pools[agreement.collaterals[0].token];
+        if (pool.length == 0) revert InexistentPool();
+        (address[] memory tokens, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
+
+        uint256 collateral = agreement.collaterals[0].amount;
+        uint256 tokenIndex = 0;
+        uint256 assignedIndex = 0;
+        uint256[] memory fees = new uint256[](agreement.loans.length);
+        uint256[] memory quoted = new uint256[](agreement.loans.length);
+        for (; tokenIndex < agreement.loans.length; tokenIndex++) {
+            assignedIndex = BalancerHelper.getTokenIndex(tokens, agreement.loans[tokenIndex].token);
+            (uint256 interest, uint256 spread) = agreement.loans[tokenIndex].interestAndSpread.unpackUint();
+            fees[tokenIndex] = agreement.loans[tokenIndex].amount.safeMulDiv(interest + spread, GeneralMath.RESOLUTION);
+            if (collateral > 0) {
+                uint256 bptNeeded = BalancerHelper.computeBptOut(
+                    agreement.loans[tokenIndex].amount + fees[tokenIndex],
+                    IERC20(agreement.collaterals[0].token).totalSupply(),
+                    totalBalances[assignedIndex],
+                    pool.weights[assignedIndex],
+                    pool.swapFee
+                );
+                if (bptNeeded <= collateral) {
+                    // The collateral is enough to pay the loan for tokenIndex: quoting this is enough
+                    quoted[tokenIndex] = agreement.loans[tokenIndex].amount + fees[tokenIndex];
+                    collateral -= bptNeeded;
+                } else {
+                    // The collateral is not enough to pay the loan for tokenIndex: we compute the last quote
+                    // We cannot break the loop because we still need to compute the fees
+                    quoted[tokenIndex] = BalancerHelper.computeAmountOut(
+                        collateral,
+                        IERC20(agreement.collaterals[0].token).totalSupply(),
+                        totalBalances[assignedIndex],
+                        pool.weights[assignedIndex],
+                        pool.swapFee
+                    );
+                    collateral = 0;
+                }
+            }
+        }
+        // If at this point we have positive collateral, the position is gaining and we add to the last index
+        assignedIndex = BalancerHelper.getTokenIndex(tokens, agreement.loans[tokenIndex - 1].token);
+        quoted[tokenIndex - 1] += BalancerHelper.computeAmountOut(
+            collateral,
+            IERC20(agreement.collaterals[0].token).totalSupply(),
+            totalBalances[assignedIndex],
+            pool.weights[assignedIndex],
+            pool.swapFee
+        );
+
+        return (quoted, fees);
     }
 
     function addPool(address poolAddress, bytes32 balancerPoolID) external onlyOwner {
