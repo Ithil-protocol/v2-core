@@ -61,18 +61,24 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @param order a struct containing data on the agreement and extra params
     function open(Order calldata order) public virtual unlocked {
         // Hook
-        _beforeOpening(order.agreement, order.data);
+        Agreement memory agreement = order.agreement;
+        _beforeOpening(agreement, order.data);
 
         // Body
         assert(order.agreement.status == Status.OPEN); // @todo should we validate more params here?
-        _open(order.agreement, order.data);
+        _open(agreement, order.data);
         _safeMint(msg.sender, id++);
 
         // Hook
-        _afterOpening(order.agreement, order.data);
+        _afterOpening(agreement, order.data);
 
         // It must be here, since the _open function may modify some fields
         agreements.push(order.agreement);
+        for (uint256 collateralIndex = 0; collateralIndex < agreements.length; collateralIndex++) {
+            agreements[agreements.length - 1].collaterals[collateralIndex].amount = agreement
+                .collaterals[collateralIndex]
+                .amount;
+        }
     }
 
     function _open(Agreement memory agreement, bytes calldata data) internal virtual {}
