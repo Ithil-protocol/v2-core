@@ -4,8 +4,7 @@ pragma solidity =0.8.17;
 abstract contract HarvestableService {
     event HarvestWasTriggered(uint256 indexed poolID);
 
-    /// @dev mapping containing the rewards for each pool
-    /// poolID => data 
+    /// @dev mapping containing the rewards for each pool ID
     struct HarvestsData {
         uint256[] totalRewards;
         uint256 totalStakedAmount;
