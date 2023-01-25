@@ -17,7 +17,8 @@ import { Helper } from "./Helper.sol";
 contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
     IManager internal immutable manager;
     StargateService internal immutable service;
-    address internal constant stargate = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
+    address internal constant stargateRouter = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
+    address internal constant stargateLPStaking = 0xB0D502E938ed5f4df2E681fE6E419ff29631d62b;
     IERC20 internal constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address internal constant usdcWhale = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
     address internal constant lpToken = 0xdf0770dF86a8034b3EFEf0A1Bb3c889B8332FF56;
@@ -28,31 +29,29 @@ contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vm.selectFork(forkId);
 
         manager = IManager(new Manager());
-        service = new StargateService(address(manager), stargate);
+        service = new StargateService(address(manager), stargateRouter, stargateLPStaking);
     }
 
     function setUp() public {
-        vm.startPrank(user);
         usdc.approve(address(service), type(uint256).max);
-        vm.stopPrank();
         vm.deal(usdcWhale, 1 ether);
 
         manager.create(address(usdc));
         manager.setCap(address(service), address(usdc), GeneralMath.RESOLUTION);
-        service.addPool(address(usdc), 1);
+        service.addPool(address(usdc), 0);
     }
 
-    function testStargateOpen() public {
+    function testStargateIntegration() public {
         //vm.assume(amount < usdc.balanceOf(usdcWhale));
         //vm.assume(margin < amount);
-        uint256 amount = 10 * 1e6;
-        uint256 loan = 9 * 1e6;
-        uint256 margin = 1e6;
-        uint256 collateral = 9 * 1e6;
+        uint256 amount = 100 * 1e6;
+        uint256 loan = 90 * 1e6;
+        uint256 margin = 10 * 1e6;
+        uint256 collateral = 90 * 1e6;
 
         IVault vault = IVault(manager.vaults(address(usdc)));
         vm.startPrank(usdcWhale);
-        usdc.transfer(user, margin);
+        usdc.transfer(address(this), margin);
         usdc.approve(address(vault), amount);
         vault.deposit(amount, usdcWhale);
         vm.stopPrank();
@@ -66,7 +65,7 @@ contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
             block.timestamp
         );
 
-        vm.prank(user);
+        console2.log("initial balance", usdc.balanceOf(address(this)));
         service.open(order);
 
         assertTrue(service.id() == 1);
@@ -81,5 +80,9 @@ contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
         assertTrue(collaterals.length == 1);
         assertTrue(createdAt == block.timestamp);
         assertTrue(status == IService.Status.OPEN);
+
+        service.close(0, "");
+
+        console2.log("final balance", usdc.balanceOf(address(this)));
     }
 }
