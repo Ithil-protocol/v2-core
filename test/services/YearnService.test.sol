@@ -21,26 +21,27 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
     IERC20 internal constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 internal constant ydai = IERC20(0xdA816459F1AB5631232FE5e97a05BBBb94970c95);
     address internal constant daiWhale = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-    address internal immutable user;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16433647);
         vm.selectFork(forkId);
 
+        vm.startPrank(admin);
         manager = IManager(new Manager());
         service = new YearnService(address(manager), registry);
-        user = address(uint160(uint(keccak256(abi.encodePacked("User")))));
+        vm.stopPrank();
     }
 
     function setUp() public {
-        vm.prank(user);
         dai.approve(address(service), type(uint256).max);
         vm.deal(daiWhale, 1 ether);
 
+        vm.startPrank(admin);
         // Create Vault
         manager.create(address(dai));
         // No cap for this service -> 100% of the liquidity can be used initially
         manager.setCap(address(service), address(dai), GeneralMath.RESOLUTION);
+        vm.stopPrank();
     }
 
     function testStake() public {
@@ -53,7 +54,7 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
         IVault vault = IVault(manager.vaults(address(dai)));
         vm.startPrank(daiWhale);
         // Transfers margin to the user
-        dai.transfer(user, margin);
+        dai.transfer(address(this), margin);
         // Deposits amount to the vault
         // Amount must be higher than loan: due to ERC4626 standard vault cannot be emptied
         dai.approve(address(vault), amount);
@@ -72,7 +73,6 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
             block.timestamp
         );
 
-        vm.prank(user);
         service.open(order);
 
         assertTrue(service.id() == 1);

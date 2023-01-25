@@ -37,7 +37,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     }
 
     modifier editable(uint256 tokenID) {
-        if (agreements[tokenID].status == Status.OPEN) revert InvalidStatus();
+        if (agreements[tokenID].status != Status.OPEN) revert InvalidStatus();
         _;
     }
 

@@ -4,10 +4,12 @@ pragma solidity >=0.8.12;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBalancerVault } from "../../interfaces/external/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/IBalancerPool.sol";
+import { IGauge } from "../../interfaces/external/IGauge.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /// @title    BalancerService contract
 /// @author   Ithil
@@ -15,6 +17,7 @@ import { Service } from "../Service.sol";
 contract BalancerService is SecuritisableService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
+    using SafeERC20 for IBalancerPool;
 
     struct PoolData {
         bytes32 balancerPoolID;
@@ -22,6 +25,7 @@ contract BalancerService is SecuritisableService {
         uint256[] weights;
         uint8 length;
         uint256 swapFee;
+        address gauge;
     }
 
     event PoolWasAdded(address indexed balancerPool);
@@ -33,9 +37,13 @@ contract BalancerService is SecuritisableService {
     mapping(address => PoolData) public pools;
     IBalancerVault internal immutable balancerVault;
     uint256 public rewardRate;
+    address public immutable rewardToken;
 
-    constructor(address _manager, address _balancerVault) Service("BalancerService", "BALANCER-SERVICE", _manager) {
+    constructor(address _manager, address _balancerVault, address _rewardToken)
+        Service("BalancerService", "BALANCER-SERVICE", _manager)
+    {
         balancerVault = IBalancerVault(_balancerVault);
+        rewardToken = _rewardToken;
     }
 
     function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
@@ -63,23 +71,24 @@ contract BalancerService is SecuritisableService {
             ),
             fromInternalBalance: false
         });
-
         balancerVault.joinPool(pool.balancerPoolID, address(this), address(this), request);
 
         agreement.collaterals[0].amount = bpToken.balanceOf(address(this)) - bptInitialBalance;
+        IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
-        address[] memory tokens;
+        address[] memory tokens = new address[](agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
             if (tokens[index] != pool.tokens[index]) revert TokenIndexMismatch();
         }
 
-        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
+        IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
 
+        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
         IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest({
             assets: tokens,
             minAmountsOut: minAmountsOut,
@@ -143,7 +152,7 @@ contract BalancerService is SecuritisableService {
         return (quoted, fees);
     }
 
-    function addPool(address poolAddress, bytes32 balancerPoolID) external onlyOwner {
+    function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
         assert(poolAddress != address(0));
 
         (address[] memory poolTokens, , ) = balancerVault.getPoolTokens(balancerPoolID);
@@ -151,6 +160,8 @@ contract BalancerService is SecuritisableService {
         assert(length > 0);
 
         IBalancerPool bpool = IBalancerPool(poolAddress);
+        bpool.safeApprove(gauge, type(uint256).max);
+
         uint256 fee = bpool.getSwapFeePercentage();
         uint256[] memory weights = bpool.getNormalizedWeights();
 
@@ -159,7 +170,7 @@ contract BalancerService is SecuritisableService {
                 IERC20(poolTokens[i]).safeApprove(address(balancerVault), type(uint256).max);
         }
 
-        pools[poolAddress] = PoolData(balancerPoolID, poolTokens, weights, uint8(length), fee);
+        pools[poolAddress] = PoolData(balancerPoolID, poolTokens, weights, uint8(length), fee, gauge);
 
         emit PoolWasAdded(poolAddress);
     }
@@ -168,6 +179,7 @@ contract BalancerService is SecuritisableService {
         PoolData memory pool = pools[poolAddress];
         assert(pools[poolAddress].length != 0);
 
+        IERC20(poolAddress).approve(pool.gauge, 0);
         delete pools[poolAddress];
 
         emit PoolWasRemoved(poolAddress);

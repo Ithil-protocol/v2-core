@@ -28,35 +28,42 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
     // Pool 60 WETH - 40 DAI
     address internal constant balancerPoolAddress = 0x0b09deA16768f0799065C475bE02919503cB2a35;
     bytes32 internal constant balancerPoolID = 0x0b09dea16768f0799065c475be02919503cb2a3500020000000000000000001a;
+    address internal constant gauge = 0x4ca6AC0509E6381Ca7CD872a6cdC0Fbf00600Fa1;
+    address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
+
     // address internal constant auraPoolID = 2;
-    address internal immutable user;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
         vm.selectFork(forkId);
+        vm.deal(admin, 1 ether);
 
+        vm.startPrank(admin);
         manager = IManager(new Manager());
-        service = new BalancerService(address(manager), balancerVault);
-        user = address(uint160(uint(keccak256(abi.encodePacked("User")))));
+        service = new BalancerService(address(manager), balancerVault, bal);
+        vm.stopPrank();
     }
 
     function setUp() public {
-        vm.startPrank(user);
         dai.approve(address(service), type(uint256).max);
         weth.approve(address(service), type(uint256).max);
-        vm.stopPrank();
+
         vm.deal(daiWhale, 1 ether);
         vm.deal(wethWhale, 1 ether);
 
+        vm.startPrank(admin);
         // Create Vaults: DAI and WETH
         manager.create(address(dai));
         manager.create(address(weth));
         // No caps for this service -> 100% of the liquidity can be used initially
         manager.setCap(address(service), address(dai), GeneralMath.RESOLUTION);
         manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
+
+        service.addPool(balancerPoolAddress, balancerPoolID, gauge);
+        vm.stopPrank();
     }
 
-    function testStake() public {
+    function testBalancerIntegration() public {
         //vm.assume(amount < dai.balanceOf(daiWhale));
         //vm.assume(margin < amount);
         uint256 daiAmount = 4134 * 1e18;
@@ -70,7 +77,7 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         // Fill DAI vault
         IVault daiVault = IVault(manager.vaults(address(dai)));
         vm.startPrank(daiWhale);
-        dai.transfer(user, daiMargin);
+        dai.transfer(address(this), daiMargin);
         dai.approve(address(daiVault), daiAmount);
         daiVault.deposit(daiAmount, daiWhale);
         vm.stopPrank();
@@ -78,7 +85,7 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         // Fill WETH vault
         IVault wethVault = IVault(manager.vaults(address(weth)));
         vm.startPrank(wethWhale);
-        weth.transfer(user, wethMargin);
+        weth.transfer(address(this), wethMargin);
         weth.approve(address(wethVault), wethAmount);
         wethVault.deposit(wethAmount, wethWhale);
         vm.stopPrank();
@@ -114,11 +121,14 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
             block.timestamp
         );
 
-        // Add balancer pool to the service
-        service.addPool(balancerPoolAddress, balancerPoolID);
-
-        vm.prank(user);
         service.open(order);
+
+        /*
+            uint256[] memory amounts = new uint256[](2);
+            amounts[0] = 1;
+            amounts[1] = 1;
+            service.close(0, abi.encode(amounts));
+        */
     }
 
     function testQuote() public {
@@ -135,7 +145,7 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         // Fill DAI vault
         IVault daiVault = IVault(manager.vaults(address(dai)));
         vm.startPrank(daiWhale);
-        dai.transfer(user, daiMargin);
+        dai.transfer(address(this), daiMargin);
         dai.approve(address(daiVault), daiAmount);
         daiVault.deposit(daiAmount, daiWhale);
         vm.stopPrank();
@@ -143,7 +153,7 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         // Fill WETH vault
         IVault wethVault = IVault(manager.vaults(address(weth)));
         vm.startPrank(wethWhale);
-        weth.transfer(user, wethMargin);
+        weth.transfer(address(this), wethMargin);
         weth.approve(address(wethVault), wethAmount);
         wethVault.deposit(wethAmount, wethWhale);
         vm.stopPrank();
@@ -179,10 +189,6 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
             block.timestamp
         );
 
-        // Add balancer pool to the service
-        service.addPool(balancerPoolAddress, balancerPoolID);
-
-        vm.prank(user);
         service.open(order);
 
         (
