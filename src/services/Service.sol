@@ -62,6 +62,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     function open(Order calldata order) public virtual unlocked {
         // Hook
         Agreement memory agreement = order.agreement;
+        agreement.createdAt = block.timestamp;
         _beforeOpening(agreement, order.data);
 
         // Body
