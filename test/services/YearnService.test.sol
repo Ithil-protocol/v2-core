@@ -69,8 +69,7 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
             loan,
             margin,
             address(ydai),
-            collateral,
-            block.timestamp
+            collateral
         );
 
         service.open(order);
