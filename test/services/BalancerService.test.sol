@@ -118,7 +118,8 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
             itemTypes,
             collateralTokens,
             collateralAmounts,
-            block.timestamp
+            block.timestamp,
+            ""
         );
 
         service.open(order);
@@ -186,7 +187,8 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
             itemTypes,
             collateralTokens,
             collateralAmounts,
-            block.timestamp
+            block.timestamp,
+            ""
         );
 
         service.open(order);

@@ -123,7 +123,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     {}
 
     function getAgreement(uint256 tokenID)
-        public
+        public view
         returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status)
     {
         Agreement memory agreement = agreements[tokenID - 1];

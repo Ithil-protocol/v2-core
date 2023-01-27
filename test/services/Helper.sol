@@ -26,7 +26,7 @@ library Helper {
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
 
-        return createAdvancedOrder(tokens, amounts, margins, itemTypes, collateralTokens, collateralAmounts, time);
+        return createAdvancedOrder(tokens, amounts, margins, itemTypes, collateralTokens, collateralAmounts, time, "");
     }
 
     // tokens.length = amounts.length = margins.length
@@ -39,7 +39,8 @@ library Helper {
         IService.ItemType[] memory itemTypes,
         address[] memory collateralTokens,
         uint256[] memory collateralAmounts,
-        uint256 time
+        uint256 time,
+        bytes memory data
     ) public pure returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
 
@@ -62,7 +63,7 @@ library Helper {
             createdAt: time,
             status: IService.Status.OPEN
         });
-        IService.Order memory order = IService.Order({ agreement: agreement, data: "" });
+        IService.Order memory order = IService.Order({ agreement: agreement, data: data });
 
         return order;
     }
