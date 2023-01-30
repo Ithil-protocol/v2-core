@@ -5,14 +5,12 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IStargateRouter } from "../../interfaces/external/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/IStargateLPStaking.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
-import { HarvestableService } from "../HarvestableService.sol";
 import { Service } from "../Service.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    StargateService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Stargate pool
-contract StargateService is SecuritisableService, HarvestableService {
+contract StargateService is SecuritisableService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IStargatePool;
 
@@ -47,22 +45,22 @@ contract StargateService is SecuritisableService, HarvestableService {
 
         stargateRouter.addLiquidity(pool.poolID, agreement.loans[0].amount + agreement.loans[0].margin, address(this));
         agreement.collaterals[0].amount = IERC20(pool.lpToken).balanceOf(address(this));
-        
+
         uint256 initialBalance = stargate.balanceOf(address(this));
         stargateLPStaking.deposit(pool.stakingPoolID, agreement.collaterals[0].amount);
 
         // update harvests data
-        harvests[pool.poolID].totalRewards[0] += stargate.balanceOf(address(this)) - initialBalance;
-        harvests[pool.poolID].totalStakedAmount += agreement.collaterals[0].amount;
+        //harvests[pool.poolID].totalRewards[0] += stargate.balanceOf(address(this)) - initialBalance;
+        //harvests[pool.poolID].totalStakedAmount += agreement.collaterals[0].amount;
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.loans[0].token];
-        
+
         uint256 initialBalance = stargate.balanceOf(address(this));
         stargateLPStaking.withdraw(pool.stakingPoolID, agreement.collaterals[0].amount);
-        harvests[pool.poolID].totalRewards[0] -= initialBalance - stargate.balanceOf(address(this));
-        harvests[pool.poolID].totalStakedAmount -= agreement.collaterals[0].amount;
+        //harvests[pool.poolID].totalRewards[0] -= initialBalance - stargate.balanceOf(address(this));
+        //harvests[pool.poolID].totalStakedAmount -= agreement.collaterals[0].amount;
 
         stargateRouter.instantRedeemLocal(
             pools[agreement.loans[0].token].poolID,
@@ -70,15 +68,16 @@ contract StargateService is SecuritisableService, HarvestableService {
             address(this)
         );
 
-/*
+        /*
         bool harvest = abi.decode(data, (bool));
         if(harvest) {
             bytes memory poolID = abi.encode(agreement.loans[0].token);
             collectRewards(poolID);
         }
-*/
+        */
     }
 
+    /*
     function collectRewards(bytes memory data) public override {
         address token = abi.decode(data, (address));
         PoolData memory pool = pools[token];
@@ -90,6 +89,7 @@ contract StargateService is SecuritisableService, HarvestableService {
 
         //_swap();
     }
+    */
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {
         assert(token != address(0));
@@ -105,7 +105,7 @@ contract StargateService is SecuritisableService, HarvestableService {
             lpToken: lpToken,
             locked: false
         });
-        harvests[pools[token].poolID].totalRewards.push(0);
+        //harvests[pools[token].poolID].totalRewards.push(0);
 
         // Approval for the main token
         if (IERC20(token).allowance(address(this), address(stargateRouter)) == 0)
