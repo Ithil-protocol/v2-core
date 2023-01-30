@@ -71,13 +71,13 @@ contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
         service.open(order);
 
         vm.prank(admin);
-        service.setWhitelistStatus(whitelistedUser, true);
+        service.addToWhitelist(whitelistedUser);
 
         vm.prank(whitelistedUser);
         service.open(order);
 
         vm.prank(admin);
-        service.setWhitelistStatus(whitelistedUser, false);
+        service.removeFromWhitelist(whitelistedUser);
 
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("UserIsNotWhitelisted()"))));
         service.open(order);
