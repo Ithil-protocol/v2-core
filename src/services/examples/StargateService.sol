@@ -82,10 +82,10 @@ contract StargateService is SecuritisableService, HarvestableService {
     function collectRewards(bytes memory data) public override {
         address token = abi.decode(data, (address));
         PoolData memory pool = pools[token];
+        assert(pool.poolID != 0);
 
         uint256 initialBalance = stargate.balanceOf(address(this));
-        stargateLPStaking.withdraw(pool.stakingPoolID, totalDeposits[token]);
-        stargateLPStaking.deposit(pool.stakingPoolID, totalDeposits[token]);
+        stargateLPStaking.deposit(pool.stakingPoolID, 0);
         harvests[pool.poolID].totalRewards[0] += stargate.balanceOf(address(this)) - initialBalance;
 
         //_swap();
