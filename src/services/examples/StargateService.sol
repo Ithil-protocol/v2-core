@@ -77,6 +77,16 @@ contract StargateService is SecuritisableService {
         */
     }
 
+    function quote(Agreement memory agreement)
+        public
+        view
+        override
+        returns (uint256[] memory results, uint256[] memory)
+    {
+        PoolData memory pool = pools[agreement.loans[0].token];
+        uint256 stg = stargateLPStaking.pendingStargate(pool.id, address(this));
+    }
+
     /*
     function collectRewards(bytes memory data) public override {
         address token = abi.decode(data, (address));
