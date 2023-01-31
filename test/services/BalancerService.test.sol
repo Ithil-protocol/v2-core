@@ -249,54 +249,50 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
         // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = daiLoan + daiMargin / 2;
-        minAmountsOut[1] = wethLoan + wethMargin / 2;
+        minAmountsOut[0] = daiLoan;
+        minAmountsOut[1] = wethLoan;
         bytes memory data = abi.encode(minAmountsOut);
         service.close(0, data);
     }
 
-    // function testQuote(
-    //     uint256 daiAmount,
-    //     uint256 daiLoan,
-    //     uint256 daiMargin,
-    //     uint256 wethAmount,
-    //     uint256 wethLoan,
-    //     uint256 wethMargin
-    // ) public {
-    //     (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
-    //         daiAmount,
-    //         daiMargin,
-    //         wethAmount,
-    //         wethMargin
-    //     );
-    //     daiLoan = daiLoan % daiAmount;
-    //     wethLoan = wethLoan % wethAmount;
-    //     IService.Order memory order = _createOrder(daiLoan, daiMargin, wethLoan, wethMargin);
+    function testQuote() public // uint256 daiAmount,
+    // uint256 daiLoan,
+    // uint256 daiMargin,
+    // uint256 wethAmount,
+    // uint256 wethLoan,
+    // uint256 wethMargin
+    {
+        uint256 daiAmount = 1204 * 1e18;
+        uint256 daiLoan = 104 * 1e18;
+        uint256 daiMargin = 42 * 1e18;
+        uint256 wethAmount = 134 * 1e18;
+        uint256 wethLoan = 41 * 1e17;
+        uint256 wethMargin = 51 * 1e17;
+        (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
+            daiAmount,
+            daiMargin,
+            wethAmount,
+            wethMargin
+        );
+        daiLoan = daiLoan % daiAmount;
+        wethLoan = wethLoan % wethAmount;
+        IService.Order memory order = _createOrder(daiLoan, daiMargin, wethLoan, wethMargin);
 
-    //     service.open(order);
+        service.open(order);
 
-    //     (
-    //         IService.Loan[] memory loan,
-    //         IService.Collateral[] memory collateral,
-    //         uint256 createdAt,
-    //         IService.Status status
-    //     ) = service.getAgreement(1);
+        (
+            IService.Loan[] memory loan,
+            IService.Collateral[] memory collateral,
+            uint256 createdAt,
+            IService.Status status
+        ) = service.getAgreement(1);
 
-    //     IService.Loan[] memory permutedLoan = new IService.Loan[](2);
-    //     permutedLoan[0] = loan[1];
-    //     permutedLoan[1] = loan[0];
+        IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
-    //     IService.Agreement memory agreement = IService.Agreement(permutedLoan, collateral, createdAt, status);
-
-    //     (uint256[] memory quoted, uint256[] memory fees) = service.quote(agreement);
-    //     console2.log("quoted[0]", quoted[0]);
-    //     console2.log("permutedLoan[0].amount", permutedLoan[0].amount);
-    //     console2.log("quoted[1]", quoted[1]);
-    //     console2.log("permutedLoan[1].amount", permutedLoan[1].amount);
-    //     // Interest rate not set for now
-    //     assertTrue(fees[0] == 0);
-    //     assertTrue(fees[1] == 0);
-    // }
+        (uint256[] memory profits, ) = service.quote(agreement);
+        console2.log("profits[0]", profits[0]);
+        console2.log("profits[1]", profits[1]);
+    }
 
     // testAddPool() public {
 
