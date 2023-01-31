@@ -8,7 +8,8 @@ import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
-import { FeeRedistributor } from "../src/FeeRedistributor.sol";
+import { FeeCollector } from "../src/FeeCollector.sol";
+import { IManager, Manager } from "../src/Manager.sol";
 import { Ithil } from "../src/Ithil.sol";
 
 interface IUniswapV2Factory {
@@ -60,23 +61,25 @@ interface IUniswapV2Router {
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
-contract FeeRedistributorTest is PRBTest, StdCheats {
+contract FeeCollectorTest is PRBTest, StdCheats {
     using GeneralMath for uint256;
 
     address internal constant user1 = address(uint160(uint(keccak256(abi.encodePacked("User1")))));
     address internal constant user2 = address(uint160(uint(keccak256(abi.encodePacked("User2")))));
-    IERC20 internal constant weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address internal constant wethWhale = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
-    IUniswapV2Router internal constant router = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
+    address internal constant wethWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+    IUniswapV2Router internal constant router = IUniswapV2Router(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
     IERC20 internal immutable ithil;
-    FeeRedistributor internal immutable redistributor;
+    Manager internal immutable manager;
+    FeeCollector internal immutable collector;
     address internal immutable pair;
 
     constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
+        uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 56960635);
         vm.selectFork(forkId);
 
-        redistributor = new FeeRedistributor();
+        manager = new Manager();
+        collector = new FeeCollector(address(manager));
         ithil = new Ithil();
         pair = IUniswapV2Factory(router.factory()).createPair(address(ithil), address(weth));
     }
@@ -88,7 +91,7 @@ contract FeeRedistributorTest is PRBTest, StdCheats {
 
         weth.approve(address(router), type(uint256).max);
         ithil.approve(address(router), type(uint256).max);
-        ithil.approve(address(redistributor), type(uint256).max);
+        ithil.approve(address(collector), type(uint256).max);
 
         vm.startPrank(user1);
         weth.approve(address(router), type(uint256).max);
@@ -105,30 +108,30 @@ contract FeeRedistributorTest is PRBTest, StdCheats {
         uint256 balance = ithil.balanceOf(address(this));
 
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("TokenNotSupported()"))));
-        redistributor.stake(address(ithil), amount);
+        collector.stake(address(ithil), amount);
 
-        redistributor.setTokenWeight(address(ithil), 1);
+        collector.setTokenWeight(address(ithil), 1);
 
-        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 0);
-        redistributor.stake(address(ithil), amount);
-        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == amount);
+        assertTrue(IERC20(address(collector)).balanceOf(address(this)) == 0);
+        collector.stake(address(ithil), amount);
+        assertTrue(IERC20(address(collector)).balanceOf(address(this)) == amount);
 
-        redistributor.unstake(address(ithil), amount);
-        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 0);
+        collector.unstake(address(ithil), amount);
+        assertTrue(IERC20(address(collector)).balanceOf(address(this)) == 0);
         assertTrue(ithil.balanceOf(address(this)) == balance);
 
         balance = ithil.balanceOf(address(this));
 
-        redistributor.setTokenWeight(address(ithil), 2);
-        redistributor.stake(address(ithil), amount);
+        collector.setTokenWeight(address(ithil), 2);
+        collector.stake(address(ithil), amount);
 
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountDeposited()"))));
-        redistributor.unstake(address(ithil), amount + 1);
+        collector.unstake(address(ithil), amount + 1);
 
-        redistributor.setTokenWeight(address(ithil), 1);
-        redistributor.unstake(address(ithil), amount);
+        collector.setTokenWeight(address(ithil), 1);
+        collector.unstake(address(ithil), amount);
 
-        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 0);
+        assertTrue(IERC20(address(collector)).balanceOf(address(this)) == 0);
         assertTrue(ithil.balanceOf(address(this)) == balance);
     }
 
@@ -144,14 +147,19 @@ contract FeeRedistributorTest is PRBTest, StdCheats {
         router.addLiquidity(address(ithil), address(weth), amountIthil, amountWeth, 1, 1, user1, block.timestamp);
         uint256 obtained = IERC20(pair).balanceOf(user1);
 
-        redistributor.setTokenWeight(address(ithil), 1);
-        redistributor.setTokenWeight(pair, 2);
+        collector.setTokenWeight(address(ithil), 1);
+        collector.setTokenWeight(pair, 2);
 
         vm.startPrank(user1);
-        IERC20(pair).approve(address(redistributor), obtained);
-        redistributor.stake(pair, obtained);
+        IERC20(pair).approve(address(collector), obtained);
+        collector.stake(pair, obtained);
         vm.stopPrank();
 
-        assertTrue(IERC20(address(redistributor)).balanceOf(user1) == obtained * 2);
+        assertTrue(IERC20(address(collector)).balanceOf(user1) == obtained * 2);
+
+        vm.prank(user1);
+        collector.unstake(pair, obtained);
+
+        assertTrue(IERC20(pair).balanceOf(user1) == obtained);
     }
 }

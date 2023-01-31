@@ -57,6 +57,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
     }
 
+    function getStatus() external view override returns (uint256, uint256, uint256) {
+        return (currentProfits, currentLosses, latestRepay);
+    }
+
     // Total assets are used to calculate shares to mint and redeem
     // They represent the deposited amount, the loans and the unlocked fees
     // As per ERC4626 standard this must never throw

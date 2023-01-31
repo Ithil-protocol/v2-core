@@ -18,6 +18,8 @@ interface IManager {
 
     function create(address token) external returns (address);
 
+    function setFeeCollector(address collector) external;
+
     function setSpread(address service, address token, uint256 spread) external;
 
     function setCap(address service, address token, uint256 cap) external;
@@ -36,18 +38,28 @@ interface IManager {
 
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
 
+    function harvestFees(address token, uint256 feesPercentage, address to, uint256 latestHarvest)
+        external
+        returns (uint256);
+
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
 
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
 
     event TokenWasRemovedFromService(address indexed service, address indexed token);
 
-    error Vault_Missing();
+    event FeeCollectorWasChanged(address indexed feeCollector);
 
-    error Restricted_To_Whitelisted_Services();
+    error VaultMissing();
 
-    error Invesment_Exceeded_Cap(uint256 investedPortion, uint256 investmentCap);
+    error RestrictedToWhitelistedServices();
+
+    error InvesmentExceededCap(uint256 investedPortion, uint256 investmentCap);
+
+    error Throttled();
 
     /// @notice thrown when amount of assets received is above the max set by caller
-    error Max_Amount_Exceeded();
+    error MaxAmountExceeded();
+
+    error Restricted();
 }

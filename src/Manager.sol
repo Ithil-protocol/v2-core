@@ -16,17 +16,23 @@ contract Manager is IManager, Ownable {
     mapping(address => address) public override vaults;
     // service => token => RiskParams
     mapping(address => mapping(address => RiskParams)) public override riskParams;
+    address public feeCollector;
 
     // solhint-disable-next-line no-empty-blocks
     constructor() {}
 
+    modifier restricted() {
+        if (msg.sender != feeCollector && msg.sender != owner()) revert Restricted();
+        _;
+    }
+
     modifier supported(address token) {
-        if (riskParams[msg.sender][token].cap == 0) revert Restricted_To_Whitelisted_Services();
+        if (riskParams[msg.sender][token].cap == 0) revert RestrictedToWhitelistedServices();
         _;
     }
 
     modifier vaultExists(address token) {
-        if (vaults[token] == address(0)) revert Vault_Missing();
+        if (vaults[token] == address(0)) revert VaultMissing();
         _;
     }
 
@@ -41,6 +47,12 @@ contract Manager is IManager, Ownable {
         vaults[token] = vault;
 
         return vault;
+    }
+
+    function setFeeCollector(address collector) external override onlyOwner {
+        feeCollector = collector;
+
+        emit FeeCollectorWasChanged(collector);
     }
 
     function setSpread(address service, address token, uint256 spread) external override onlyOwner {
@@ -77,7 +89,7 @@ contract Manager is IManager, Ownable {
             currentExposure,
             freeLiquidity.safeAdd(netLoans - amount)
         );
-        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        if (investedPortion > investmentCap) revert InvesmentExceededCap(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);
     }
 
@@ -93,7 +105,7 @@ contract Manager is IManager, Ownable {
 
     /// @inheritdoc IManager
     function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        external
+        public
         override
         supported(token)
         vaultExists(token)
@@ -104,24 +116,43 @@ contract Manager is IManager, Ownable {
         uint256 investedPortion = totalSupply == 0
             ? GeneralMath.RESOLUTION
             : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
-        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        if (investedPortion > investmentCap) revert InvesmentExceededCap(investedPortion, investmentCap);
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
-        if (amountIn > maxAmountIn) revert Max_Amount_Exceeded();
+        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 
         return amountIn;
     }
 
     /// @inheritdoc IManager
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
-        external
+        public
         override
         supported(token)
         vaultExists(token)
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);
-        if (amountIn > maxAmountIn) revert Max_Amount_Exceeded();
+        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 
         return amountIn;
+    }
+
+    /// @inheritdoc IManager
+    function harvestFees(address token, uint256 feesPercentage, address to, uint256 latestHarvest)
+        external
+        override
+        restricted
+        vaultExists(token)
+        returns (uint256)
+    {
+        IVault vault = IVault(vaults[token]);
+        (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getStatus();
+        if (latestRepay < latestHarvest) revert Throttled();
+
+        uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feesPercentage, GeneralMath.RESOLUTION);
+        uint256 sharesToMint = vault.convertToShares(feesToHarvest);
+        vault.directMint(sharesToMint, to);
+
+        return sharesToMint;
     }
 }
