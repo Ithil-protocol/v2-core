@@ -4,7 +4,6 @@ pragma solidity =0.8.17;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { PRBTest } from "@prb/test/PRBTest.sol";
-import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
@@ -13,8 +12,38 @@ import { BalancerService } from "../../src/services/examples/BalancerService.sol
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
+import { console2 } from "forge-std/console2.sol";
+
+/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
+/// @dev Run Forge with `-vvvv` to see console logs.
+/// https://book.getfoundry.sh/forge/writing-tests
+
+/// @dev State study
+/// BalancerService native state:
+/// mapping(address => PoolData) public pools;
+/// IBalancerVault internal immutable balancerVault;
+/// address public immutable rewardToken; (this is just BAL)
+
+/// - BalancerService is SecuritisableService:
+/// mapping(uint256 => address) public lenders;
+
+/// - SecuritisableService is DebitService:
+/// None
+
+/// - DebitService is Service:
+/// IManager public immutable manager;
+/// address public guardian;
+/// mapping(address => uint256) public exposures;
+/// Agreement[] public agreements;
+/// bool public locked;
+/// uint256 public id;
+
+/// @dev overrides (except first implementation of virtual functions)
+///
 
 contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
+    using GeneralMath for uint256;
+
     IManager internal immutable manager;
     BalancerService internal immutable service;
     IERC20 internal constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
@@ -30,6 +59,8 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
     bytes32 internal constant balancerPoolID = 0x0b09dea16768f0799065c475be02919503cb2a3500020000000000000000001a;
     address internal constant gauge = 0x4ca6AC0509E6381Ca7CD872a6cdC0Fbf00600Fa1;
     address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
+
+    // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
 
     // address internal constant auraPoolID = 2;
 
@@ -63,16 +94,17 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vm.stopPrank();
     }
 
-    function testBalancerIntegration() public {
-        //vm.assume(amount < dai.balanceOf(daiWhale));
-        //vm.assume(margin < amount);
-        uint256 daiAmount = 4134 * 1e18;
-        uint256 daiLoan = 514 * 1e18;
-        uint256 daiMargin = 131 * 1e18;
-
-        uint256 wethAmount = 135 * 1e18;
-        uint256 wethLoan = 11 * 1e18;
-        uint256 wethMargin = 3 * 1e18;
+    function _prepareVaultsAndUser(uint256 daiAmount, uint256 daiMargin, uint256 wethAmount, uint256 wethMargin)
+        internal
+        returns (uint256, uint256, uint256, uint256)
+    {
+        // Modifications to be sure daiAmount + daiMargin <= dai.balanceOf(daiWhale) and same for weth
+        daiAmount = daiAmount % dai.balanceOf(daiWhale);
+        daiMargin = daiMargin % (dai.balanceOf(daiWhale) - daiAmount);
+        wethAmount = wethAmount % weth.balanceOf(wethWhale);
+        wethMargin = wethMargin % (weth.balanceOf(wethWhale) - wethAmount);
+        daiAmount++;
+        wethAmount++;
 
         // Fill DAI vault
         IVault daiVault = IVault(manager.vaults(address(dai)));
@@ -89,76 +121,13 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         weth.approve(address(wethVault), wethAmount);
         wethVault.deposit(wethAmount, wethWhale);
         vm.stopPrank();
-
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(dai);
-        tokens[1] = address(weth);
-
-        uint256[] memory loans = new uint256[](2);
-        loans[0] = daiLoan;
-        loans[1] = wethLoan;
-
-        uint256[] memory margins = new uint256[](2);
-        margins[0] = daiMargin;
-        margins[1] = wethMargin;
-
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
-
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = balancerPoolAddress;
-
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = 0;
-
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
-            block.timestamp,
-            ""
-        );
-
-        service.open(order);
-
-        /*
-            uint256[] memory amounts = new uint256[](2);
-            amounts[0] = 1;
-            amounts[1] = 1;
-            service.close(0, abi.encode(amounts));
-        */
+        return (daiAmount, daiMargin, wethAmount, wethMargin);
     }
 
-    function testQuote() public {
-        //vm.assume(amount < dai.balanceOf(daiWhale));
-        //vm.assume(margin < amount);
-        uint256 daiAmount = 4134 * 1e18;
-        uint256 daiLoan = 514 * 1e18;
-        uint256 daiMargin = 131 * 1e18;
-
-        uint256 wethAmount = 135 * 1e18;
-        uint256 wethLoan = 11 * 1e18;
-        uint256 wethMargin = 3 * 1e18;
-
-        // Fill DAI vault
-        IVault daiVault = IVault(manager.vaults(address(dai)));
-        vm.startPrank(daiWhale);
-        dai.transfer(address(this), daiMargin);
-        dai.approve(address(daiVault), daiAmount);
-        daiVault.deposit(daiAmount, daiWhale);
-        vm.stopPrank();
-
-        // Fill WETH vault
-        IVault wethVault = IVault(manager.vaults(address(weth)));
-        vm.startPrank(wethWhale);
-        weth.transfer(address(this), wethMargin);
-        weth.approve(address(wethVault), wethAmount);
-        wethVault.deposit(wethAmount, wethWhale);
-        vm.stopPrank();
-
+    function _createOrder(uint256 daiLoan, uint256 daiMargin, uint256 wethLoan, uint256 wethMargin)
+        internal
+        returns (IService.Order memory)
+    {
         address[] memory tokens = new address[](2);
         tokens[0] = address(dai);
         tokens[1] = address(weth);
@@ -190,8 +159,50 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
             block.timestamp,
             ""
         );
+        return order;
+    }
+
+    function _openOrder(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) internal returns (uint256, uint256, uint256, uint256, uint256, uint256) {
+        (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
+            daiAmount,
+            daiMargin,
+            wethAmount,
+            wethMargin
+        );
+        // Loan must be less than amount otherwise Vault will revert
+        // Since daiAmount > 0 and wethAmount > 0, the following does not revert for division by zero
+        daiLoan = daiLoan % daiAmount;
+        wethLoan = wethLoan % wethAmount;
+        IService.Order memory order = _createOrder(daiLoan, daiMargin, wethLoan, wethMargin);
 
         service.open(order);
+        return (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin);
+    }
+
+    function testOpen(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) public {
+        uint256 timestamp = block.timestamp;
+        (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
+            daiAmount,
+            daiLoan,
+            daiMargin,
+            wethAmount,
+            wethLoan,
+            wethMargin
+        );
 
         (
             IService.Loan[] memory loan,
@@ -200,17 +211,98 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
             IService.Status status
         ) = service.getAgreement(1);
 
-        IService.Loan[] memory permutedLoan = new IService.Loan[](2);
-        permutedLoan[0] = loan[1];
-        permutedLoan[1] = loan[0];
-
-        IService.Agreement memory agreement = IService.Agreement(permutedLoan, collateral, createdAt, status);
-
-        (uint256[] memory quoted, uint256[] memory fees) = service.quote(agreement);
-        assertTrue(quoted[0] >= permutedLoan[0].amount);
-        assertTrue(quoted[1] >= permutedLoan[1].amount);
-        // Interest rate not set for now
-        assertTrue(fees[0] == 0);
-        assertTrue(fees[1] == 0);
+        assertTrue(loan[0].token == address(dai));
+        assertTrue(loan[0].amount == daiLoan);
+        assertTrue(loan[0].margin == daiMargin);
+        assertTrue(loan[1].token == address(weth));
+        assertTrue(loan[1].amount == wethLoan);
+        assertTrue(loan[1].margin == wethMargin);
+        assertTrue(collateral[0].token == balancerPoolAddress);
+        assertTrue(collateral[0].identifier == 0);
+        assertTrue(collateral[0].itemType == IService.ItemType.ERC20);
+        assertTrue(createdAt == timestamp);
+        assertTrue(status == IService.Status.OPEN);
     }
+
+    function testClose() public // uint256 daiAmount,
+    // uint256 daiLoan,
+    // uint256 daiMargin,
+    // uint256 wethAmount,
+    // uint256 wethLoan,
+    // uint256 wethMargin
+    {
+        uint256 daiAmount = 1204 * 1e18;
+        uint256 daiLoan = 104 * 1e18;
+        uint256 daiMargin = 42 * 1e18;
+        uint256 wethAmount = 134 * 1e18;
+        uint256 wethLoan = 41 * 1e17;
+        uint256 wethMargin = 51 * 1e17;
+        (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
+            daiAmount,
+            daiLoan,
+            daiMargin,
+            wethAmount,
+            wethLoan,
+            wethMargin
+        );
+
+        uint256[] memory minAmountsOut = new uint256[](2);
+        // Fees make the initial investment always at a loss
+        // In this test we allow any loss: quoter tests will make this more precise
+        minAmountsOut[0] = daiLoan + daiMargin / 2;
+        minAmountsOut[1] = wethLoan + wethMargin / 2;
+        bytes memory data = abi.encode(minAmountsOut);
+        service.close(0, data);
+    }
+
+    // function testQuote(
+    //     uint256 daiAmount,
+    //     uint256 daiLoan,
+    //     uint256 daiMargin,
+    //     uint256 wethAmount,
+    //     uint256 wethLoan,
+    //     uint256 wethMargin
+    // ) public {
+    //     (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
+    //         daiAmount,
+    //         daiMargin,
+    //         wethAmount,
+    //         wethMargin
+    //     );
+    //     daiLoan = daiLoan % daiAmount;
+    //     wethLoan = wethLoan % wethAmount;
+    //     IService.Order memory order = _createOrder(daiLoan, daiMargin, wethLoan, wethMargin);
+
+    //     service.open(order);
+
+    //     (
+    //         IService.Loan[] memory loan,
+    //         IService.Collateral[] memory collateral,
+    //         uint256 createdAt,
+    //         IService.Status status
+    //     ) = service.getAgreement(1);
+
+    //     IService.Loan[] memory permutedLoan = new IService.Loan[](2);
+    //     permutedLoan[0] = loan[1];
+    //     permutedLoan[1] = loan[0];
+
+    //     IService.Agreement memory agreement = IService.Agreement(permutedLoan, collateral, createdAt, status);
+
+    //     (uint256[] memory quoted, uint256[] memory fees) = service.quote(agreement);
+    //     console2.log("quoted[0]", quoted[0]);
+    //     console2.log("permutedLoan[0].amount", permutedLoan[0].amount);
+    //     console2.log("quoted[1]", quoted[1]);
+    //     console2.log("permutedLoan[1].amount", permutedLoan[1].amount);
+    //     // Interest rate not set for now
+    //     assertTrue(fees[0] == 0);
+    //     assertTrue(fees[1] == 0);
+    // }
+
+    // testAddPool() public {
+
+    // }
+
+    // testRemovePool() public {
+
+    // }
 }

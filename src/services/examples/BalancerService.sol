@@ -80,23 +80,33 @@ contract BalancerService is SecuritisableService {
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
+        // TODO: add check on fees to be sure amountOut is not too little
+        IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
         address[] memory tokens = new address[](agreement.loans.length);
+        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
             if (tokens[index] != pool.tokens[index]) revert TokenIndexMismatch();
         }
 
-        IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
-
-        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
         IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest({
             assets: tokens,
             minAmountsOut: minAmountsOut,
-            userData: abi.encode(IBalancerVault.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, agreement.collaterals[0].amount),
+            userData: abi.encode(2, minAmountsOut, agreement.collaterals[0].amount),
             toInternalBalance: false
         });
 
+        uint256 spentBpt = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
+        spentBpt -= IERC20(agreement.collaterals[0].token).balanceOf(address(this));
+        // Swap residual BPT for whatever the Balancer pool gives back and repay sender
+        request = IBalancerVault.ExitPoolRequest({
+            assets: tokens,
+            minAmountsOut: new uint256[](agreement.loans.length),
+            userData: abi.encode(1, agreement.collaterals[0].amount - spentBpt),
+            toInternalBalance: false
+        });
+        balancerVault.exitPool(pool.balancerPoolID, address(this), payable(msg.sender), request);
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
