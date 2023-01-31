@@ -88,6 +88,7 @@ contract FeeRedistributorTest is PRBTest, StdCheats {
 
         weth.approve(address(router), type(uint256).max);
         ithil.approve(address(router), type(uint256).max);
+        ithil.approve(address(redistributor), type(uint256).max);
 
         vm.startPrank(user1);
         weth.approve(address(router), type(uint256).max);
@@ -97,22 +98,38 @@ contract FeeRedistributorTest is PRBTest, StdCheats {
         router.addLiquidity(address(ithil), address(weth), 1e5 * 1e18, 10 * 1e18, 1, 1, address(this), block.timestamp);
     }
 
-    function testStakingBase() public {
-        uint256 initialBalance = ithil.balanceOf(address(this));
+    function testStakingBase(uint256 amount) public {
+        vm.assume(amount > 0);
+        vm.assume(amount < ithil.balanceOf(address(this)));
 
-        ithil.approve(address(redistributor), type(uint256).max);
+        uint256 balance = ithil.balanceOf(address(this));
+
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("TokenNotSupported()"))));
-        redistributor.stake(address(ithil), 1e18);
+        redistributor.stake(address(ithil), amount);
 
         redistributor.setTokenWeight(address(ithil), 1);
 
         assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 0);
-        redistributor.stake(address(ithil), 1e18);
-        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 1e18);
+        redistributor.stake(address(ithil), amount);
+        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == amount);
 
-        redistributor.unstake(address(ithil), 1e18);
+        redistributor.unstake(address(ithil), amount);
         assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 0);
-        assertTrue(ithil.balanceOf(address(this)) == initialBalance);
+        assertTrue(ithil.balanceOf(address(this)) == balance);
+
+        balance = ithil.balanceOf(address(this));
+
+        redistributor.setTokenWeight(address(ithil), 2);
+        redistributor.stake(address(ithil), amount);
+
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountDeposited()"))));
+        redistributor.unstake(address(ithil), amount + 1);
+
+        redistributor.setTokenWeight(address(ithil), 1);
+        redistributor.unstake(address(ithil), amount);
+
+        assertTrue(IERC20(address(redistributor)).balanceOf(address(this)) == 0);
+        assertTrue(ithil.balanceOf(address(this)) == balance);
     }
 
     function testStakingAdvanced() public {

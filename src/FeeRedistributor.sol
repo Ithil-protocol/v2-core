@@ -22,7 +22,8 @@ contract FeeRedistributor is ERC20, ERC20Permit, ERC20Votes, Ownable {
 
     event TokenWeightWasChanged(address indexed token, uint256 newWeight);
     error TokenNotSupported();
-    error NoDeposits();
+    error InsufficientAmountDeposited();
+    error NullAmount();
 
     constructor() ERC20("stITHIL", "STAKED ITHIL") ERC20Permit("stITHIL") {}
 
@@ -37,7 +38,8 @@ contract FeeRedistributor is ERC20, ERC20Permit, ERC20Votes, Ownable {
     }
 
     function unstake(address token, uint256 amount) external {
-        if (balances[msg.sender][token].deposited == 0) revert NoDeposits();
+        if (amount == 0) revert NullAmount();
+        if (balances[msg.sender][token].deposited < amount) revert InsufficientAmountDeposited();
 
         balances[msg.sender][token].deposited -= amount;
         IERC20(token).safeTransfer(msg.sender, amount);
