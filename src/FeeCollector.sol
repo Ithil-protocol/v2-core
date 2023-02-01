@@ -59,7 +59,7 @@ contract FeeCollector is ERC20, ERC20Permit, ERC20Votes, Ownable {
         _burn(msg.sender, toBurn);
     }
 
-    function harvestFees(address[] calldata tokens) external {
+    function harvestFees(address[] calldata tokens, bytes calldata swapData) external {
         uint256 length = tokens.length;
         for (uint256 i = 0; i < length; i++) {
             manager.harvestFees(tokens[i], fee, address(this), latestTrigger[tokens[i]]);
