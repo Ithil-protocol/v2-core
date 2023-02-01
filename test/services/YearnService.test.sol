@@ -26,19 +26,22 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16433647);
         vm.selectFork(forkId);
 
+        vm.startPrank(admin);
         manager = IManager(new Manager());
         service = new YearnService(address(manager), registry);
+        vm.stopPrank();
     }
 
     function setUp() public {
-        vm.prank(user);
         dai.approve(address(service), type(uint256).max);
         vm.deal(daiWhale, 1 ether);
 
+        vm.startPrank(admin);
         // Create Vault
         manager.create(address(dai));
         // No cap for this service -> 100% of the liquidity can be used initially
         manager.setCap(address(service), address(dai), GeneralMath.RESOLUTION);
+        vm.stopPrank();
     }
 
     function testStake() public {
@@ -51,7 +54,7 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
         IVault vault = IVault(manager.vaults(address(dai)));
         vm.startPrank(daiWhale);
         // Transfers margin to the user
-        dai.transfer(user, margin);
+        dai.transfer(address(this), margin);
         // Deposits amount to the vault
         // Amount must be higher than loan: due to ERC4626 standard vault cannot be emptied
         dai.approve(address(vault), amount);
@@ -66,11 +69,9 @@ contract YearnServiceTest is PRBTest, StdCheats, BaseServiceTest {
             loan,
             margin,
             address(ydai),
-            collateral,
-            block.timestamp
+            collateral
         );
 
-        vm.prank(user);
         service.open(order);
 
         assertTrue(service.id() == 1);

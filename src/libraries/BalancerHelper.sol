@@ -56,4 +56,12 @@ library BalancerHelper {
 
         return nonTaxableAmount + taxableAmountMinusFees;
     }
+
+    function getTokenIndex(address[] memory tokens, address token) internal pure returns (uint8) {
+        for (uint8 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == token) return i;
+        }
+
+        revert BalancerStrategy__Token_Not_In_Pool(token);
+    }
 }

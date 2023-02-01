@@ -56,14 +56,7 @@ contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vault.deposit(amount, usdcWhale);
         vm.stopPrank();
 
-        IService.Order memory order = Helper.createSimpleERC20Order(
-            address(usdc),
-            loan,
-            margin,
-            lpToken,
-            collateral,
-            block.timestamp
-        );
+        IService.Order memory order = Helper.createSimpleERC20Order(address(usdc), loan, margin, lpToken, collateral);
 
         console2.log("initial balance", usdc.balanceOf(address(this)));
         service.open(order);

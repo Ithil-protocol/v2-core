@@ -54,10 +54,10 @@ contract StargateService is SecuritisableService {
         //harvests[pool.poolID].totalStakedAmount += agreement.collaterals[0].amount;
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.loans[0].token];
 
-        uint256 initialBalance = stargate.balanceOf(address(this));
+        //uint256 initialBalance = stargate.balanceOf(address(this));
         stargateLPStaking.withdraw(pool.stakingPoolID, agreement.collaterals[0].amount);
         //harvests[pool.poolID].totalRewards[0] -= initialBalance - stargate.balanceOf(address(this));
         //harvests[pool.poolID].totalStakedAmount -= agreement.collaterals[0].amount;
@@ -67,6 +67,9 @@ contract StargateService is SecuritisableService {
             agreement.collaterals[0].amount,
             address(this)
         );
+
+        IERC20 token = IERC20(agreement.loans[0].token);
+        token.safeTransfer(ownerOf(tokenID), token.balanceOf(address(this)));
 
         /*
         bool harvest = abi.decode(data, (bool));
@@ -84,7 +87,9 @@ contract StargateService is SecuritisableService {
         returns (uint256[] memory results, uint256[] memory)
     {
         PoolData memory pool = pools[agreement.loans[0].token];
-        uint256 stg = stargateLPStaking.pendingStargate(pool.id, address(this));
+        uint256 stg = stargateLPStaking.pendingStargate(pool.poolID, address(this));
+
+        // quote swap STG to notional
     }
 
     /*
