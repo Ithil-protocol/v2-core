@@ -7,9 +7,12 @@ import { PRBTest } from "@prb/test/PRBTest.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
+import { IBalancerVault } from "../../src/interfaces/external/IBalancerVault.sol";
+import { IBalancerPool } from "../../src/interfaces/external/IBalancerPool.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BalancerService } from "../../src/services/examples/BalancerService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 import { console2 } from "forge-std/console2.sol";
@@ -224,19 +227,20 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         assertTrue(status == IService.Status.OPEN);
     }
 
-    function testClose() public // uint256 daiAmount,
-    // uint256 daiLoan,
-    // uint256 daiMargin,
-    // uint256 wethAmount,
-    // uint256 wethLoan,
-    // uint256 wethMargin
-    {
-        uint256 daiAmount = 1204 * 1e18;
-        uint256 daiLoan = 104 * 1e18;
-        uint256 daiMargin = 42 * 1e18;
-        uint256 wethAmount = 134 * 1e18;
-        uint256 wethLoan = 41 * 1e17;
-        uint256 wethMargin = 51 * 1e17;
+    function testClose(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin,
+        uint256 minAmountsOutDai,
+        uint256 minAmountsOutWeth
+    ) public {
+        (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
+        vm.assume(minAmountsOutDai <= totalBalances[0]);
+        vm.assume(minAmountsOutWeth <= totalBalances[1]);
         (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
             daiAmount,
             daiLoan,
@@ -249,25 +253,50 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
         // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = daiLoan;
-        minAmountsOut[1] = wethLoan;
+        minAmountsOut[0] = minAmountsOutDai;
+        minAmountsOut[1] = minAmountsOutWeth;
         bytes memory data = abi.encode(minAmountsOut);
-        service.close(0, data);
+
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        bool slippageEnforced = minAmountsOutDai > daiLoan && minAmountsOutWeth > wethLoan;
+        if (slippageEnforced) {
+            uint256[] memory normalizedWeights = IBalancerPool(balancerPoolAddress).getNormalizedWeights();
+            uint256 swapFee = IBalancerPool(balancerPoolAddress).getSwapFeePercentage();
+            uint256 bptTotalSupply = IERC20(balancerPoolAddress).totalSupply();
+            uint256 bptAmountOut = WeightedMath._calcBptInGivenExactTokensOut(
+                totalBalances,
+                normalizedWeights,
+                minAmountsOut,
+                bptTotalSupply,
+                swapFee
+            );
+            if (bptAmountOut > collaterals[0].amount) {
+                // This case is when slippage is exceeded
+                vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
+                service.close(0, data);
+            } else {
+                uint256 initialDaiBalance = dai.balanceOf(address(service));
+                uint256 initialWethBalance = weth.balanceOf(address(service));
+                service.close(0, data);
+                // collateral tokens have been burned
+                assertTrue(IERC20(balancerPoolAddress).totalSupply() == bptTotalSupply - collaterals[0].amount);
+                // min amounts out are respected
+                assertTrue(dai.balanceOf(address(service)) >= initialDaiBalance + minAmountsOut[0]);
+                assertTrue(weth.balanceOf(address(service)) >= initialWethBalance + minAmountsOut[1]);
+            }
+        } else {
+            service.close(0, data);
+        }
     }
 
-    function testQuote() public // uint256 daiAmount,
-    // uint256 daiLoan,
-    // uint256 daiMargin,
-    // uint256 wethAmount,
-    // uint256 wethLoan,
-    // uint256 wethMargin
-    {
-        uint256 daiAmount = 1204 * 1e18;
-        uint256 daiLoan = 104 * 1e18;
-        uint256 daiMargin = 42 * 1e18;
-        uint256 wethAmount = 134 * 1e18;
-        uint256 wethLoan = 41 * 1e17;
-        uint256 wethMargin = 51 * 1e17;
+    function testQuote(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) public {
         (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
             daiAmount,
             daiMargin,
@@ -290,8 +319,6 @@ contract BalancerServiceTest is PRBTest, StdCheats, BaseServiceTest {
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
         (uint256[] memory profits, ) = service.quote(agreement);
-        console2.log("profits[0]", profits[0]);
-        console2.log("profits[1]", profits[1]);
     }
 
     // testAddPool() public {
