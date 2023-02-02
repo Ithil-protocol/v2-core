@@ -77,14 +77,14 @@ contract BalancerService is SecuritisableService {
         balancerVault.joinPool(pool.balancerPoolID, address(this), address(this), request);
 
         agreement.collaterals[0].amount = bpToken.balanceOf(address(this)) - bptInitialBalance;
-        IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
+        if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little
-        IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
+        if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
         address[] memory tokens = new address[](agreement.loans.length);
         uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
         bool slippageEnforced = true;
