@@ -37,17 +37,11 @@ interface IManager {
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
 
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
-
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
-
     event TokenWasRemovedFromService(address indexed service, address indexed token);
 
-    error Vault_Missing();
-
-    error Restricted_To_Whitelisted_Services();
-
-    error Invesment_Exceeded_Cap(uint256 investedPortion, uint256 investmentCap);
-
-    /// @notice thrown when amount of assets received is above the max set by caller
-    error Max_Amount_Exceeded();
+    error VaultMissing();
+    error RestrictedToWhitelistedServices();
+    error InvestmentCapExceeded(uint256 investedPortion, uint256 investmentCap);
+    error MaxAmountExceeded();
 }

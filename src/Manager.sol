@@ -17,16 +17,13 @@ contract Manager is IManager, Ownable {
     // service => token => RiskParams
     mapping(address => mapping(address => RiskParams)) public override riskParams;
 
-    // solhint-disable-next-line no-empty-blocks
-    constructor() {}
-
     modifier supported(address token) {
-        if (riskParams[msg.sender][token].cap == 0) revert Restricted_To_Whitelisted_Services();
+        if (riskParams[msg.sender][token].cap == 0) revert RestrictedToWhitelistedServices();
         _;
     }
 
     modifier vaultExists(address token) {
-        if (vaults[token] == address(0)) revert Vault_Missing();
+        if (vaults[token] == address(0)) revert VaultMissing();
         _;
     }
 
@@ -77,7 +74,7 @@ contract Manager is IManager, Ownable {
             currentExposure,
             freeLiquidity.safeAdd(netLoans - amount)
         );
-        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);
     }
 
@@ -104,9 +101,9 @@ contract Manager is IManager, Ownable {
         uint256 investedPortion = totalSupply == 0
             ? GeneralMath.RESOLUTION
             : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
-        if (investedPortion > investmentCap) revert Invesment_Exceeded_Cap(investedPortion, investmentCap);
+        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
-        if (amountIn > maxAmountIn) revert Max_Amount_Exceeded();
+        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 
         return amountIn;
     }
@@ -120,7 +117,7 @@ contract Manager is IManager, Ownable {
         returns (uint256)
     {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);
-        if (amountIn > maxAmountIn) revert Max_Amount_Exceeded();
+        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 
         return amountIn;
     }
