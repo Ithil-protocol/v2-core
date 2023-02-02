@@ -6,6 +6,7 @@ import { ICurvePool } from "../../interfaces/external/ICurvePool.sol";
 import { IConvexBooster } from "../../interfaces/external/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { CurveHelper } from "../../libraries/CurveHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
 import { console2 } from "forge-std/console2.sol";
@@ -22,6 +23,7 @@ contract CurveConvexService is SecuritisableService {
         uint256 convex; // Convex pool ID
         IBaseRewardPool baseRewardPool; // Convex rewards pool
         address[] tokens;
+        address[] rewardTokens; // Incentive tokens given by Curve
     }
 
     event PoolWasAdded(address indexed curvePool, uint256 indexed ConvexPid);
@@ -48,21 +50,7 @@ contract CurveConvexService is SecuritisableService {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
-        if (agreement.loans.length == 2) {
-            uint256[2] memory amounts;
-            for (uint256 index = 0; index < 2; index++) {
-                amounts[index] = agreement.loans[index].amount + agreement.loans[index].margin;
-            }
-            ICurvePool(pool.curve).add_liquidity(amounts, agreement.collaterals[0].amount);
-        } else if (agreement.loans.length == 3) {
-            uint256[3] memory amounts;
-            for (uint256 index = 0; index < 3; index++) {
-                amounts[index] = agreement.loans[index].amount + agreement.loans[index].margin;
-            }
-            ICurvePool(pool.curve).add_liquidity(amounts, agreement.collaterals[0].amount);
-        } else {
-            revert InexistentPool();
-        }
+        CurveHelper.deposit(pool.curve, agreement);
 
         agreement.collaterals[0].amount = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
 
@@ -74,16 +62,13 @@ contract CurveConvexService is SecuritisableService {
 
         pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
 
-        if (agreement.loans.length == 2) {
-            uint256[2] memory minAmountsOut = abi.decode(data, (uint256[2]));
-            ICurvePool(pool.curve).remove_liquidity(agreement.collaterals[0].amount, minAmountsOut);
-        } else if (agreement.loans.length == 3) {
-            uint256[3] memory minAmountsOut = abi.decode(data, (uint256[3]));
-            ICurvePool(pool.curve).remove_liquidity(agreement.collaterals[0].amount, minAmountsOut);
-        }
+        CurveHelper.withdraw(pool.curve, agreement, data);
     }
 
-    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens) external onlyOwner {
+    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens, address[] calldata rewardTokens)
+        external
+        onlyOwner
+    {
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(convexPid);
         assert(!poolInfo.shutdown);
 
@@ -99,7 +84,13 @@ contract CurveConvexService is SecuritisableService {
         // Allow Convex to take Curve LP tokens
         IERC20(poolInfo.lptoken).safeApprove(address(booster), type(uint256).max);
 
-        pools[poolInfo.lptoken] = PoolData(curvePool, convexPid, IBaseRewardPool(poolInfo.crvRewards), tokens);
+        pools[poolInfo.lptoken] = PoolData(
+            curvePool,
+            convexPid,
+            IBaseRewardPool(poolInfo.crvRewards),
+            tokens,
+            rewardTokens
+        );
 
         emit PoolWasAdded(curvePool, convexPid);
     }
@@ -121,15 +112,21 @@ contract CurveConvexService is SecuritisableService {
     }
 
     /*
-    CurvePool memory p = pools[token];
-    if (pools[token].pool == address(0)) revert CurveStrategy__Token_Not_Supported();
+    function harvest(address token) external {
+        PoolData memory pool = pools[token];
+        if (pool.tokens.length == 0) revert InexistentPool();
+        p.baseRewardPool.getReward(address(this), true);
 
-    p.baseRewardPool.getReward(address(this), true);
+        for(uint8 i = 0; i < pool.rewardTokens.length; i++) {
+            // swap reward for ITHIL
+        }
+    }
 
-    function quote(address src, address dst, uint256 amount) public view override returns (uint256, uint256) {
-        ICurve pool = ICurve(pools[src].pool);
-        uint256 obtained = (amount * 10**36) / pool.get_virtual_price();
-        return (obtained, obtained);
+    function quote(uint256 amount) public view override returns (uint256) {
+        PoolData memory pool = pools[token];
+        if (pool.tokens.length == 0) revert InexistentPool();
+
+        return CurveHelper.quote(pool.curve, amount);
     }
     */
 }

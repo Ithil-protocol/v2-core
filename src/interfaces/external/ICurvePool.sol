@@ -40,6 +40,8 @@ interface ICurvePool {
 
     function add_liquidity(uint256[3] memory _amounts, uint256 _min_mint_amount) external returns (uint256);
 
+    function add_liquidity(uint256[4] memory _amounts, uint256 _min_mint_amount) external returns (uint256);
+
     /**
         @notice Withdraw coins from the pool
         @dev Withdrawal amounts are based on current deposit ratios
@@ -54,6 +56,10 @@ interface ICurvePool {
     function remove_liquidity(uint256 _burn_amount, uint256[3] memory _min_amounts)
         external
         returns (uint256[3] memory);
+
+    function remove_liquidity(uint256 _burn_amount, uint256[4] memory _min_amounts)
+        external
+        returns (uint256[4] memory);
 
     /**
         @notice Withdraw a single coin from the pool

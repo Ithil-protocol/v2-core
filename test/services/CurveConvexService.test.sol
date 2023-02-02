@@ -22,13 +22,14 @@ contract CurveConvexServiceTest is PRBTest, StdCheats, BaseServiceTest {
     address internal constant cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
 
     // OHM-WETH
-    address internal constant curvePool = 0x6ec38b3228251a0C5D491Faf66858e2E23d7728B;
-    address internal constant curveLpToken = 0x3660BD168494d61ffDac21E403d0F6356cF90fD7;
-    uint256 internal constant convexPid = 92;
-    IERC20 internal constant ohm = IERC20(0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5);
-    address internal constant ohmWhale = 0xB63cac384247597756545b500253ff8E607a8020;
-    IERC20 internal constant weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address internal constant wethWhale = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
+    address internal constant curvePool = 0x98a7F18d4E56Cfe84E3D081B40001B3d5bD3eB8B;
+    address internal constant curveLpToken = 0x3D229E1B4faab62F621eF2F6A610961f7BD7b23B;
+    uint256 internal constant convexPid = 54;
+
+    IERC20 internal constant eurs = IERC20(0xdB25f211AB05b1c97D595516F45794528a807ad8);
+    address internal constant eursWhale = 0xdB25f211AB05b1c97D595516F45794528a807ad8;
+    IERC20 internal constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    address internal constant usdcWhale = 0x0A59649758aa4d66E25f08Dd01271e891fe52199;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
@@ -42,62 +43,62 @@ contract CurveConvexServiceTest is PRBTest, StdCheats, BaseServiceTest {
     }
 
     function setUp() public {
-        ohm.approve(address(service), type(uint256).max);
-        weth.approve(address(service), type(uint256).max);
+        eurs.approve(address(service), type(uint256).max);
+        usdc.approve(address(service), type(uint256).max);
 
-        vm.deal(ohmWhale, 1 ether);
-        vm.deal(wethWhale, 1 ether);
+        vm.deal(eursWhale, 1 ether);
+        vm.deal(usdcWhale, 1 ether);
 
         vm.startPrank(admin);
-        manager.create(address(ohm));
-        manager.create(address(weth));
-        manager.setCap(address(service), address(ohm), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
+        manager.create(address(eurs));
+        manager.create(address(usdc));
+        manager.setCap(address(service), address(eurs), GeneralMath.RESOLUTION);
+        manager.setCap(address(service), address(usdc), GeneralMath.RESOLUTION);
 
         address[] memory tokens = new address[](2);
-        tokens[0] = address(ohm);
-        tokens[1] = address(weth);
+        tokens[0] = address(usdc);
+        tokens[1] = address(eurs);
 
-        service.addPool(curvePool, convexPid, tokens);
+        service.addPool(curvePool, convexPid, tokens, new address[](0));
         vm.stopPrank();
     }
 
     function testCurveConvexIntegration() public {
-        uint256 ohmAmount = 4134 * 1e9;
-        uint256 ohmLoan = 514 * 1e9;
-        uint256 ohmMargin = 131 * 1e9;
+        uint256 eursAmount = 100 * 1e2;
+        uint256 eursLoan = 10 * 1e2;
+        uint256 eursMargin = 1 * 1e2;
 
-        uint256 wethAmount = 135 * 1e18;
-        uint256 wethLoan = 11 * 1e18;
-        uint256 wethMargin = 3 * 1e18;
+        uint256 usdcAmount = 110 * 1e6;
+        uint256 usdcLoan = 11 * 1e6;
+        uint256 usdcMargin = 2 * 1e6;
 
         // Fill OHM vault
-        IVault ohmVault = IVault(manager.vaults(address(ohm)));
-        vm.startPrank(ohmWhale);
-        ohm.transfer(address(this), ohmMargin);
-        ohm.approve(address(ohmVault), ohmAmount);
-        ohmVault.deposit(ohmAmount, ohmWhale);
+        IVault eursVault = IVault(manager.vaults(address(eurs)));
+        vm.startPrank(eursWhale);
+        eurs.transfer(address(this), eursMargin);
+        eurs.approve(address(eursVault), eursAmount);
+        eursVault.deposit(eursAmount, eursWhale);
         vm.stopPrank();
 
         // Fill WETH vault
-        IVault wethVault = IVault(manager.vaults(address(weth)));
-        vm.startPrank(wethWhale);
-        weth.transfer(address(this), wethMargin);
-        weth.approve(address(wethVault), wethAmount);
-        wethVault.deposit(wethAmount, wethWhale);
+        IVault usdcVault = IVault(manager.vaults(address(usdc)));
+        vm.startPrank(usdcWhale);
+        usdc.transfer(address(this), usdcMargin);
+        usdc.approve(address(usdcVault), usdcAmount);
+        usdcVault.deposit(usdcAmount, usdcWhale);
         vm.stopPrank();
 
         address[] memory tokens = new address[](2);
-        tokens[0] = address(ohm);
-        tokens[1] = address(weth);
+        tokens[0] = address(eurs);
+        tokens[1] = address(usdc);
 
         uint256[] memory loans = new uint256[](2);
-        loans[0] = ohmLoan;
-        loans[1] = wethLoan;
+        loans[0] = eursLoan;
+        loans[1] = usdcLoan;
 
         uint256[] memory margins = new uint256[](2);
-        margins[0] = ohmMargin;
-        margins[1] = wethMargin;
+        margins[0] = eursMargin;
+        margins[1] = usdcMargin;
 
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
@@ -121,7 +122,7 @@ contract CurveConvexServiceTest is PRBTest, StdCheats, BaseServiceTest {
 
         service.open(order);
 
-        uint256[2] memory amounts = [uint256(1e9), uint256(1e18)];
+        uint256[2] memory amounts = [uint256(100), uint256(1e6)];
         service.close(0, abi.encode(amounts));
     }
 }
