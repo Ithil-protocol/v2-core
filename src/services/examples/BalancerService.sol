@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.12;
+pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBalancerVault } from "../../interfaces/external/IBalancerVault.sol";
@@ -86,7 +86,7 @@ contract BalancerService is SecuritisableService {
             if (tokens[index] != pool.tokens[index]) revert TokenIndexMismatch();
         }
 
-        IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
+        if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
 
         uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
         IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest({
