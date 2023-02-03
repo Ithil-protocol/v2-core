@@ -2,6 +2,7 @@
 pragma solidity >=0.8.12;
 
 import { FloatingPointMath } from "./FloatingPointMath.sol";
+import { WeightedMath } from "./external/Balancer/WeightedMath.sol";
 
 /// @title    BalancerHelper library
 /// @author   Ithil
@@ -9,52 +10,33 @@ import { FloatingPointMath } from "./FloatingPointMath.sol";
 library BalancerHelper {
     error BalancerStrategy__Token_Not_In_Pool(address token);
 
-    function computeBptOut(
-        uint256 amountIn,
-        uint256 totalBptSupply,
-        uint256 totalTokenBalance,
-        uint256 normalisedWeight,
-        uint256 swapPercentageFee
-    ) internal pure returns (uint256) {
-        uint256 swapFee = FloatingPointMath.mul(
-            FloatingPointMath.mul(amountIn, FloatingPointMath.REFERENCE - normalisedWeight),
-            swapPercentageFee
-        );
-        uint256 balanceRatio = FloatingPointMath.div(totalTokenBalance + amountIn - swapFee, totalTokenBalance);
-        uint256 invariantRatio = FloatingPointMath.power(balanceRatio, normalisedWeight);
-        return
-            invariantRatio > FloatingPointMath.REFERENCE
-                ? FloatingPointMath.mul(totalBptSupply, invariantRatio - FloatingPointMath.REFERENCE)
-                : 0;
+    function exitExactBPTInForTokensOut(uint256[] memory balances, uint256 bptAmountIn, uint256 totalSupply)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalSupply);
+        return amountsOut;
     }
 
-    function computeAmountOut(
-        uint256 amountIn,
-        uint256 totalBptSupply,
-        uint256 totalTokenBalance,
-        uint256 normalisedWeight,
-        uint256 swapPercentageFee
-    ) internal pure returns (uint256) {
-        uint256 invariantRatio = FloatingPointMath.div(totalBptSupply - amountIn, totalBptSupply);
-        uint256 balanceRatio = FloatingPointMath.power(
-            invariantRatio,
-            FloatingPointMath.div(FloatingPointMath.REFERENCE, normalisedWeight)
-        );
-        uint256 amountOutWithoutFee = FloatingPointMath.mul(
-            totalTokenBalance,
-            FloatingPointMath.complement(balanceRatio)
-        );
-        uint256 taxableAmount = FloatingPointMath.mul(
-            amountOutWithoutFee,
-            FloatingPointMath.complement(normalisedWeight)
-        );
-        uint256 nonTaxableAmount = FloatingPointMath.sub(amountOutWithoutFee, taxableAmount);
-        uint256 taxableAmountMinusFees = FloatingPointMath.mul(
-            taxableAmount,
-            FloatingPointMath.complement(swapPercentageFee)
+    function exitBPTInForExactTokensOut(
+        uint256[] memory balances,
+        uint256[] memory normalizedWeights,
+        uint256[] memory amountsOut,
+        uint256 totalSupply,
+        uint256 swapFee
+    ) public view returns (uint256) {
+        // _upscaleArray(amountsOut);
+
+        uint256 bptAmountIn = WeightedMath._calcBptInGivenExactTokensOut(
+            balances,
+            normalizedWeights,
+            amountsOut,
+            totalSupply,
+            swapFee
         );
 
-        return nonTaxableAmount + taxableAmountMinusFees;
+        return bptAmountIn;
     }
 
     function getTokenIndex(address[] memory tokens, address token) internal pure returns (uint8) {

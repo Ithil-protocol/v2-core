@@ -11,6 +11,8 @@ import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
 import { console2 } from "forge-std/console2.sol";
 
+import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
+
 /// @title    BalancerService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
@@ -33,6 +35,7 @@ contract BalancerService is SecuritisableService {
 
     error InexistentPool();
     error TokenIndexMismatch();
+    error SlippageError();
 
     mapping(address => PoolData) public pools;
     IBalancerVault internal immutable balancerVault;
@@ -74,82 +77,90 @@ contract BalancerService is SecuritisableService {
         balancerVault.joinPool(pool.balancerPoolID, address(this), address(this), request);
 
         agreement.collaterals[0].amount = bpToken.balanceOf(address(this)) - bptInitialBalance;
-        IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
+        if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
+        // TODO: add check on fees to be sure amountOut is not too little
+        if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
         address[] memory tokens = new address[](agreement.loans.length);
+        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
+        bool slippageEnforced = true;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
             if (tokens[index] != pool.tokens[index]) revert TokenIndexMismatch();
+            if (minAmountsOut[index] <= agreement.loans[index].amount) {
+                slippageEnforced = false;
+                minAmountsOut[index] = agreement.loans[index].amount;
+            }
         }
 
-        IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
+        uint256 spentBpt = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
 
-        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
         IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest({
             assets: tokens,
             minAmountsOut: minAmountsOut,
-            userData: abi.encode(IBalancerVault.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, agreement.collaterals[0].amount),
+            userData: abi.encode(2, minAmountsOut, agreement.collaterals[0].amount),
             toInternalBalance: false
         });
-
+        // If possible, try to obtain the minAmountsOut
+        try balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request) {
+            spentBpt -= IERC20(agreement.collaterals[0].token).balanceOf(address(this));
+        } catch {
+            // It is not possible to obtain minAmountsOut
+            // This could be a bad repay event but also a too strict slippage on user side
+            // In the latter case, we simply revert
+            if (slippageEnforced) revert SlippageError();
+        }
+        // Swap residual BPT for whatever the Balancer pool gives back and repay sender
+        // This is done also if slippage is not enforced and the first exit failed
+        // In this case we are on a bad liquidation
+        request = IBalancerVault.ExitPoolRequest({
+            assets: tokens,
+            minAmountsOut: new uint256[](agreement.loans.length),
+            userData: abi.encode(1, agreement.collaterals[0].amount - spentBpt),
+            toInternalBalance: false
+        });
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
-        (address[] memory tokens, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
-
-        uint256 collateral = agreement.collaterals[0].amount;
-        uint256 tokenIndex = 0;
-        uint256 assignedIndex = 0;
+        (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
+        uint256[] memory amountsOut = new uint256[](agreement.loans.length);
         uint256[] memory fees = new uint256[](agreement.loans.length);
-        uint256[] memory quoted = new uint256[](agreement.loans.length);
-        for (; tokenIndex < agreement.loans.length; tokenIndex++) {
-            assignedIndex = BalancerHelper.getTokenIndex(tokens, agreement.loans[tokenIndex].token);
-            (uint256 interest, uint256 spread) = agreement.loans[tokenIndex].interestAndSpread.unpackUint();
-            fees[tokenIndex] = agreement.loans[tokenIndex].amount.safeMulDiv(interest + spread, GeneralMath.RESOLUTION);
-            if (collateral > 0) {
-                uint256 bptNeeded = BalancerHelper.computeBptOut(
-                    agreement.loans[tokenIndex].amount + fees[tokenIndex],
-                    IERC20(agreement.collaterals[0].token).totalSupply(),
-                    totalBalances[assignedIndex],
-                    pool.weights[assignedIndex],
-                    pool.swapFee
-                );
-                if (bptNeeded <= collateral) {
-                    // The collateral is enough to pay the loan for tokenIndex: quoting this is enough
-                    quoted[tokenIndex] = agreement.loans[tokenIndex].amount + fees[tokenIndex];
-                    collateral -= bptNeeded;
-                } else {
-                    // The collateral is not enough to pay the loan for tokenIndex: we compute the last quote
-                    // We cannot break the loop because we still need to compute the fees
-                    quoted[tokenIndex] = BalancerHelper.computeAmountOut(
-                        collateral,
-                        IERC20(agreement.collaterals[0].token).totalSupply(),
-                        totalBalances[assignedIndex],
-                        pool.weights[assignedIndex],
-                        pool.swapFee
-                    );
-                    collateral = 0;
-                }
-            }
+        uint256[] memory profits;
+        for (uint256 index = 0; index < agreement.loans.length; index++) {
+            // TODO: add fees
+            amountsOut[index] = agreement.loans[index].amount;
         }
-        // If at this point we have positive collateral, the position is gaining and we add to the last index
-        assignedIndex = BalancerHelper.getTokenIndex(tokens, agreement.loans[tokenIndex - 1].token);
-        quoted[tokenIndex - 1] += BalancerHelper.computeAmountOut(
-            collateral,
-            IERC20(agreement.collaterals[0].token).totalSupply(),
-            totalBalances[assignedIndex],
-            pool.weights[assignedIndex],
+        // Calculate needed BPT to repay loan + fees
+        uint256 totalSupply = IERC20(agreement.collaterals[0].token).totalSupply();
+        uint256 bptAmountOut = WeightedMath._calcBptInGivenExactTokensOut(
+            totalBalances,
+            pool.weights,
+            amountsOut,
+            totalSupply,
             pool.swapFee
         );
-
-        return (quoted, fees);
+        // The remaining BPT is swapped to obtain profit
+        // We need to update the balances since we virtually took tokens out of the pool
+        // We also need to update the total supply since the bptOut were burned
+        for (uint256 index = 0; index < agreement.loans.length; index++) {
+            // TODO: add fees
+            totalBalances[index] -= amountsOut[index];
+        }
+        if (bptAmountOut < agreement.collaterals[0].amount) {
+            profits = BalancerHelper.exitExactBPTInForTokensOut(
+                totalBalances,
+                agreement.collaterals[0].amount - bptAmountOut,
+                totalSupply - bptAmountOut
+            );
+        }
+        return (profits, fees);
     }
 
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
