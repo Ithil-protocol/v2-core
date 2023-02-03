@@ -219,7 +219,7 @@ library WeightedMath {
         uint256[] memory amountsOut,
         uint256 bptTotalSupply,
         uint256 swapFee
-    ) internal view returns (uint256) {
+    ) internal pure returns (uint256) {
         // BPT in, so we round up overall.
 
         uint256[] memory balanceRatiosWithoutFee = new uint256[](amountsOut.length);
