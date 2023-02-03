@@ -5,8 +5,10 @@ pragma solidity =0.8.17;
 contract ConstantRateModel {
     uint256 public immutable value;
 
+    error InvalidInitParams();
+
     constructor(uint256 _value) {
-        assert(_value > 0);
+        if (_value == 0) revert InvalidInitParams();
 
         value = _value;
     }

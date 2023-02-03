@@ -46,6 +46,7 @@ interface IService is IERC721Enumerable {
     event BaseRiskSpreadWasUpdated(address indexed asset, uint256 indexed id, uint256 newValue);
     event LockWasToggled(bool status);
     event GuardianWasUpdated(address indexed newGuardian);
+
     error Locked();
     error RestrictedToOwner();
     error RestrictedAccess();

@@ -9,7 +9,7 @@ abstract contract DebitService is Service {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
-    error Too_Risky();
+    error AboveRiskThreshold();
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
     /// Throws if margin = 0
@@ -72,7 +72,7 @@ abstract contract DebitService is Service {
 
             (uint256 computedIR, uint256 computedSpread) = _baseInterestRateAndSpread(agreement, freeLiquidity);
             (uint256 requestedIR, uint256 requestedSpread) = agreement.loans[index].interestAndSpread.unpackUint();
-            if (computedIR > requestedIR || computedSpread > requestedSpread) revert Too_Risky();
+            if (computedIR > requestedIR || computedSpread > requestedSpread) revert AboveRiskThreshold();
         }
 
         super.open(order);

@@ -8,8 +8,6 @@ import { WeightedMath } from "./external/Balancer/WeightedMath.sol";
 /// @author   Ithil
 /// @notice   A library to perform the most common operations on Balancer
 library BalancerHelper {
-    error BalancerStrategy__Token_Not_In_Pool(address token);
-
     function exitExactBPTInForTokensOut(uint256[] memory balances, uint256 bptAmountIn, uint256 totalSupply)
         public
         view
@@ -43,7 +41,5 @@ library BalancerHelper {
         for (uint8 i = 0; i < tokens.length; i++) {
             if (tokens[i] == token) return i;
         }
-
-        revert BalancerStrategy__Token_Not_In_Pool(token);
     }
 }
