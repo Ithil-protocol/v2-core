@@ -39,7 +39,7 @@ contract CurveConvexService is SecuritisableService {
     IERC20 internal immutable cvx;
 
     constructor(address _manager, address _booster, address _cvx)
-        Service("BalancerService", "BALANCER-SERVICE", _manager)
+        Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
     {
         booster = IConvexBooster(_booster);
         cvx = IERC20(_cvx);
@@ -75,7 +75,12 @@ contract CurveConvexService is SecuritisableService {
         ICurvePool curve = ICurvePool(curvePool);
         uint256 length = tokens.length;
         for (uint256 i = 0; i < length; i++) {
-            assert(curve.coins(i) == tokens[i]);
+            try curve.coins(i) returns (address tkn) {
+                assert(tkn == tokens[i]);
+            } catch {
+                int128 j = int128(uint128(i));
+                assert(curve.coins(j) == tokens[i]);
+            }
 
             // Allow Curve pool to take tokens
             IERC20(tokens[i]).safeApprove(curvePool, type(uint256).max);

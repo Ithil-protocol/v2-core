@@ -90,17 +90,17 @@ contract VaultTest is PRBTest, StdCheats {
 
     function testAccess(uint256 shares, uint256 assets, uint256 debt) public {
         vm.startPrank(notOwner);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Not_Owner()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.setFeeUnlockTime(1000);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Not_Owner()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.sweep(anyAddress, address(spuriousToken));
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Not_Owner()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.directMint(shares, anyAddress);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Not_Owner()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.directBurn(shares, anyAddress);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Not_Owner()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.borrow(assets, anyAddress);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Not_Owner()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.repay(assets, debt, anyAddress);
         vm.stopPrank();
     }
@@ -197,7 +197,7 @@ contract VaultTest is PRBTest, StdCheats {
             currentLosses
         );
         if (feeUnlockTimeSet < 30 || feeUnlockTimeSet > 7 days) {
-            vm.expectRevert(bytes4(keccak256(abi.encodePacked("Fee_Unlock_Out_Of_Range()"))));
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("FeeUnlockTimeOutOfRange()"))));
             vault.setFeeUnlockTime(feeUnlockTimeSet);
         } else {
             vault.setFeeUnlockTime(feeUnlockTimeSet);
@@ -381,7 +381,7 @@ contract VaultTest is PRBTest, StdCheats {
 
         vm.startPrank(receiver);
         if (withdrawn >= vault.freeLiquidity()) {
-            vm.expectRevert(bytes4(keccak256(abi.encodePacked("Insufficient_Liquidity()"))));
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             vault.withdraw(withdrawn, receiver, receiver);
             withdrawn = 0;
         }
@@ -434,7 +434,7 @@ contract VaultTest is PRBTest, StdCheats {
 
         vm.startPrank(receiver);
         if (withdrawn >= vault.freeLiquidity()) {
-            vm.expectRevert(bytes4(keccak256(abi.encodePacked("Insufficient_Liquidity()"))));
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             vault.redeem(redeemed, receiver, receiver);
             redeemed = 0;
             withdrawn = 0;
@@ -659,7 +659,7 @@ contract VaultTest is PRBTest, StdCheats {
 
         // withdraw without leaving 1 token unit
         uint256 vaultBalance = token.balanceOf(address(vault));
-        vm.expectRevert(IVault.Insufficient_Liquidity.selector);
+        vm.expectRevert(IVault.InsufficientLiquidity.selector);
         vault.withdraw(vaultBalance, tokenSink, receiver);
     }
 
@@ -670,7 +670,7 @@ contract VaultTest is PRBTest, StdCheats {
         vm.stopPrank();
 
         uint256 vaultBalance = token.balanceOf(address(vault));
-        vm.expectRevert(IVault.Insufficient_Free_Liquidity.selector);
+        vm.expectRevert(IVault.InsufficientFreeLiquidity.selector);
         vault.borrow(vaultBalance, address(this));
     }
 }

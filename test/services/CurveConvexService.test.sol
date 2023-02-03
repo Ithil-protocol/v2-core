@@ -22,14 +22,14 @@ contract CurveConvexServiceTest is PRBTest, StdCheats, BaseServiceTest {
     address internal constant cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
 
     // OHM-WETH
-    address internal constant curvePool = 0x98a7F18d4E56Cfe84E3D081B40001B3d5bD3eB8B;
-    address internal constant curveLpToken = 0x3D229E1B4faab62F621eF2F6A610961f7BD7b23B;
-    uint256 internal constant convexPid = 54;
+    address internal constant curvePool = 0x93054188d876f558f4a66B2EF1d97d16eDf0895B;
+    address internal constant curveLpToken = 0x49849C98ae39Fff122806C06791Fa73784FB3675;
+    uint256 internal constant convexPid = 6;
 
-    IERC20 internal constant eurs = IERC20(0xdB25f211AB05b1c97D595516F45794528a807ad8);
-    address internal constant eursWhale = 0xdB25f211AB05b1c97D595516F45794528a807ad8;
-    IERC20 internal constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    address internal constant usdcWhale = 0x0A59649758aa4d66E25f08Dd01271e891fe52199;
+    IERC20 internal constant renBTC = IERC20(0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D);
+    address internal constant renBTCWhale = 0xaAde032DC41DbE499deBf54CFEe86d13358E9aFC;
+    IERC20 internal constant wbtc = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
+    address internal constant wbtcWhale = 0x218B95BE3ed99141b0144Dba6cE88807c4AD7C09;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
@@ -43,62 +43,62 @@ contract CurveConvexServiceTest is PRBTest, StdCheats, BaseServiceTest {
     }
 
     function setUp() public {
-        eurs.approve(address(service), type(uint256).max);
-        usdc.approve(address(service), type(uint256).max);
+        renBTC.approve(address(service), type(uint256).max);
+        wbtc.approve(address(service), type(uint256).max);
 
-        vm.deal(eursWhale, 1 ether);
-        vm.deal(usdcWhale, 1 ether);
+        vm.deal(renBTCWhale, 1 ether);
+        vm.deal(wbtcWhale, 1 ether);
 
         vm.startPrank(admin);
-        manager.create(address(eurs));
-        manager.create(address(usdc));
-        manager.setCap(address(service), address(eurs), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(usdc), GeneralMath.RESOLUTION);
+        manager.create(address(renBTC));
+        manager.create(address(wbtc));
+        manager.setCap(address(service), address(renBTC), GeneralMath.RESOLUTION);
+        manager.setCap(address(service), address(wbtc), GeneralMath.RESOLUTION);
 
         address[] memory tokens = new address[](2);
-        tokens[0] = address(usdc);
-        tokens[1] = address(eurs);
+        tokens[0] = address(renBTC);
+        tokens[1] = address(wbtc);
 
         service.addPool(curvePool, convexPid, tokens, new address[](0));
         vm.stopPrank();
     }
 
     function testCurveConvexIntegration() public {
-        uint256 eursAmount = 100 * 1e2;
-        uint256 eursLoan = 10 * 1e2;
-        uint256 eursMargin = 1 * 1e2;
+        uint256 renBTCAmount = 11 * 1e8;
+        uint256 renBTCLoan = 1 * 1e8;
+        uint256 renBTCMargin = 0.1 * 1e8;
 
-        uint256 usdcAmount = 110 * 1e6;
-        uint256 usdcLoan = 11 * 1e6;
-        uint256 usdcMargin = 2 * 1e6;
+        uint256 wbtcAmount = 11 * 1e8;
+        uint256 wbtcLoan = 1 * 1e8;
+        uint256 wbtcMargin = 0.1 * 1e8;
 
         // Fill OHM vault
-        IVault eursVault = IVault(manager.vaults(address(eurs)));
-        vm.startPrank(eursWhale);
-        eurs.transfer(address(this), eursMargin);
-        eurs.approve(address(eursVault), eursAmount);
-        eursVault.deposit(eursAmount, eursWhale);
+        IVault renBTCVault = IVault(manager.vaults(address(renBTC)));
+        vm.startPrank(renBTCWhale);
+        renBTC.transfer(address(this), renBTCMargin);
+        renBTC.approve(address(renBTCVault), renBTCAmount);
+        renBTCVault.deposit(renBTCAmount, renBTCWhale);
         vm.stopPrank();
 
         // Fill WETH vault
-        IVault usdcVault = IVault(manager.vaults(address(usdc)));
-        vm.startPrank(usdcWhale);
-        usdc.transfer(address(this), usdcMargin);
-        usdc.approve(address(usdcVault), usdcAmount);
-        usdcVault.deposit(usdcAmount, usdcWhale);
+        IVault wbtcVault = IVault(manager.vaults(address(wbtc)));
+        vm.startPrank(wbtcWhale);
+        wbtc.transfer(address(this), wbtcMargin);
+        wbtc.approve(address(wbtcVault), wbtcAmount);
+        wbtcVault.deposit(wbtcAmount, wbtcWhale);
         vm.stopPrank();
 
         address[] memory tokens = new address[](2);
-        tokens[0] = address(eurs);
-        tokens[1] = address(usdc);
+        tokens[0] = address(renBTC);
+        tokens[1] = address(wbtc);
 
         uint256[] memory loans = new uint256[](2);
-        loans[0] = eursLoan;
-        loans[1] = usdcLoan;
+        loans[0] = renBTCLoan;
+        loans[1] = wbtcLoan;
 
         uint256[] memory margins = new uint256[](2);
-        margins[0] = eursMargin;
-        margins[1] = usdcMargin;
+        margins[0] = renBTCMargin;
+        margins[1] = wbtcMargin;
 
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;

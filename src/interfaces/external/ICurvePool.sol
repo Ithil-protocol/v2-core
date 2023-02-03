@@ -5,6 +5,8 @@ pragma solidity =0.8.17;
 interface ICurvePool {
     function coins(uint256 arg0) external view returns (address);
 
+    function coins(int128 arg0) external view returns (address);
+
     /**
         @notice The current virtual price of the pool LP token
         @dev Useful for calculating profits
