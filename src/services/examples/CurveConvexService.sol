@@ -63,6 +63,16 @@ contract CurveConvexService is SecuritisableService {
         pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
+
+        _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
+    }
+
+    function _harvest(PoolData memory pool, address wanted) internal {
+        pool.baseRewardPool.getReward(address(this), true);
+
+        for(uint8 i = 0; i < pool.rewardTokens.length; i++) {
+            /// @todo swap reward for notional
+        }
     }
 
     function addPool(address curvePool, uint256 convexPid, address[] calldata tokens, address[] calldata rewardTokens)
@@ -117,16 +127,6 @@ contract CurveConvexService is SecuritisableService {
     }
 
     /*
-    function harvest(address token) external {
-        PoolData memory pool = pools[token];
-        if (pool.tokens.length == 0) revert InexistentPool();
-        p.baseRewardPool.getReward(address(this), true);
-
-        for(uint8 i = 0; i < pool.rewardTokens.length; i++) {
-            // swap reward for ITHIL
-        }
-    }
-
     function quote(uint256 amount) public view override returns (uint256) {
         PoolData memory pool = pools[token];
         if (pool.tokens.length == 0) revert InexistentPool();
