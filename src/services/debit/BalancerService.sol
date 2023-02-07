@@ -2,16 +2,14 @@
 pragma solidity >=0.8.12;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IBalancerVault } from "../../interfaces/external/IBalancerVault.sol";
-import { IBalancerPool } from "../../interfaces/external/IBalancerPool.sol";
-import { IGauge } from "../../interfaces/external/IGauge.sol";
+import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
+import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
+import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
+import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
-import { console2 } from "forge-std/console2.sol";
-
-import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 
 /// @title    BalancerService contract
 /// @author   Ithil

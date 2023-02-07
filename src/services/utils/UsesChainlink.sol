@@ -2,7 +2,7 @@
 pragma solidity =0.8.17;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IChainlinkFeedRegistry } from "../../interfaces/external/IChainlinkFeedRegistry.sol";
+import { IChainlinkFeedRegistry } from "../../interfaces/external/chainlink/IChainlinkFeedRegistry.sol";
 
 contract UsesChainlink is Ownable {
     address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
