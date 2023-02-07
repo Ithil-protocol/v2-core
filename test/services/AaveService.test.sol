@@ -160,4 +160,18 @@ contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
             service.close(0, data);
         }
     }
+    
+    function testQuote(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
+        (daiAmount, daiLoan, daiMargin) = _openOrder(daiAmount, daiLoan, daiMargin);
+
+        (
+            IService.Loan[] memory loan,
+            IService.Collateral[] memory collaterals,
+            uint256 createdAt,
+            IService.Status status
+        ) = service.getAgreement(1);
+
+        IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
+        (uint256[] memory profits, ) = service.quote(agreement);
+    }
 }
