@@ -9,38 +9,10 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
-import { AaveService } from "../../src/services/examples/AaveService.sol";
+import { AaveService } from "../../src/services/debit/AaveService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
-import { console2 } from "forge-std/console2.sol";
-
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// @dev Run Forge with `-vvvv` to see console logs.
-/// https://book.getfoundry.sh/forge/writing-tests
-
-/// @dev State study
-/// BalancerService native state:
-/// mapping(address => PoolData) public pools;
-/// IBalancerVault internal immutable balancerVault;
-/// address public immutable rewardToken; (this is just BAL)
-
-/// - BalancerService is SecuritisableService:
-/// mapping(uint256 => address) public lenders;
-
-/// - SecuritisableService is DebitService:
-/// None
-
-/// - DebitService is Service:
-/// IManager public immutable manager;
-/// address public guardian;
-/// mapping(address => uint256) public exposures;
-/// Agreement[] public agreements;
-/// bool public locked;
-/// uint256 public id;
-
-/// @dev overrides (except first implementation of virtual functions)
-///
 
 contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
     using GeneralMath for uint256;

@@ -7,7 +7,6 @@ import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Service } from "../Service.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil

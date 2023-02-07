@@ -7,15 +7,14 @@ import { PRBTest } from "@prb/test/PRBTest.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
-import { IBalancerVault } from "../../src/interfaces/external/IBalancerVault.sol";
-import { IBalancerPool } from "../../src/interfaces/external/IBalancerPool.sol";
-import { IManager, Manager } from "../../src/Manager.sol";
-import { BalancerService } from "../../src/services/examples/BalancerService.sol";
+import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
+import { IBalancerPool } from "../../src/interfaces/external/balancer/IBalancerPool.sol";
+import { BalancerService } from "../../src/services/debit/BalancerService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
 /// @dev Run Forge with `-vvvv` to see console logs.
