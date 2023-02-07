@@ -60,17 +60,17 @@ contract CurveConvexService is SecuritisableService {
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
+        _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
+
         pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
-
-        _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
     }
 
     function _harvest(PoolData memory pool, address wanted) internal {
         pool.baseRewardPool.getReward(address(this), true);
 
-        for(uint8 i = 0; i < pool.rewardTokens.length; i++) {
+        for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
             /// @todo swap reward for notional
         }
     }
