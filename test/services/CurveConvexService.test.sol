@@ -79,7 +79,7 @@ contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest
         renBTCAmount++;
         wbtcAmount++;
         renBTCMargin++;
-        wbtcMargin++; 
+        wbtcMargin++;
 
         // Fill renBTC vault
         IVault renBTCVault = IVault(manager.vaults(address(renBTC)));
