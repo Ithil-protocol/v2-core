@@ -160,7 +160,7 @@ contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
             service.close(0, data);
         }
     }
-    
+
     function testQuote(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
         (daiAmount, daiLoan, daiMargin) = _openOrder(daiAmount, daiLoan, daiMargin);
 
