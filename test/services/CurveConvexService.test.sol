@@ -73,7 +73,8 @@ contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest
         wbtcAmount = wbtcAmount % wbtc.balanceOf(wbtcWhale);
         wbtcMargin = wbtcMargin % (wbtc.balanceOf(wbtcWhale) - wbtcAmount);
 
-        // add_liquidity() of the curve pool gives an EVM error when depositing 0: we enforce the amount to be at least 1
+        // add_liquidity() of the curve pool gives an EVM error when depositing 0
+        // we enforce the amount to be at least 1
 
         renBTCAmount++;
         wbtcAmount++;
