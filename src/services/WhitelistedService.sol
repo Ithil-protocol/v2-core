@@ -22,16 +22,22 @@ abstract contract WhitelistedService is Service {
         emit WhitelistAccessFlagWasToggled();
     }
 
-    function addToWhitelist(address addr) external onlyOwner {
-        whitelisted[addr] = true;
+    function addToWhitelist(address[] calldata users) external onlyOwner {
+        uint256 length = users.length;
+        for (uint256 i = 0; i < length; i++) {
+            whitelisted[users[i]] = true;
 
-        emit WhitelistStatusWasChanged(addr, true);
+            emit WhitelistStatusWasChanged(users[i], true);
+        }
     }
 
-    function removeFromWhitelist(address addr) external onlyOwner {
-        delete whitelisted[addr];
+    function removeFromWhitelist(address[] calldata users) external onlyOwner {
+        uint256 length = users.length;
+        for (uint256 i = 0; i < length; i++) {
+            delete whitelisted[users[i]];
 
-        emit WhitelistStatusWasChanged(addr, false);
+            emit WhitelistStatusWasChanged(users[i], false);
+        }
     }
 
     function _beforeOpening(Agreement memory agreement, bytes calldata data) internal override {
