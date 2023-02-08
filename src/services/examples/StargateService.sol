@@ -46,21 +46,17 @@ contract StargateService is SecuritisableService {
         stargateRouter.addLiquidity(pool.poolID, agreement.loans[0].amount + agreement.loans[0].margin, address(this));
         agreement.collaterals[0].amount = IERC20(pool.lpToken).balanceOf(address(this));
 
-        uint256 initialBalance = stargate.balanceOf(address(this));
+        uint256 initial = stargate.balanceOf(address(this));
         stargateLPStaking.deposit(pool.stakingPoolID, agreement.collaterals[0].amount);
-
-        // update harvests data
-        //harvests[pool.poolID].totalRewards[0] += stargate.balanceOf(address(this)) - initialBalance;
-        //harvests[pool.poolID].totalStakedAmount += agreement.collaterals[0].amount;
+        uint256 obtained = stargate.balanceOf(address(this)) - initial; // may underflow
+        // upon deposit you receive some STG tokens
     }
 
     function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.loans[0].token];
 
-        //uint256 initialBalance = stargate.balanceOf(address(this));
         stargateLPStaking.withdraw(pool.stakingPoolID, agreement.collaterals[0].amount);
-        //harvests[pool.poolID].totalRewards[0] -= initialBalance - stargate.balanceOf(address(this));
-        //harvests[pool.poolID].totalStakedAmount -= agreement.collaterals[0].amount;
+        // upon withdrawal you receive some STG tokens
 
         stargateRouter.instantRedeemLocal(
             pools[agreement.loans[0].token].poolID,
@@ -70,14 +66,6 @@ contract StargateService is SecuritisableService {
 
         IERC20 token = IERC20(agreement.loans[0].token);
         token.safeTransfer(ownerOf(tokenID), token.balanceOf(address(this)));
-
-        /*
-        bool harvest = abi.decode(data, (bool));
-        if(harvest) {
-            bytes memory poolID = abi.encode(agreement.loans[0].token);
-            collectRewards(poolID);
-        }
-        */
     }
 
     function quote(Agreement memory agreement)
@@ -91,20 +79,6 @@ contract StargateService is SecuritisableService {
 
         // quote swap STG to notional
     }
-
-    /*
-    function collectRewards(bytes memory data) public override {
-        address token = abi.decode(data, (address));
-        PoolData memory pool = pools[token];
-        assert(pool.poolID != 0);
-
-        uint256 initialBalance = stargate.balanceOf(address(this));
-        stargateLPStaking.deposit(pool.stakingPoolID, 0);
-        harvests[pool.poolID].totalRewards[0] += stargate.balanceOf(address(this)) - initialBalance;
-
-        //_swap();
-    }
-    */
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {
         assert(token != address(0));
@@ -120,7 +94,6 @@ contract StargateService is SecuritisableService {
             lpToken: lpToken,
             locked: false
         });
-        //harvests[pools[token].poolID].totalRewards.push(0);
 
         // Approval for the main token
         if (IERC20(token).allowance(address(this), address(stargateRouter)) == 0)
