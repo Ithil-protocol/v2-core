@@ -205,7 +205,7 @@ contract ManagerTest is PRBTest, StdCheats {
         vm.startPrank(debitServiceOne);
         uint256 increasedAssets = vault.convertToAssets(minted);
         if (increasedAssets > maxAmountIn) {
-            vm.expectRevert(bytes4(keccak256(abi.encodePacked("Max_Amount_Exceeded()"))));
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
             manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);
         } else {
             manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);
@@ -235,7 +235,7 @@ contract ManagerTest is PRBTest, StdCheats {
             vm.startPrank(debitServiceOne);
             uint256 distributedAssets = vault.convertToAssets(burned);
             if (distributedAssets > maxAmountIn) {
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("Max_Amount_Exceeded()"))));
+                vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
                 manager.directBurn(address(firstToken), anyAddress, burned, maxAmountIn);
             } else {
                 manager.directBurn(address(firstToken), anyAddress, burned, maxAmountIn);
