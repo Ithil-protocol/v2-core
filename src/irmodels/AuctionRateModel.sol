@@ -9,7 +9,8 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 contract AuctionRateModel {
     using GeneralMath for uint256;
 
-    error Interest_Rate_Overflow();
+    error InvalidInitParams();
+    error InterestRateOverflow();
 
     /**
      * @dev gas saving trick
@@ -20,8 +21,8 @@ contract AuctionRateModel {
     uint256 public immutable halvingTime;
 
     constructor(uint256 _halvingTime, uint256 _initialRate) {
-        assert(_halvingTime > 0);
-        assert(_initialRate < GeneralMath.RESOLUTION);
+        if (_halvingTime == 0) revert InvalidInitParams();
+        if (_initialRate > GeneralMath.RESOLUTION) revert InvalidInitParams();
 
         halvingTime = _halvingTime;
         baseAndLatest = GeneralMath.packInUint(block.timestamp, _initialRate);
@@ -42,7 +43,7 @@ contract AuctionRateModel {
             block.timestamp - latestBorrow + halvingTime
         );
         // Reset new base and latest borrow, force IR stays below resolution
-        if (newBase >= GeneralMath.RESOLUTION) revert Interest_Rate_Overflow();
+        if (newBase >= GeneralMath.RESOLUTION) revert InterestRateOverflow();
         baseAndLatest = GeneralMath.packInUint(block.timestamp, newBase);
 
         return newBase;

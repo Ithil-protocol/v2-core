@@ -22,7 +22,7 @@ contract Manager is IManager, Ownable {
     constructor() {}
 
     modifier restricted() {
-        if (msg.sender != feeCollector && msg.sender != owner()) revert Restricted();
+        if (msg.sender != feeCollector && msg.sender != owner()) revert RestrictedToOwner();
         _;
     }
 
@@ -89,7 +89,7 @@ contract Manager is IManager, Ownable {
             currentExposure,
             freeLiquidity.safeAdd(netLoans - amount)
         );
-        if (investedPortion > investmentCap) revert InvesmentExceededCap(investedPortion, investmentCap);
+        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);
     }
 
@@ -116,7 +116,7 @@ contract Manager is IManager, Ownable {
         uint256 investedPortion = totalSupply == 0
             ? GeneralMath.RESOLUTION
             : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
-        if (investedPortion > investmentCap) revert InvesmentExceededCap(investedPortion, investmentCap);
+        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
         if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 
@@ -151,7 +151,8 @@ contract Manager is IManager, Ownable {
 
         uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feesPercentage, GeneralMath.RESOLUTION);
         uint256 sharesToMint = vault.convertToShares(feesToHarvest);
-        vault.directMint(sharesToMint, to);
+        vault.directMint(sharesToMint, address(this));
+        vault.redeem(sharesToMint, address(this), to);
 
         return sharesToMint;
     }

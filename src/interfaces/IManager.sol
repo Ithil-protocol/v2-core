@@ -43,23 +43,14 @@ interface IManager {
         returns (uint256);
 
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
-
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
-
     event TokenWasRemovedFromService(address indexed service, address indexed token);
-
-    event FeeCollectorWasChanged(address indexed feeCollector);
+    event FeeCollectorWasChanged(address indexed newFeeCollector);
 
     error VaultMissing();
-
     error RestrictedToWhitelistedServices();
-
-    error InvesmentExceededCap(uint256 investedPortion, uint256 investmentCap);
-
+    error RestrictedToOwner();
     error Throttled();
-
-    /// @notice thrown when amount of assets received is above the max set by caller
+    error InvestmentCapExceeded(uint256 investedPortion, uint256 investmentCap);
     error MaxAmountExceeded();
-
-    error Restricted();
 }

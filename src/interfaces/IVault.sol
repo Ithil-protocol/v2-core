@@ -49,10 +49,9 @@ interface IVault is IERC4626 {
     event DirectMint(address indexed receiver, uint256 shares, uint256 increasedAssets);
     event DirectBurn(address indexed receiver, uint256 shares, uint256 distributedAssets);
 
-    // Errors
-    error Insufficient_Liquidity();
-    error Insufficient_Free_Liquidity();
-    error Supply_Burned();
-    error Fee_Unlock_Out_Of_Range();
-    error Not_Owner();
+    error InsufficientLiquidity();
+    error InsufficientFreeLiquidity();
+    error BurnThresholdExceeded();
+    error FeeUnlockTimeOutOfRange();
+    error RestrictedToOwner();
 }

@@ -73,6 +73,7 @@ contract FeeCollectorTest is PRBTest, StdCheats {
     Manager internal immutable manager;
     FeeCollector internal immutable collector;
     address internal immutable pair;
+    IVault internal immutable wethVault;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 56960635);
@@ -82,12 +83,19 @@ contract FeeCollectorTest is PRBTest, StdCheats {
         collector = new FeeCollector(address(manager));
         ithil = new Ithil();
         pair = IUniswapV2Factory(router.factory()).createPair(address(ithil), address(weth));
+
+        manager.create(address(weth));
+        wethVault = IVault(manager.vaults(address(weth)));
     }
 
     function setUp() public {
+        manager.setFeeCollector(address(collector));
+
         vm.deal(wethWhale, 1 ether);
-        vm.prank(wethWhale);
+        vm.startPrank(wethWhale);
         weth.transfer(address(this), 10 * 1e18);
+        weth.approve(address(wethVault), type(uint256).max);
+        vm.stopPrank();
 
         weth.approve(address(router), type(uint256).max);
         ithil.approve(address(router), type(uint256).max);
@@ -155,11 +163,30 @@ contract FeeCollectorTest is PRBTest, StdCheats {
         collector.stake(pair, obtained);
         vm.stopPrank();
 
-        assertTrue(IERC20(address(collector)).balanceOf(user1) == obtained * 2);
+        assertTrue(IERC20(pair).balanceOf(user1) == 0);
 
         vm.prank(user1);
         collector.unstake(pair, obtained);
 
         assertTrue(IERC20(pair).balanceOf(user1) == obtained);
+    }
+
+    function testCollectFees() public {
+        vm.prank(wethWhale);
+        wethVault.deposit(1e18, wethWhale);
+
+        uint256 amount = 1000 * 1e18;
+        ithil.transfer(user1, amount);
+
+        collector.setTokenWeight(address(ithil), 1);
+
+        vm.startPrank(user1);
+        IERC20(ithil).approve(address(collector), amount);
+        collector.stake(address(ithil), amount);
+        vm.stopPrank();
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(weth);
+        collector.harvestFees(tokens);
     }
 }

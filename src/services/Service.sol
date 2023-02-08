@@ -56,29 +56,37 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     }
 
     ///// Service functions /////
+    function _saveAgreement(Agreement memory agreement) internal {
+        Agreement storage newAgreement = agreements.push();
+        newAgreement.status = Status.OPEN;
+        newAgreement.createdAt = block.timestamp;
+
+        for (uint256 loansIndex = 0; loansIndex < agreement.loans.length; loansIndex++) {
+            newAgreement.loans.push(agreement.loans[loansIndex]);
+        }
+
+        for (uint256 collateralIndex = 0; collateralIndex < agreement.collaterals.length; collateralIndex++) {
+            newAgreement.collaterals.push(agreement.collaterals[collateralIndex]);
+        }
+    }
 
     /// @notice creates a new service agreement
     /// @param order a struct containing data on the agreement and extra params
     function open(Order calldata order) public virtual unlocked {
-        // Hook
+        // Save agreement in memory to allow editing
         Agreement memory agreement = order.agreement;
+
+        // Hook
         _beforeOpening(agreement, order.data);
 
         // Body
-        assert(order.agreement.status == Status.OPEN); // @todo should we validate more params here?
         _open(agreement, order.data);
         _safeMint(msg.sender, id++);
 
         // Hook
         _afterOpening(agreement, order.data);
 
-        // It must be here, since the _open function may modify some fields
-        agreements.push(order.agreement);
-        for (uint256 collateralIndex = 0; collateralIndex < agreements.length; collateralIndex++) {
-            agreements[agreements.length - 1].collaterals[collateralIndex].amount = agreement
-                .collaterals[collateralIndex]
-                .amount;
-        }
+        _saveAgreement(agreement);
     }
 
     function _open(Agreement memory agreement, bytes calldata data) internal virtual {}

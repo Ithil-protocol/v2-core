@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.12;
+pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -11,4 +11,6 @@ interface IBalancerPool is IERC20 {
     function getNormalizedWeights() external view returns (uint256[] memory);
 
     function getSwapFeePercentage() external view returns (uint256);
+
+    function getLastInvariant() external view returns (uint256);
 }
