@@ -29,6 +29,8 @@ contract StargateService is SecuritisableService {
     event PoolWasAdded(address indexed token);
     event PoolLockWasToggled(address indexed token, bool status);
     error InexistentPool();
+    error AmountTooLow();
+    error InsufficientAmountOut();
 
     constructor(address _manager, address _stargateRouter, address _stargateLPStaking)
         Service("StargateService", "STARGATE-SERVICE", _manager)
@@ -42,19 +44,20 @@ contract StargateService is SecuritisableService {
         if (pools[agreement.loans[0].token].poolID == 0) revert InexistentPool();
 
         PoolData memory pool = pools[agreement.loans[0].token];
-
+        if (_expectedMintedTokens(agreement.loans[0].amount + agreement.loans[0].margin, pool.lpToken) == 0)
+            revert AmountTooLow();
         stargateRouter.addLiquidity(pool.poolID, agreement.loans[0].amount + agreement.loans[0].margin, address(this));
         agreement.collaterals[0].amount = IERC20(pool.lpToken).balanceOf(address(this));
 
-        uint256 initial = stargate.balanceOf(address(this));
         stargateLPStaking.deposit(pool.stakingPoolID, agreement.collaterals[0].amount);
-        uint256 obtained = stargate.balanceOf(address(this)) - initial; // may underflow
         // upon deposit you receive some STG tokens
     }
 
-    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.loans[0].token];
 
+        uint256 minAmountsOut = abi.decode(data, (uint256));
+        uint256 initialBalance = IERC20(agreement.loans[0].token).balanceOf(address(this));
         stargateLPStaking.withdraw(pool.stakingPoolID, agreement.collaterals[0].amount);
         // upon withdrawal you receive some STG tokens
 
@@ -63,9 +66,8 @@ contract StargateService is SecuritisableService {
             agreement.collaterals[0].amount,
             address(this)
         );
-
-        IERC20 token = IERC20(agreement.loans[0].token);
-        token.safeTransfer(ownerOf(tokenID), token.balanceOf(address(this)));
+        if (IERC20(agreement.loans[0].token).balanceOf(address(this)) - initialBalance < minAmountsOut)
+            revert InsufficientAmountOut();
     }
 
     function quote(Agreement memory agreement)
@@ -77,7 +79,12 @@ contract StargateService is SecuritisableService {
         PoolData memory pool = pools[agreement.loans[0].token];
         uint256 stg = stargateLPStaking.pendingStargate(pool.poolID, address(this));
 
-        // quote swap STG to notional
+        uint256[] memory fees = new uint256[](1);
+        uint256[] memory quoted = new uint256[](1);
+        quoted[0] = _expectedObtainedTokens(agreement.collaterals[0].amount, pool.lpToken);
+        return (quoted, fees);
+
+        // TODO: quote swap STG to notional
     }
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {
@@ -114,5 +121,21 @@ contract StargateService is SecuritisableService {
         IERC20(pools[token].lpToken).approve(address(stargateLPStaking), 0);
 
         emit PoolLockWasToggled(token, pools[token].locked);
+    }
+
+    function _expectedMintedTokens(uint256 amount, address lpToken) internal view returns (uint256 expected) {
+        IStargatePool pool = IStargatePool(lpToken);
+
+        uint256 amountSD = amount / pool.convertRate();
+        uint256 mintFeeSD = (amountSD * pool.mintFeeBP()) / 10000;
+        amountSD = amountSD - mintFeeSD;
+        expected = (amountSD * pool.totalSupply()) / pool.totalLiquidity();
+    }
+
+    function _expectedObtainedTokens(uint256 amount, address lpToken) internal view returns (uint256 expected) {
+        IStargatePool pool = IStargatePool(lpToken);
+
+        uint256 amountSD = (amount * pool.totalLiquidity()) / pool.totalSupply();
+        expected = amountSD * pool.convertRate();
     }
 }
