@@ -33,7 +33,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     modifier onlyOwner() {
-        if (manager != msg.sender) revert Not_Owner();
+        if (manager != msg.sender) revert RestrictedToOwner();
         _;
     }
 
@@ -44,7 +44,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     function setFeeUnlockTime(uint256 _feeUnlockTime) external override onlyOwner {
         // Minimum 30 seconds, maximum 7 days
         // This also avoids division by zero in _calculateLockedProfits()
-        if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert Fee_Unlock_Out_Of_Range();
+        if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert FeeUnlockTimeOutOfRange();
         feeUnlockTime = _feeUnlockTime;
 
         emit DegradationCoefficientWasUpdated(feeUnlockTime);
@@ -92,7 +92,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
         uint256 freeLiq = freeLiquidity();
-        if (assets >= freeLiq) revert Insufficient_Liquidity();
+        if (assets >= freeLiq) revert InsufficientLiquidity();
         uint256 shares = super.withdraw(assets, receiver, owner);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
@@ -108,7 +108,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     {
         uint256 freeLiq = freeLiquidity();
         uint256 assets = previewRedeem(shares);
-        if (assets >= freeLiq) revert Insufficient_Liquidity();
+        if (assets >= freeLiq) revert InsufficientLiquidity();
         super.redeem(shares, receiver, owner);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
@@ -145,7 +145,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Burning the entire supply would trigger an _initialConvertToShares at next deposit
         // Meaning that the first to deposit will get everything
         // To avoid overriding _initialConvertToShares, we make the following check
-        if (shares >= totalSupply()) revert Supply_Burned();
+        if (shares >= totalSupply()) revert BurnThresholdExceeded();
 
         // When burning, the owner assets are distributed to others
         // Thus we need to lock them in order to avoid flashloan attacks
@@ -171,7 +171,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
-        if (assets >= freeLiq) revert Insufficient_Free_Liquidity();
+        if (assets >= freeLiq) revert InsufficientFreeLiquidity();
         // Net loans are in any moment less than IERC20(asset()).totalSupply()
         // Thus the next sum never overflows
         netLoans += assets;

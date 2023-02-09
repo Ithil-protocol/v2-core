@@ -4,7 +4,6 @@ pragma solidity =0.8.17;
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { PRBTest } from "@prb/test/PRBTest.sol";
-import { console2 } from "forge-std/console2.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IManager, Manager } from "../src/Manager.sol";
@@ -205,7 +204,7 @@ contract ManagerTest is PRBTest, StdCheats {
         vm.startPrank(debitServiceOne);
         uint256 increasedAssets = vault.convertToAssets(minted);
         if (increasedAssets > maxAmountIn) {
-            vm.expectRevert(bytes4(keccak256(abi.encodePacked("Max_Amount_Exceeded()"))));
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
             manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);
         } else {
             manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);
@@ -235,7 +234,7 @@ contract ManagerTest is PRBTest, StdCheats {
             vm.startPrank(debitServiceOne);
             uint256 distributedAssets = vault.convertToAssets(burned);
             if (distributedAssets > maxAmountIn) {
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("Max_Amount_Exceeded()"))));
+                vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
                 manager.directBurn(address(firstToken), anyAddress, burned, maxAmountIn);
             } else {
                 manager.directBurn(address(firstToken), anyAddress, burned, maxAmountIn);

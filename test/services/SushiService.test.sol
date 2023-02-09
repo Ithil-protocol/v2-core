@@ -9,7 +9,7 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { SushiService } from "../../src/services/examples/SushiService.sol";
+import { SushiService } from "../../src/services/debit/SushiService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";

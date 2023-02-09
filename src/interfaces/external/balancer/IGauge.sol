@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.12;
+pragma solidity =0.8.17;
 
 /// @title Curve and Balancer Gauges
 interface IGauge {

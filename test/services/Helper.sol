@@ -9,9 +9,8 @@ library Helper {
         uint256 amount,
         uint256 margin,
         address collateralToken,
-        uint256 collateralAmount,
-        uint256 time
-    ) public pure returns (IService.Order memory) {
+        uint256 collateralAmount
+    ) public view returns (IService.Order memory) {
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         uint256[] memory amounts = new uint256[](1);
@@ -26,7 +25,17 @@ library Helper {
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
 
-        return createAdvancedOrder(tokens, amounts, margins, itemTypes, collateralTokens, collateralAmounts, time, "");
+        return
+            createAdvancedOrder(
+                tokens,
+                amounts,
+                margins,
+                itemTypes,
+                collateralTokens,
+                collateralAmounts,
+                block.timestamp,
+                ""
+            );
     }
 
     // tokens.length = amounts.length = margins.length
@@ -41,7 +50,7 @@ library Helper {
         uint256[] memory collateralAmounts,
         uint256 time,
         bytes memory data
-    ) public pure returns (IService.Order memory) {
+    ) public view returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
 
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
