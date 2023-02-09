@@ -52,7 +52,6 @@ contract SushiService is SecuritisableService {
             amountsIn[index] = agreement.loans[index].amount + agreement.loans[index].margin;
         }
 
-        console2.log("Hello");
         uint256[2] memory minAmountsOut = abi.decode(data, (uint256[2]));
         (, , uint256 liquidity) = router.addLiquidity(
             agreement.loans[0].token,
@@ -67,7 +66,6 @@ contract SushiService is SecuritisableService {
 
         agreement.collaterals[0].amount = liquidity;
         minichef.deposit(pool.poolID, liquidity, address(this));
-        console2.log("World!");
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {}

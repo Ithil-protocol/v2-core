@@ -11,10 +11,13 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { SushiService } from "../../src/services/debit/SushiService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
 contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
+    using GeneralMath for uint256;
+
     IManager internal immutable manager;
     SushiService internal immutable service;
     IERC20 internal constant usdc = IERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
@@ -54,18 +57,24 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vm.stopPrank();
     }
 
-    function testSushiIntegration() public {
-        //vm.assume(amount < dai.balanceOf(daiWhale));
-        //vm.assume(margin < amount);
-        uint256 usdcAmount = 4134 * 1e6;
-        uint256 usdcLoan = 514 * 1e6;
-        uint256 usdcMargin = 131 * 1e6;
+    function _prepareVaultsAndUser(uint256 usdcAmount, uint256 usdcMargin, uint256 wethAmount, uint256 wethMargin)
+        internal
+        returns (uint256, uint256, uint256, uint256)
+    {
+        // Modifications to be sure usdcAmount + usdcMargin <= usdc.balanceOf(usdcWhale) and same for weth
+        usdcAmount = usdcAmount % usdc.balanceOf(usdcWhale);
+        usdcMargin = usdcMargin % (usdc.balanceOf(usdcWhale) - usdcAmount);
+        wethAmount = wethAmount % weth.balanceOf(wethWhale);
+        wethMargin = wethMargin % (weth.balanceOf(wethWhale) - wethAmount);
 
-        uint256 wethAmount = 135 * 1e18;
-        uint256 wethLoan = 11 * 1e18;
-        uint256 wethMargin = 3 * 1e18;
+        // UniswapV2Library: INSUFFICIENT_AMOUNT will be thrown by Uniswap quote function
+        // when trying to deploy zero liquidity: we enforce it to be at least 1
+        if (usdcAmount == 0) usdcAmount++;
+        if (wethAmount == 0) wethAmount++;
+        if (usdcMargin == 0) usdcMargin++;
+        if (wethMargin == 0) wethMargin++;
 
-        // Fill USDC vault
+        // Fill usdc vault
         IVault usdcVault = IVault(manager.vaults(address(usdc)));
         vm.startPrank(usdcWhale);
         usdc.transfer(address(this), usdcMargin);
@@ -80,7 +89,13 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         weth.approve(address(wethVault), wethAmount);
         wethVault.deposit(wethAmount, wethWhale);
         vm.stopPrank();
+        return (usdcAmount, usdcMargin, wethAmount, wethMargin);
+    }
 
+    function _createOrder(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
+        internal
+        returns (IService.Order memory)
+    {
         address[] memory tokens = new address[](2);
         tokens[0] = address(weth);
         tokens[1] = address(usdc);
@@ -102,9 +117,8 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = 0;
 
-        uint256[] memory amountsOut = new uint256[](2);
-        amountsOut[0] = 1;
-        amountsOut[1] = 1;
+        // Slippage protection prevents price to move too much while liquidity is provided
+        // TODO: add slippage checks
 
         IService.Order memory order = Helper.createAdvancedOrder(
             tokens,
@@ -114,8 +128,181 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
             collateralTokens,
             collateralAmounts,
             block.timestamp,
-            abi.encode(amountsOut)
+            abi.encode([uint256(0), uint256(0)])
         );
-        service.open(order);
+        return order;
+    }
+
+    function _calculateLiquidity(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
+        internal
+        view
+        returns (uint256, uint256, uint256)
+    {
+        (, bytes memory wethQuotedData) = sushirouter.staticcall(
+            abi.encodeWithSignature(
+                "quote(uint256,uint256,uint256)",
+                wethMargin + wethLoan,
+                weth.balanceOf(sushiLp),
+                usdc.balanceOf(sushiLp)
+            )
+        );
+        (, bytes memory usdcQuotedData) = sushirouter.staticcall(
+            abi.encodeWithSignature(
+                "quote(uint256,uint256,uint256)",
+                usdcMargin + usdcLoan,
+                usdc.balanceOf(sushiLp),
+                weth.balanceOf(sushiLp)
+            )
+        );
+        (, bytes memory klast) = sushiLp.staticcall(abi.encodeWithSignature("kLast()"));
+        uint256 amountA;
+        uint256 amountB;
+        if (abi.decode(wethQuotedData, (uint256)) <= usdcLoan + usdcMargin) {
+            (amountA, amountB) = (wethLoan + wethMargin, abi.decode(wethQuotedData, (uint256)));
+        } else {
+            (amountA, amountB) = (abi.decode(usdcQuotedData, (uint256)), usdcLoan + usdcMargin);
+        }
+        uint256 rootK = Math.sqrt((weth.balanceOf(sushiLp) + amountA) * (usdc.balanceOf(sushiLp) + amountB));
+        uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
+        return (amountA, amountB, (IERC20(sushiLp).totalSupply() * (rootK - rootKLast)) / (5 * rootK + rootKLast));
+    }
+
+    function _openOrder(
+        uint256 usdcAmount,
+        uint256 usdcLoan,
+        uint256 usdcMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) internal returns (uint256, uint256, uint256, uint256, uint256, uint256) {
+        (usdcAmount, usdcMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
+            usdcAmount,
+            usdcMargin,
+            wethAmount,
+            wethMargin
+        );
+        // Loan must be less than amount otherwise Vault will revert
+        // Since usdcAmount > 0 and wethAmount > 0, the following does not revert for division by zero
+        usdcLoan = usdcLoan % usdcAmount;
+        wethLoan = wethLoan % wethAmount;
+        IService.Order memory order = _createOrder(usdcLoan, usdcMargin, wethLoan, wethMargin);
+
+        (uint256 wethQuoted, uint256 usdcQuoted, uint256 liquidity) = _calculateLiquidity(
+            usdcLoan,
+            usdcMargin,
+            wethLoan,
+            wethMargin
+        );
+
+        if (
+            wethQuoted * (IERC20(sushiLp).totalSupply() + liquidity) < weth.balanceOf(sushiLp) ||
+            usdcQuoted * (IERC20(sushiLp).totalSupply() + liquidity) < usdc.balanceOf(sushiLp)
+        ) {
+            vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
+            service.open(order);
+        } else service.open(order);
+        return (usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin);
+    }
+
+    function testOpen(
+        uint256 usdcAmount,
+        uint256 usdcLoan,
+        uint256 usdcMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) public {
+        uint256 timestamp = block.timestamp;
+        (usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
+            usdcAmount,
+            usdcLoan,
+            usdcMargin,
+            wethAmount,
+            wethLoan,
+            wethMargin
+        );
+
+        if (service.id() > 0) {
+            (
+                IService.Loan[] memory loan,
+                IService.Collateral[] memory collateral,
+                uint256 createdAt,
+                IService.Status status
+            ) = service.getAgreement(1);
+
+            assertTrue(loan[0].token == address(weth));
+            assertTrue(loan[0].amount == wethLoan);
+            assertTrue(loan[0].margin == wethMargin);
+            assertTrue(loan[1].token == address(usdc));
+            assertTrue(loan[1].amount == usdcLoan);
+            assertTrue(loan[1].margin == usdcMargin);
+            assertTrue(collateral[0].token == sushiLp);
+            assertTrue(collateral[0].identifier == 0);
+            assertTrue(collateral[0].itemType == IService.ItemType.ERC20);
+            assertTrue(createdAt == timestamp);
+            assertTrue(status == IService.Status.OPEN);
+        }
+    }
+
+    function testClose(
+        uint256 usdcAmount,
+        uint256 usdcLoan,
+        uint256 usdcMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin,
+        uint256 minAmountsOutusdc,
+        uint256 minAmountsOutWeth
+    ) public {
+        (usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
+            usdcAmount,
+            usdcLoan,
+            usdcMargin,
+            wethAmount,
+            wethLoan,
+            wethMargin
+        );
+
+        uint256[] memory minAmountsOut = new uint256[](2);
+        // Fees make the initial investment always at a loss
+        // In this test we allow any loss: quoter tests will make this more precise
+        minAmountsOut[0] = minAmountsOutusdc;
+        minAmountsOut[1] = minAmountsOutWeth;
+        bytes memory data = abi.encode(minAmountsOut);
+
+        if (service.id() > 0) {
+            service.close(0, data);
+        }
+    }
+
+    function testQuote(
+        uint256 usdcAmount,
+        uint256 usdcLoan,
+        uint256 usdcMargin,
+        uint256 wethAmount,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) public {
+        (usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
+            usdcAmount,
+            usdcLoan,
+            usdcMargin,
+            wethAmount,
+            wethLoan,
+            wethMargin
+        );
+
+        if (service.id() > 0) {
+            (
+                IService.Loan[] memory loan,
+                IService.Collateral[] memory collateral,
+                uint256 createdAt,
+                IService.Status status
+            ) = service.getAgreement(1);
+
+            IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
+
+            (uint256[] memory profits, ) = service.quote(agreement);
+        }
     }
 }
