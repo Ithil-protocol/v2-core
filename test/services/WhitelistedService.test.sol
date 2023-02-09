@@ -31,6 +31,7 @@ contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
     TestService internal immutable service;
     ERC20PresetMinterPauser internal immutable token;
     address internal constant whitelistedUser = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted")))));
+    address internal constant whitelistedUser2 = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted2")))));
     uint256 internal constant collateral = 1e18;
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
@@ -70,16 +71,35 @@ contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("UserIsNotWhitelisted()"))));
         service.open(order);
 
+        address[] memory whitelistedUsers = new address[](2);
+        whitelistedUsers[0] = whitelistedUser;
+        whitelistedUsers[1] = whitelistedUser2;
+
         vm.prank(admin);
-        service.addToWhitelist(whitelistedUser);
+        service.addToWhitelist(whitelistedUsers);
 
         vm.prank(whitelistedUser);
         service.open(order);
 
+        vm.prank(whitelistedUser2);
+        service.open(order);
+
         vm.prank(admin);
-        service.removeFromWhitelist(whitelistedUser);
+        service.removeFromWhitelist(whitelistedUsers);
 
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("UserIsNotWhitelisted()"))));
+        vm.prank(whitelistedUser);
+        service.open(order);
+
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("UserIsNotWhitelisted()"))));
+        vm.prank(whitelistedUser2);
+        service.open(order);
+
+        vm.prank(admin);
+        service.toggleWhitelistFlag();
+
+        service.open(order);
+        vm.prank(whitelistedUser);
         service.open(order);
     }
 }

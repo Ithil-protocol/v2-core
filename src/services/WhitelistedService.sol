@@ -6,22 +6,41 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 
 abstract contract WhitelistedService is Service {
     mapping(address => bool) public whitelisted;
+    bool public enabled;
+
+    event WhitelistAccessFlagWasToggled();
     event WhitelistStatusWasChanged(address indexed user, bool status);
     error UserIsNotWhitelisted();
 
-    function addToWhitelist(address addr) external onlyOwner {
-        whitelisted[addr] = true;
-
-        emit WhitelistStatusWasChanged(addr, true);
+    constructor() {
+        enabled = true;
     }
 
-    function removeFromWhitelist(address addr) external onlyOwner {
-        delete whitelisted[addr];
+    function toggleWhitelistFlag() external onlyOwner {
+        enabled = !enabled;
 
-        emit WhitelistStatusWasChanged(addr, false);
+        emit WhitelistAccessFlagWasToggled();
+    }
+
+    function addToWhitelist(address[] calldata users) external onlyOwner {
+        uint256 length = users.length;
+        for (uint256 i = 0; i < length; i++) {
+            whitelisted[users[i]] = true;
+
+            emit WhitelistStatusWasChanged(users[i], true);
+        }
+    }
+
+    function removeFromWhitelist(address[] calldata users) external onlyOwner {
+        uint256 length = users.length;
+        for (uint256 i = 0; i < length; i++) {
+            delete whitelisted[users[i]];
+
+            emit WhitelistStatusWasChanged(users[i], false);
+        }
     }
 
     function _beforeOpening(Agreement memory agreement, bytes calldata data) internal override {
-        if (!whitelisted[msg.sender]) revert UserIsNotWhitelisted();
+        if (enabled && !whitelisted[msg.sender]) revert UserIsNotWhitelisted();
     }
 }
