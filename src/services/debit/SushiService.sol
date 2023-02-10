@@ -68,7 +68,22 @@ contract SushiService is SecuritisableService {
         minichef.deposit(pool.poolID, liquidity, address(this));
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {}
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+        PoolData memory pool = pools[agreement.collaterals[0].token];
+        minichef.withdraw(pool.poolID, agreement.collaterals[0].amount, address(this));
+
+        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
+        IERC20(agreement.collaterals[0].token).approve(address(router), agreement.collaterals[0].amount);
+        router.removeLiquidity(
+            agreement.loans[0].token,
+            agreement.loans[1].token,
+            agreement.collaterals[0].amount,
+            minAmountsOut[0],
+            minAmountsOut[1],
+            address(this),
+            block.timestamp // @todo pass via bytes data ?
+        );
+    }
 
     function addPool(address lpToken, uint256 poolID, address[2] calldata tokens) external onlyOwner {
         assert(tokens[0] < tokens[1]);

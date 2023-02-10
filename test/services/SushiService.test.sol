@@ -133,7 +133,7 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         return order;
     }
 
-    function _calculateLiquidity(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
+    function _calculateDeposit(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
         internal
         view
         returns (uint256, uint256, uint256)
@@ -154,7 +154,6 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
                 weth.balanceOf(sushiLp)
             )
         );
-        (, bytes memory klast) = sushiLp.staticcall(abi.encodeWithSignature("kLast()"));
         uint256 amountA;
         uint256 amountB;
         if (abi.decode(wethQuotedData, (uint256)) <= usdcLoan + usdcMargin) {
@@ -162,9 +161,14 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         } else {
             (amountA, amountB) = (abi.decode(usdcQuotedData, (uint256)), usdcLoan + usdcMargin);
         }
+        return (amountA, amountB, _calculateFees(amountA, amountB));
+    }
+
+    function _calculateFees(uint256 amountA, uint256 amountB) internal view returns (uint256) {
+        (, bytes memory klast) = sushiLp.staticcall(abi.encodeWithSignature("kLast()"));
         uint256 rootK = Math.sqrt((weth.balanceOf(sushiLp) + amountA) * (usdc.balanceOf(sushiLp) + amountB));
         uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
-        return (amountA, amountB, (IERC20(sushiLp).totalSupply() * (rootK - rootKLast)) / (5 * rootK + rootKLast));
+        return (IERC20(sushiLp).totalSupply() * (rootK - rootKLast)) / (5 * rootK + rootKLast);
     }
 
     function _openOrder(
@@ -187,7 +191,7 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         wethLoan = wethLoan % wethAmount;
         IService.Order memory order = _createOrder(usdcLoan, usdcMargin, wethLoan, wethMargin);
 
-        (uint256 wethQuoted, uint256 usdcQuoted, uint256 liquidity) = _calculateLiquidity(
+        (uint256 wethQuoted, uint256 usdcQuoted, uint256 fees) = _calculateDeposit(
             usdcLoan,
             usdcMargin,
             wethLoan,
@@ -195,8 +199,8 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         );
 
         if (
-            wethQuoted * (IERC20(sushiLp).totalSupply() + liquidity) < weth.balanceOf(sushiLp) ||
-            usdcQuoted * (IERC20(sushiLp).totalSupply() + liquidity) < usdc.balanceOf(sushiLp)
+            wethQuoted * (IERC20(sushiLp).totalSupply() + fees) < weth.balanceOf(sushiLp) ||
+            usdcQuoted * (IERC20(sushiLp).totalSupply() + fees) < usdc.balanceOf(sushiLp)
         ) {
             vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
             service.open(order);
@@ -266,12 +270,23 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
         // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = minAmountsOutusdc;
-        minAmountsOut[1] = minAmountsOutWeth;
+        minAmountsOut[0] = 0;
+        minAmountsOut[1] = 0;
         bytes memory data = abi.encode(minAmountsOut);
 
         if (service.id() > 0) {
-            service.close(0, data);
+            (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+
+            uint256 balanceWeth = weth.balanceOf(sushiLp);
+            uint256 balanceUsdc = usdc.balanceOf(sushiLp);
+            uint256 fees = _calculateFees(balanceWeth, balanceUsdc);
+            uint256 totalSupply = IERC20(sushiLp).totalSupply() + fees;
+            if (
+                collaterals[0].amount * balanceWeth < totalSupply || collaterals[0].amount * balanceUsdc < totalSupply
+            ) {
+                vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
+                service.close(0, data);
+            } else service.close(0, data);
         }
     }
 
@@ -295,12 +310,12 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         if (service.id() > 0) {
             (
                 IService.Loan[] memory loan,
-                IService.Collateral[] memory collateral,
+                IService.Collateral[] memory collaterals,
                 uint256 createdAt,
                 IService.Status status
             ) = service.getAgreement(1);
 
-            IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
+            IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
             (uint256[] memory profits, ) = service.quote(agreement);
         }
