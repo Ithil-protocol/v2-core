@@ -5,6 +5,7 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Router.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { Math } from "../../libraries/external/Uniswap/Math.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
 import { console2 } from "forge-std/console2.sol";
@@ -83,6 +84,22 @@ contract SushiService is SecuritisableService {
             address(this),
             block.timestamp // @todo pass via bytes data ?
         );
+    }
+
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
+        uint256[] memory fees = new uint256[](agreement.loans.length);
+        uint256[] memory quoted = new uint256[](agreement.loans.length);
+        uint256 balanceA = IERC20(agreement.loans[0].token).balanceOf(agreement.collaterals[0].token);
+        uint256 balanceB = IERC20(agreement.loans[1].token).balanceOf(agreement.collaterals[0].token);
+        uint256 totalSupply = IERC20(agreement.collaterals[0].token).totalSupply();
+        (, bytes memory klast) = agreement.collaterals[0].token.staticcall(abi.encodeWithSignature("kLast()"));
+        // Todo: add fees
+        uint256 rootK = Math.sqrt(balanceA + agreement.loans[0].amount) * (balanceB + agreement.loans[1].amount);
+        uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
+        totalSupply += (totalSupply * (rootK - rootKLast)) / (5 * rootK + rootKLast);
+        quoted[0] = (agreement.collaterals[0].amount * balanceA) / totalSupply;
+        quoted[1] = (agreement.collaterals[0].amount * balanceB) / totalSupply;
+        return (fees, quoted);
     }
 
     function addPool(address lpToken, uint256 poolID, address[2] calldata tokens) external onlyOwner {
