@@ -106,7 +106,7 @@ contract SushiService is SecuritisableService {
     }
 
     function addPool(uint256 poolID, address[2] calldata tokens) external onlyOwner {
-        if(tokens[0] >= tokens[1]) revert WrongTokenOrder();
+        if (tokens[0] >= tokens[1]) revert WrongTokenOrder();
         address lpToken = IUniswapV2Factory(router.factory()).getPair(tokens[0], tokens[1]);
         if (minichef.lpToken(poolID) != lpToken) revert SushiLPMismatch();
 
