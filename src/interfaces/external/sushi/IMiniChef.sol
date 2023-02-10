@@ -23,4 +23,6 @@ interface IMiniChef {
     function totalAllocPoint() external view returns (uint256);
 
     function sushiPerSecond() external view returns (uint256);
+
+    function lpToken(uint256 _index) external view returns (address);
 }

@@ -53,7 +53,7 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         manager.setCap(address(service), address(usdc), GeneralMath.RESOLUTION);
         manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
 
-        service.addPool(sushiLp, poolID, [address(weth), address(usdc)]);
+        service.addPool(poolID, [address(weth), address(usdc)]);
         vm.stopPrank();
     }
 

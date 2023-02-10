@@ -3,6 +3,7 @@ pragma solidity >=0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Router.sol";
+import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Factory.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
@@ -28,6 +29,7 @@ contract SushiService is SecuritisableService {
     error TokenIndexMismatch();
     error InexistentPool();
     error InvalidInput();
+    error SushiLPMismatch();
 
     mapping(address => PoolData) public pools;
     IUniswapV2Router public immutable router;
@@ -102,8 +104,10 @@ contract SushiService is SecuritisableService {
         return (fees, quoted);
     }
 
-    function addPool(address lpToken, uint256 poolID, address[2] calldata tokens) external onlyOwner {
+    function addPool(uint256 poolID, address[2] calldata tokens) external onlyOwner {
         assert(tokens[0] < tokens[1]);
+        address lpToken = IUniswapV2Factory(router.factory()).getPair(tokens[0], tokens[1]);
+        if (minichef.lpToken(poolID) != lpToken) revert SushiLPMismatch();
 
         for (uint8 i = 0; i < 2; i++) {
             if (IERC20(tokens[i]).allowance(address(this), address(router)) == 0)
