@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { ICurvePool } from "../interfaces/external/ICurvePool.sol";
+import { ICurvePool } from "../interfaces/external/curve/ICurvePool.sol";
 import { IService } from "../interfaces/IService.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    CurveHelper library
 /// @author   Ithil

@@ -2,14 +2,13 @@
 pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ICurvePool } from "../../interfaces/external/ICurvePool.sol";
-import { IConvexBooster } from "../../interfaces/external/IConvexBooster.sol";
-import { IBaseRewardPool } from "../../interfaces/external/IBaseRewardPool.sol";
+import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
+import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
+import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
