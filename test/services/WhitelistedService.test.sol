@@ -23,10 +23,9 @@ contract TestService is WhitelistedService {
     function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {}
 }
 
-contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract WhitelistedServiceTest is BaseServiceTest {
     using SafeERC20 for IERC20;
 
-    IManager internal immutable manager;
     TestService internal immutable service;
     ERC20PresetMinterPauser internal immutable token;
     address internal constant whitelistedUser = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted")))));
@@ -35,11 +34,12 @@ contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
 
-    constructor() {
+    string internal constant rpcUrl = "MAINNET_RPC_URL"; 
+    uint256 internal constant blockNumber = 16448665;
+    constructor() BaseServiceTest(rpcUrl, blockNumber) {
         token = new ERC20PresetMinterPauser("test", "TEST");
 
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new TestService(address(manager));
         vm.stopPrank();
     }

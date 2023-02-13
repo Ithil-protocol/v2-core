@@ -14,8 +14,8 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
-    IManager internal immutable manager;
+contract StargateServiceTest is BaseServiceTest {
+    
     StargateService internal immutable service;
     address internal constant stargateRouter = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
     address internal constant stargateLPStaking = 0xB0D502E938ed5f4df2E681fE6E419ff29631d62b;
@@ -24,12 +24,10 @@ contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
     address internal constant lpToken = 0xdf0770dF86a8034b3EFEf0A1Bb3c889B8332FF56;
     uint16 internal constant usdcPoolID = 1;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-
+    string internal constant rpcUrl = "MAINNET_RPC_URL"; 
+    uint256 internal constant blockNumber = 16448665;
+    constructor() BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new StargateService(address(manager), stargateRouter, stargateLPStaking);
         vm.stopPrank();
     }

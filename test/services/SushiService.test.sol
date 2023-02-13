@@ -15,10 +15,9 @@ import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract SushiServiceTest is BaseServiceTest {
     using GeneralMath for uint256;
 
-    IManager internal immutable manager;
     SushiService internal immutable service;
     IERC20 internal constant usdc = IERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
     address internal constant usdcWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
@@ -29,13 +28,10 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
     uint256 internal constant poolID = 0;
     address internal constant sushiLp = 0x905dfCD5649217c42684f23958568e533C711Aa3;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 55895589);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL"; 
+    uint256 internal constant blockNumber = 55895589;
+    constructor() BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new SushiService(address(manager), sushirouter, minichef);
         vm.stopPrank();
     }

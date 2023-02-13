@@ -43,10 +43,9 @@ import { Helper } from "./Helper.sol";
 /// @dev overrides (except first implementation of virtual functions)
 ///
 
-contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
+contract BalancerServiceWeightedDAIWETH is BaseServiceTest {
     using GeneralMath for uint256;
 
-    IManager internal immutable manager;
     BalancerService internal immutable service;
     IERC20 internal constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     // Block 16448665 dai whale balance = 193908563885609559262031126 > 193908563 * 10^18
@@ -66,13 +65,10 @@ contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
 
     // address internal constant auraPoolID = 2;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    string internal constant rpcUrl = "MAINNET_RPC_URL"; 
+    uint256 internal constant blockNumber = 16448665;
+    constructor() BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new BalancerService(address(manager), balancerVault, bal);
         vm.stopPrank();
     }
@@ -330,10 +326,9 @@ contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
     // }
 }
 
-contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
+contract BalancerServiceWeightedOHMWETH is BaseServiceTest {
     using GeneralMath for uint256;
 
-    IManager internal immutable manager;
     BalancerService internal immutable service;
     IERC20 internal constant ohm = IERC20(0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5);
     address internal constant ohmWhale = 0x64C0fe73Dff66a8b9b803A1796082a575899DD26;
@@ -347,17 +342,14 @@ contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
     address internal constant gauge = address(0);
     address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
 
+    string internal constant rpcUrl = "MAINNET_RPC_URL"; 
+    uint256 internal constant blockNumber = 16448665;
     // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
 
     // address internal constant auraPoolID = 2;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    constructor() BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new BalancerService(address(manager), balancerVault, bal);
         vm.stopPrank();
     }
@@ -617,7 +609,6 @@ contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
 contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceTest {
     using GeneralMath for uint256;
 
-    IManager internal immutable manager;
     BalancerService internal immutable service;
     IERC20 internal constant lusd = IERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
     address internal constant lusdWhale = 0x954f2a8b86Aa586c3Cc3a2088B72e2a560D7Dc22;
@@ -637,13 +628,8 @@ contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceT
 
     // address internal constant auraPoolID = 2;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    constructor(string memory rpcUrl, uint256 blockNumber) BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new BalancerService(address(manager), balancerVault, bal);
         vm.stopPrank();
     }

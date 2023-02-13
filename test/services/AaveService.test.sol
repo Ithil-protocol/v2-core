@@ -14,10 +14,9 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract AaveServiceTest is BaseServiceTest {
     using GeneralMath for uint256;
 
-    IManager internal immutable manager;
     AaveService internal immutable service;
     IERC20 internal constant dai = IERC20(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
     IAToken internal constant aDai = IAToken(0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE);
@@ -25,13 +24,11 @@ contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
     address internal constant daiWhale = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 58581858);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 58581858;
 
+    constructor() BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new AaveService(address(manager), aavePool);
         vm.stopPrank();
     }

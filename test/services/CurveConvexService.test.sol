@@ -13,8 +13,8 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseServiceTest } from "./BaseServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest {
-    IManager internal immutable manager;
+contract CurveConvexServiceTestRenBTCWBTC is BaseServiceTest {
+    
     CurveConvexService internal immutable service;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
@@ -30,13 +30,10 @@ contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest
     IERC20 internal constant wbtc = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     address internal constant wbtcWhale = 0x218B95BE3ed99141b0144Dba6cE88807c4AD7C09;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    string internal constant rpcUrl = "MAINNET_RPC_URL"; 
+    uint256 internal constant blockNumber = 16448665;
+    constructor(string memory rpcUrl, uint256 blockNumber) BaseServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new CurveConvexService(address(manager), convexBooster, cvx);
         vm.stopPrank();
     }
