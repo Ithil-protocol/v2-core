@@ -32,9 +32,11 @@ contract StargateService is SecuritisableService {
     error AmountTooLow();
     error InsufficientAmountOut();
 
-    constructor(address _manager, address _stargateRouter, address _stargateLPStaking)
-        Service("StargateService", "STARGATE-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _stargateRouter,
+        address _stargateLPStaking
+    ) Service("StargateService", "STARGATE-SERVICE", _manager) {
         stargateRouter = IStargateRouter(_stargateRouter);
         stargateLPStaking = IStargateLPStaking(_stargateLPStaking);
         stargate = IERC20(stargateLPStaking.stargate());
@@ -70,12 +72,9 @@ contract StargateService is SecuritisableService {
             revert InsufficientAmountOut();
     }
 
-    function quote(Agreement memory agreement)
-        public
-        view
-        override
-        returns (uint256[] memory results, uint256[] memory)
-    {
+    function quote(
+        Agreement memory agreement
+    ) public view override returns (uint256[] memory results, uint256[] memory) {
         PoolData memory pool = pools[agreement.loans[0].token];
         uint256 stg = stargateLPStaking.pendingStargate(pool.poolID, address(this));
 

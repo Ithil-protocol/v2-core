@@ -3,19 +3,16 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { console2 } from "forge-std/console2.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { SushiService } from "../../src/services/debit/SushiService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     IManager internal immutable manager;
@@ -57,10 +54,12 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         vm.stopPrank();
     }
 
-    function _prepareVaultsAndUser(uint256 usdcAmount, uint256 usdcMargin, uint256 wethAmount, uint256 wethMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
+    function _prepareVaultsAndUser(
+        uint256 usdcAmount,
+        uint256 usdcMargin,
+        uint256 wethAmount,
+        uint256 wethMargin
+    ) internal returns (uint256, uint256, uint256, uint256) {
         // Modifications to be sure usdcAmount + usdcMargin <= usdc.balanceOf(usdcWhale) and same for weth
         usdcAmount = usdcAmount % usdc.balanceOf(usdcWhale);
         usdcMargin = usdcMargin % (usdc.balanceOf(usdcWhale) - usdcAmount);
@@ -92,10 +91,12 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         return (usdcAmount, usdcMargin, wethAmount, wethMargin);
     }
 
-    function _createOrder(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
-        internal
-        returns (IService.Order memory)
-    {
+    function _createOrder(
+        uint256 usdcLoan,
+        uint256 usdcMargin,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) internal returns (IService.Order memory) {
         address[] memory tokens = new address[](2);
         tokens[0] = address(weth);
         tokens[1] = address(usdc);
@@ -133,11 +134,12 @@ contract SushiServiceTest is PRBTest, StdCheats, BaseServiceTest {
         return order;
     }
 
-    function _calculateDeposit(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
-        internal
-        view
-        returns (uint256, uint256, uint256)
-    {
+    function _calculateDeposit(
+        uint256 usdcLoan,
+        uint256 usdcMargin,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) internal view returns (uint256, uint256, uint256) {
         (, bytes memory wethQuotedData) = sushirouter.staticcall(
             abi.encodeWithSignature(
                 "quote(uint256,uint256,uint256)",

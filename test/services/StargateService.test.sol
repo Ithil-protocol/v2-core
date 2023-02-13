@@ -3,18 +3,16 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { StargateService } from "../../src/services/debit/StargateService.sol";
 import { IStargatePool } from "../../src/interfaces/external/stargate/IStargateLPStaking.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract StargateServiceTest is BaseIntegrationServiceTest {
     IManager internal immutable manager;
     StargateService internal immutable service;
     address internal constant stargateRouter = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
@@ -109,10 +107,11 @@ contract StargateServiceTest is PRBTest, StdCheats, BaseServiceTest {
         expected = (amountSD * pool.totalSupply()) / pool.totalLiquidity();
     }
 
-    function _openOrder(uint256 usdcAmount, uint256 usdcLoan, uint256 usdcMargin)
-        internal
-        returns (uint256, uint256, uint256, bool)
-    {
+    function _openOrder(
+        uint256 usdcAmount,
+        uint256 usdcLoan,
+        uint256 usdcMargin
+    ) internal returns (uint256, uint256, uint256, bool) {
         (usdcAmount, usdcMargin) = _prepareVaultsAndUser(usdcAmount, usdcMargin);
         bool success = true;
         // Loan must be less than amount otherwise Vault will revert

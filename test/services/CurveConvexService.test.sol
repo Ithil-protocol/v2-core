@@ -3,17 +3,15 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { CurveConvexService } from "../../src/services/debit/CurveConvexService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest {
+contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
     IManager internal immutable manager;
     CurveConvexService internal immutable service;
 
@@ -62,10 +60,12 @@ contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest
         vm.stopPrank();
     }
 
-    function _prepareVaultsAndUser(uint256 renBTCAmount, uint256 renBTCMargin, uint256 wbtcAmount, uint256 wbtcMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
+    function _prepareVaultsAndUser(
+        uint256 renBTCAmount,
+        uint256 renBTCMargin,
+        uint256 wbtcAmount,
+        uint256 wbtcMargin
+    ) internal returns (uint256, uint256, uint256, uint256) {
         // Modifications to be sure renBTCAmount + renBTCMargin <= renBTC.balanceOf(renBTCWhale) and same for wbtc
         renBTCAmount = renBTCAmount % renBTC.balanceOf(renBTCWhale);
         renBTCMargin = renBTCMargin % (renBTC.balanceOf(renBTCWhale) - renBTCAmount);
@@ -98,10 +98,12 @@ contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest
         return (renBTCAmount, renBTCMargin, wbtcAmount, wbtcMargin);
     }
 
-    function _createOrder(uint256 renBTCLoan, uint256 renBTCMargin, uint256 wbtcLoan, uint256 wbtcMargin)
-        internal
-        returns (IService.Order memory)
-    {
+    function _createOrder(
+        uint256 renBTCLoan,
+        uint256 renBTCMargin,
+        uint256 wbtcLoan,
+        uint256 wbtcMargin
+    ) internal returns (IService.Order memory) {
         address[] memory tokens = new address[](2);
         tokens[0] = address(renBTC);
         tokens[1] = address(wbtc);

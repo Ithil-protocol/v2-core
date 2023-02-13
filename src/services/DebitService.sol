@@ -13,22 +13,20 @@ abstract contract DebitService is Service {
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
     /// Throws if margin = 0
-    function riskSpreadFromMargin(uint256 amount, uint256 margin, uint256 baseSpread)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function riskSpreadFromMargin(
+        uint256 amount,
+        uint256 margin,
+        uint256 baseSpread
+    ) internal view virtual returns (uint256) {
         return baseSpread.safeMulDiv(amount, margin);
     }
 
     /// @dev Defaults to amount + margin * riskSpread / (ir + riskSpread)
-    function liquidationThreshold(uint256 amount, uint256 margin, uint256 interestAndSpread)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function liquidationThreshold(
+        uint256 amount,
+        uint256 margin,
+        uint256 interestAndSpread
+    ) internal view virtual returns (uint256) {
         (uint256 interestRate, uint256 riskSpread) = interestAndSpread.unpackUint();
         return amount.safeAdd(margin.safeMulDiv(riskSpread, interestRate + riskSpread));
     }
@@ -102,11 +100,10 @@ abstract contract DebitService is Service {
     /// how: for first to last index, calculate minimum obtained >= loan amount + fees
     function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory) {}
 
-    function _baseInterestRateAndSpread(Agreement memory agreement, uint256 freeLiquidity)
-        internal
-        virtual
-        returns (uint256, uint256)
-    {}
+    function _baseInterestRateAndSpread(
+        Agreement memory agreement,
+        uint256 freeLiquidity
+    ) internal virtual returns (uint256, uint256) {}
 
     // Computes the payment due to the vault or lender
     function _computeDuePayment(Agreement memory agreement, bytes calldata data) internal virtual returns (uint256) {}

@@ -40,9 +40,11 @@ contract BalancerService is SecuritisableService {
     uint256 public rewardRate;
     address public immutable rewardToken;
 
-    constructor(address _manager, address _balancerVault, address _rewardToken)
-        Service("BalancerService", "BALANCER-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _balancerVault,
+        address _rewardToken
+    ) Service("BalancerService", "BALANCER-SERVICE", _manager) {
         balancerVault = IBalancerVault(_balancerVault);
         rewardToken = _rewardToken;
     }

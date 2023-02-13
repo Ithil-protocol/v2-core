@@ -3,8 +3,6 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
@@ -13,12 +11,8 @@ import { BalancerService } from "../../src/services/debit/BalancerService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
-
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// @dev Run Forge with `-vvvv` to see console logs.
-/// https://book.getfoundry.sh/forge/writing-tests
 
 /// @dev State study
 /// BalancerService native state:
@@ -43,7 +37,7 @@ import { Helper } from "./Helper.sol";
 /// @dev overrides (except first implementation of virtual functions)
 ///
 
-contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
+contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     IManager internal immutable manager;
@@ -96,10 +90,12 @@ contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
         vm.stopPrank();
     }
 
-    function _prepareVaultsAndUser(uint256 daiAmount, uint256 daiMargin, uint256 wethAmount, uint256 wethMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
+    function _prepareVaultsAndUser(
+        uint256 daiAmount,
+        uint256 daiMargin,
+        uint256 wethAmount,
+        uint256 wethMargin
+    ) internal returns (uint256, uint256, uint256, uint256) {
         // Modifications to be sure daiAmount + daiMargin <= dai.balanceOf(daiWhale) and same for weth
         daiAmount = daiAmount % dai.balanceOf(daiWhale);
         daiMargin = daiMargin % (dai.balanceOf(daiWhale) - daiAmount);
@@ -126,10 +122,12 @@ contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
         return (daiAmount, daiMargin, wethAmount, wethMargin);
     }
 
-    function _createOrder(uint256 daiLoan, uint256 daiMargin, uint256 wethLoan, uint256 wethMargin)
-        internal
-        returns (IService.Order memory)
-    {
+    function _createOrder(
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) internal returns (IService.Order memory) {
         address[] memory tokens = new address[](2);
         tokens[0] = address(dai);
         tokens[1] = address(weth);
@@ -330,7 +328,7 @@ contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
     // }
 }
 
-contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
+contract BalancerServiceWeightedOHMWETH is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     IManager internal immutable manager;
@@ -381,10 +379,12 @@ contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
         vm.stopPrank();
     }
 
-    function _prepareVaultsAndUser(uint256 ohmAmount, uint256 ohmMargin, uint256 wethAmount, uint256 wethMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
+    function _prepareVaultsAndUser(
+        uint256 ohmAmount,
+        uint256 ohmMargin,
+        uint256 wethAmount,
+        uint256 wethMargin
+    ) internal returns (uint256, uint256, uint256, uint256) {
         // Modifications to be sure ohmAmount + ohmMargin <= ohm.balanceOf(ohmWhale) and same for weth
         ohmAmount = ohmAmount % ohm.balanceOf(ohmWhale);
         ohmMargin = ohmMargin % (ohm.balanceOf(ohmWhale) - ohmAmount);
@@ -411,10 +411,12 @@ contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
         return (ohmAmount, ohmMargin, wethAmount, wethMargin);
     }
 
-    function _createOrder(uint256 ohmLoan, uint256 ohmMargin, uint256 wethLoan, uint256 wethMargin)
-        internal
-        returns (IService.Order memory)
-    {
+    function _createOrder(
+        uint256 ohmLoan,
+        uint256 ohmMargin,
+        uint256 wethLoan,
+        uint256 wethMargin
+    ) internal returns (IService.Order memory) {
         address[] memory tokens = new address[](2);
         tokens[0] = address(ohm);
         tokens[1] = address(weth);
@@ -614,7 +616,7 @@ contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
     // }
 }
 
-contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceTest {
+contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     IManager internal immutable manager;
@@ -672,10 +674,11 @@ contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceT
         vm.stopPrank();
     }
 
-    function _prepareVaultsAndUser(uint256 lusdMargin, uint256 lqtyMargin, uint256 wethMargin)
-        internal
-        returns (uint256, uint256, uint256)
-    {
+    function _prepareVaultsAndUser(
+        uint256 lusdMargin,
+        uint256 lqtyMargin,
+        uint256 wethMargin
+    ) internal returns (uint256, uint256, uint256) {
         // Modifications to be sure lusdAmount + lusdMargin <= lusd.balanceOf(lusdWhale) and same for weth
         lusdMargin = lusdMargin % lusd.balanceOf(lusdWhale);
         lqtyMargin = lqtyMargin % lqty.balanceOf(lqtyWhale);

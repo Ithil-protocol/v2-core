@@ -50,9 +50,12 @@ interface IGelatoOps {
      *
      * @return taskId Unique hash of the task created.
      */
-    function createTask(address execAddress, bytes calldata execData, ModuleData calldata moduleData, address feeToken)
-        external
-        returns (bytes32 taskId);
+    function createTask(
+        address execAddress,
+        bytes calldata execData,
+        ModuleData calldata moduleData,
+        address feeToken
+    ) external returns (bytes32 taskId);
 
     /**
      * @notice Terminates a task that was created and Gelato can no longer execute it.

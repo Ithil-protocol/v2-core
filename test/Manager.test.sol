@@ -3,8 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IManager, Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
@@ -17,7 +16,7 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// @dev Manager underlying Vault state
 /// --> see Vault test
 
-contract ManagerTest is PRBTest, StdCheats {
+contract ManagerTest is Test {
     using GeneralMath for uint256;
 
     Manager internal immutable manager;
@@ -78,10 +77,11 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
-    function _setupArbitraryState(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap)
-        private
-        returns (uint256)
-    {
+    function _setupArbitraryState(
+        uint256 previousDeposit,
+        uint256 debitSpread,
+        uint256 debitCap
+    ) private returns (uint256) {
         address vaultAddress = manager.vaults(address(firstToken));
         vm.startPrank(tokenSink);
         firstToken.approve(vaultAddress, previousDeposit);
@@ -116,9 +116,12 @@ contract ManagerTest is PRBTest, StdCheats {
         assertTrue(storedCap == cap);
     }
 
-    function testFeeUnlockTime(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap, uint256 feeUnlockTime)
-        public
-    {
+    function testFeeUnlockTime(
+        uint256 previousDeposit,
+        uint256 debitSpread,
+        uint256 debitCap,
+        uint256 feeUnlockTime
+    ) public {
         _setupArbitraryState(previousDeposit, debitSpread, debitCap);
         feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
@@ -165,9 +168,13 @@ contract ManagerTest is PRBTest, StdCheats {
         }
     }
 
-    function testRepay(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap, uint256 repaid, uint256 debt)
-        public
-    {
+    function testRepay(
+        uint256 previousDeposit,
+        uint256 debitSpread,
+        uint256 debitCap,
+        uint256 repaid,
+        uint256 debt
+    ) public {
         debitCap = _setupArbitraryState(previousDeposit, debitSpread, debitCap);
         vm.assume(repaid <= firstToken.balanceOf(tokenSink));
         vm.startPrank(tokenSink);

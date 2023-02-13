@@ -64,7 +64,9 @@ interface ICurvePool {
         @param _min_received Minimum amount of coin to receive
         @return Amount of coin received
     */
-    function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received)
-        external
-        returns (uint256);
+    function remove_liquidity_one_coin(
+        uint256 _burn_amount,
+        int128 i,
+        uint256 _min_received
+    ) external returns (uint256);
 }

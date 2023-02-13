@@ -37,9 +37,11 @@ contract CurveConvexService is SecuritisableService {
     IERC20 internal immutable crv;
     IERC20 internal immutable cvx;
 
-    constructor(address _manager, address _booster, address _cvx)
-        Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _booster,
+        address _cvx
+    ) Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager) {
         booster = IConvexBooster(_booster);
         cvx = IERC20(_cvx);
         crv = IERC20(booster.crv());
@@ -91,10 +93,12 @@ contract CurveConvexService is SecuritisableService {
         return (quoted, fees);
     }
 
-    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens, address[] calldata rewardTokens)
-        external
-        onlyOwner
-    {
+    function addPool(
+        address curvePool,
+        uint256 convexPid,
+        address[] calldata tokens,
+        address[] calldata rewardTokens
+    ) external onlyOwner {
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(convexPid);
         assert(!poolInfo.shutdown);
 

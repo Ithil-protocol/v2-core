@@ -61,13 +61,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256, uint256)
-    {
+    function borrow(
+        address token,
+        uint256 amount,
+        uint256 currentExposure,
+        address receiver
+    ) external override supported(token) vaultExists(token) returns (uint256, uint256) {
         uint256 investmentCap = riskParams[msg.sender][token].cap;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
@@ -79,23 +78,23 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-    {
+    function repay(
+        address token,
+        uint256 amount,
+        uint256 debt,
+        address repayer
+    ) external override supported(token) vaultExists(token) {
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 
     /// @inheritdoc IManager
-    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256)
-    {
+    function directMint(
+        address token,
+        address to,
+        uint256 shares,
+        uint256 currentExposure,
+        uint256 maxAmountIn
+    ) external override supported(token) vaultExists(token) returns (uint256) {
         uint256 investmentCap = riskParams[msg.sender][token].cap;
         uint256 totalSupply = IVault(vaults[token]).totalSupply();
         uint256 investedPortion = totalSupply == 0
@@ -109,13 +108,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256)
-    {
+    function directBurn(
+        address token,
+        address from,
+        uint256 shares,
+        uint256 maxAmountIn
+    ) external override supported(token) vaultExists(token) returns (uint256) {
         uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);
         if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 

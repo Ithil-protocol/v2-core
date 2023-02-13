@@ -37,9 +37,11 @@ contract SushiService is SecuritisableService {
     IMiniChef public immutable minichef;
     address public immutable rewardToken;
 
-    constructor(address _manager, address _router, address _minichef)
-        Service("SushiService", "SUSHI-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _router,
+        address _minichef
+    ) Service("SushiService", "SUSHI-SERVICE", _manager) {
         router = IUniswapV2Router(_router);
         minichef = IMiniChef(_minichef);
         rewardToken = minichef.SUSHI();

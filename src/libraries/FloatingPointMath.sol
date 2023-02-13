@@ -34,13 +34,13 @@ library FloatingPointMath {
 
         // First order is already quite near
         uint256 firstOrder = base > REFERENCE ? REFERENCE + mul(mantissa, exp) : REFERENCE - mul(mantissa, exp);
-        uint256 den = 2 * (REFERENCE**3);
+        uint256 den = 2 * (REFERENCE ** 3);
 
         if (exp > REFERENCE) {
-            uint256 num = exp * (exp - REFERENCE) * (mantissa**2);
+            uint256 num = exp * (exp - REFERENCE) * (mantissa ** 2);
             return firstOrder + num / den;
         } else {
-            uint256 num = exp * (REFERENCE - exp) * (mantissa**2);
+            uint256 num = exp * (REFERENCE - exp) * (mantissa ** 2);
             return firstOrder - num / den;
         }
     }

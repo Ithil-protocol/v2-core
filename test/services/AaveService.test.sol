@@ -3,18 +3,16 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract AaveServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     IManager internal immutable manager;
@@ -100,10 +98,11 @@ contract AaveServiceTest is PRBTest, StdCheats, BaseServiceTest {
         return order;
     }
 
-    function _openOrder(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin)
-        internal
-        returns (uint256, uint256, uint256)
-    {
+    function _openOrder(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin
+    ) internal returns (uint256, uint256, uint256) {
         (daiAmount, daiMargin) = _prepareVaultsAndUser(daiAmount, daiMargin);
         // Loan must be less than amount otherwise Vault will revert
         // Since daiAmount > 0, the following does not revert for division by zero
