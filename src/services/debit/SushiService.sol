@@ -9,7 +9,6 @@ import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    SushiService contract
 /// @author   Ithil

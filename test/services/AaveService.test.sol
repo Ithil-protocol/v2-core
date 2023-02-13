@@ -24,8 +24,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
 
     constructor() {
-        uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 58581858);
-        vm.selectFork(forkId);
+        vm.createSelectFork(vm.envString("ARBITRUM_RPC_URL"), 55895589);
         vm.deal(admin, 1 ether);
 
         vm.startPrank(admin);

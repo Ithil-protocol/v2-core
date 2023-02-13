@@ -27,8 +27,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
     address internal constant sushiLp = 0x905dfCD5649217c42684f23958568e533C711Aa3;
 
     constructor() {
-        uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 55895589);
-        vm.selectFork(forkId);
+        vm.createSelectFork(vm.envString("ARBITRUM_RPC_URL"), 55895589);
         vm.deal(admin, 1 ether);
 
         vm.startPrank(admin);

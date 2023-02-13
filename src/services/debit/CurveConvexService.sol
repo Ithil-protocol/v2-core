@@ -9,6 +9,7 @@ import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
@@ -40,11 +41,12 @@ contract CurveConvexService is SecuritisableService {
     constructor(
         address _manager,
         address _booster,
+        address _crv,
         address _cvx
     ) Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager) {
         booster = IConvexBooster(_booster);
+        crv = IERC20(_crv);
         cvx = IERC20(_cvx);
-        crv = IERC20(booster.crv());
     }
 
     function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
@@ -55,7 +57,7 @@ contract CurveConvexService is SecuritisableService {
 
         agreement.collaterals[0].amount = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
 
-        if (!booster.deposit(pool.convex, agreement.collaterals[0].amount, true)) revert ConvexStakingFailed();
+        if (!booster.deposit(pool.convex, agreement.collaterals[0].amount)) revert ConvexStakingFailed();
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
@@ -63,7 +65,7 @@ contract CurveConvexService is SecuritisableService {
 
         _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
 
-        pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
+        pool.baseRewardPool.withdraw(agreement.collaterals[0].amount, false);
 
         uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement);
 
@@ -71,7 +73,7 @@ contract CurveConvexService is SecuritisableService {
     }
 
     function _harvest(PoolData memory pool, address wanted) internal {
-        pool.baseRewardPool.getReward(address(this), true);
+        pool.baseRewardPool.getReward(address(this));
 
         for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
             /// @todo swap reward for notional
@@ -122,7 +124,7 @@ contract CurveConvexService is SecuritisableService {
         pools[poolInfo.lptoken] = PoolData(
             curvePool,
             convexPid,
-            IBaseRewardPool(poolInfo.crvRewards),
+            IBaseRewardPool(poolInfo.rewards),
             tokens,
             rewardTokens
         );
@@ -145,13 +147,4 @@ contract CurveConvexService is SecuritisableService {
 
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
-
-    /*
-    function quote(uint256 amount) public view override returns (uint256) {
-        PoolData memory pool = pools[token];
-        if (pool.tokens.length == 0) revert InexistentPool();
-
-        return CurveHelper.quote(pool.curve, amount);
-    }
-    */
 }
