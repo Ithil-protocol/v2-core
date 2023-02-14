@@ -3,9 +3,8 @@ pragma solidity =0.8.17;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
 import { console2 } from "forge-std/console2.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 import { FeeCollector } from "../src/FeeCollector.sol";
@@ -61,7 +60,7 @@ interface IUniswapV2Router {
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
-contract FeeCollectorTest is PRBTest, StdCheats {
+contract FeeCollectorTest is Test {
     using GeneralMath for uint256;
 
     address internal constant user1 = address(uint160(uint(keccak256(abi.encodePacked("User1")))));
@@ -80,7 +79,7 @@ contract FeeCollectorTest is PRBTest, StdCheats {
         vm.selectFork(forkId);
 
         manager = new Manager();
-        collector = new FeeCollector(address(manager));
+        collector = new FeeCollector(address(manager), weth);
         ithil = new Ithil();
         pair = IUniswapV2Factory(router.factory()).createPair(address(ithil), address(weth));
 
@@ -110,8 +109,7 @@ contract FeeCollectorTest is PRBTest, StdCheats {
     }
 
     function testStakingBase(uint256 amount) public {
-        vm.assume(amount > 0);
-        vm.assume(amount < ithil.balanceOf(address(this)));
+        amount = bound(amount, 1, ithil.balanceOf(address(this)));
 
         uint256 balance = ithil.balanceOf(address(this));
 
@@ -181,9 +179,13 @@ contract FeeCollectorTest is PRBTest, StdCheats {
         collector.setTokenWeight(address(ithil), 1);
 
         vm.startPrank(user1);
-        IERC20(ithil).approve(address(collector), amount);
+        ithil.approve(address(collector), amount);
         collector.stake(address(ithil), amount);
         vm.stopPrank();
+
+        // generate fees
+        vm.prank(wethWhale);
+        weth.transfer(address(wethVault), 100 * 1e18);
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(weth);

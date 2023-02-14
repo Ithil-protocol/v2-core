@@ -152,7 +152,7 @@ contract Manager is IManager, Ownable {
         uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feesPercentage, GeneralMath.RESOLUTION);
         uint256 sharesToMint = vault.convertToShares(feesToHarvest);
         vault.directMint(sharesToMint, address(this));
-        vault.redeem(sharesToMint, address(this), to);
+        vault.redeem(sharesToMint, to, address(this));
 
         return sharesToMint;
     }
