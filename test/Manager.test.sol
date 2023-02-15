@@ -3,8 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IManager, Manager } from "../src/Manager.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
@@ -17,7 +16,7 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// @dev Manager underlying Vault state
 /// --> see Vault test
 
-contract ManagerTest is PRBTest, StdCheats {
+contract ManagerTest is Test {
     using GeneralMath for uint256;
 
     Manager internal immutable manager;

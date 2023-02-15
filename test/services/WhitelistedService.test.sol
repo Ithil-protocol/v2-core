@@ -3,14 +3,12 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { Service, IService } from "../../src/services/Service.sol";
 import { WhitelistedService } from "../../src/services/WhitelistedService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
 contract TestService is WhitelistedService {
@@ -23,10 +21,9 @@ contract TestService is WhitelistedService {
     function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {}
 }
 
-contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
+contract WhitelistedServiceTest is BaseIntegrationServiceTest {
     using SafeERC20 for IERC20;
 
-    IManager internal immutable manager;
     TestService internal immutable service;
     ERC20PresetMinterPauser internal immutable token;
     address internal constant whitelistedUser = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted")))));
@@ -35,21 +32,24 @@ contract WhitelistedServiceTest is PRBTest, StdCheats, BaseServiceTest {
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
 
-    constructor() {
+    string internal constant rpcUrl = "MAINNET_RPC_URL";
+    uint256 internal constant blockNumber = 16448665;
+
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         token = new ERC20PresetMinterPauser("test", "TEST");
 
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new TestService(address(manager));
         vm.stopPrank();
+        serviceAddress = address(service);
+        loanLength = 1;
     }
 
-    function setUp() public {
+    function setUp() public override {
         token.mint(whitelistedUser, type(uint128).max);
         token.mint(address(this), type(uint128).max);
 
         vm.prank(whitelistedUser);
-        token.approve(address(service), type(uint256).max);
         token.approve(address(service), type(uint256).max);
 
         vm.startPrank(admin);

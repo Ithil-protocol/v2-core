@@ -63,7 +63,9 @@ abstract contract DebitService is Service {
                 address(this),
                 agreement.loans[index].margin
             );
-            (uint256 freeLiquidity, ) = manager.borrow(
+            // No need to launch borrow if amount is zero
+            uint256 freeLiquidity;
+            (freeLiquidity, ) = manager.borrow(
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
                 exposures[agreement.loans[index].token],
