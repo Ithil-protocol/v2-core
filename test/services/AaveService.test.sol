@@ -3,18 +3,16 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract AaveServiceTest is BaseServiceTest {
+contract AaveServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     AaveService internal immutable service;
@@ -24,7 +22,7 @@ contract AaveServiceTest is BaseServiceTest {
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
     uint256 internal constant blockNumber = 58581858;
 
-    constructor() BaseServiceTest(rpcUrl, blockNumber) {
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         service = new AaveService(address(manager), aavePool);
         vm.stopPrank();
@@ -39,14 +37,15 @@ contract AaveServiceTest is BaseServiceTest {
 
     function testOpen(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        uint256 collateralExpected = (daiAmount % whaleBalance) > 0
-            ? (daiLoan % (daiAmount % whaleBalance)) + (daiMargin % (whaleBalance - (daiAmount % whaleBalance))) + 1
-            : (daiMargin % whaleBalance) + 1;
+        uint256 transformedAmount = daiAmount % whaleBalance;
+        if (transformedAmount == 0) transformedAmount++;
+        uint256 transformedMargin = (daiMargin % (whaleBalance - transformedAmount));
+        if (transformedMargin == 0) transformedMargin++;
         IService.Order memory order = _openOrder1(
             daiAmount,
             daiLoan,
             daiMargin,
-            collateralExpected,
+            (daiLoan % transformedAmount) + transformedMargin,
             block.timestamp,
             ""
         );

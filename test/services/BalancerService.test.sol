@@ -3,8 +3,6 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
@@ -13,7 +11,7 @@ import { BalancerService } from "../../src/services/debit/BalancerService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
@@ -43,7 +41,7 @@ import { Helper } from "./Helper.sol";
 /// @dev overrides (except first implementation of virtual functions)
 ///
 
-contract BalancerServiceWeightedDAIWETH is BaseServiceTest {
+contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     BalancerService internal immutable service;
@@ -59,7 +57,7 @@ contract BalancerServiceWeightedDAIWETH is BaseServiceTest {
     string internal constant rpcUrl = "MAINNET_RPC_URL";
     uint256 internal constant blockNumber = 16448665;
 
-    constructor() BaseServiceTest(rpcUrl, blockNumber) {
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         service = new BalancerService(address(manager), balancerVault, bal);
         vm.stopPrank();
@@ -196,7 +194,7 @@ contract BalancerServiceWeightedOHMWETH is BalancerServiceWeightedDAIWETH {
     }
 }
 
-contract BalancerServiceWeightedLUSDLQTYWETH is BaseServiceTest {
+contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     BalancerService internal immutable service;
@@ -213,7 +211,7 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseServiceTest {
     string internal constant rpcUrl = "MAINNET_RPC_URL";
     uint256 internal constant blockNumber = 16448665;
 
-    constructor() BaseServiceTest(rpcUrl, blockNumber) {
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         service = new BalancerService(address(manager), balancerVault, bal);
         vm.stopPrank();

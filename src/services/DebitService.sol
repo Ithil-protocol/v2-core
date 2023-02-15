@@ -65,13 +65,12 @@ abstract contract DebitService is Service {
             );
             // No need to launch borrow if amount is zero
             uint256 freeLiquidity;
-            if (agreement.loans[index].amount > 0)
-                (freeLiquidity, ) = manager.borrow(
-                    agreement.loans[index].token,
-                    agreement.loans[index].amount,
-                    exposures[agreement.loans[index].token],
-                    address(this)
-                );
+            (freeLiquidity, ) = manager.borrow(
+                agreement.loans[index].token,
+                agreement.loans[index].amount,
+                exposures[agreement.loans[index].token],
+                address(this)
+            );
 
             (uint256 computedIR, uint256 computedSpread) = _baseInterestRateAndSpread(agreement, freeLiquidity);
             (uint256 requestedIR, uint256 requestedSpread) = agreement.loans[index].interestAndSpread.unpackUint();

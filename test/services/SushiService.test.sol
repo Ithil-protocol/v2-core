@@ -3,19 +3,16 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { console2 } from "forge-std/console2.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { SushiService } from "../../src/services/debit/SushiService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract SushiServiceTest is BaseServiceTest {
+contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     SushiService internal immutable service;
@@ -26,7 +23,7 @@ contract SushiServiceTest is BaseServiceTest {
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
     uint256 internal constant blockNumber = 55895589;
 
-    constructor() BaseServiceTest(rpcUrl, blockNumber) {
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         service = new SushiService(address(manager), sushirouter, minichef);
         vm.stopPrank();

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
@@ -11,7 +10,7 @@ import { IManager, Manager } from "../../src/Manager.sol";
 import { Helper } from "./Helper.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 
-contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
+contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
 
@@ -63,7 +62,7 @@ contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
     /// @param needsBumping whether we need to have amount > 0 (some services could fail)
     function _depositAmountInVault(address token, uint256 amount, bool needsBumping) internal returns (uint256) {
         amount = amount % IERC20(token).balanceOf(whales[address(token)]); // 0 <= amount <= dai.balanceOf(whale) - 1
-        if (needsBumping) amount++;
+        if (needsBumping && amount == 0) amount++;
 
         IVault vault = IVault(manager.vaults(token));
         vm.startPrank(whales[token]);
@@ -81,7 +80,7 @@ contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
     /// @param needsBumping whether we need to have amount > 0 (some services could fail if not)
     function _giveMarginToUser(address token, uint256 margin, bool needsBumping) internal returns (uint256) {
         margin = margin % (IERC20(token).balanceOf(whales[token])); // 0 <= margin <= dai.balanceOf(whale) - 1
-        if (needsBumping) margin++;
+        if (needsBumping && margin == 0) margin++;
 
         vm.startPrank(whales[token]);
         IERC20(token).transfer(address(this), margin);
@@ -100,9 +99,10 @@ contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
         bytes memory data
     ) internal returns (IService.Order memory) {
         for (uint i = 0; i < loanLength; i++) {
-            amounts[i] = _depositAmountInVault(loanTokens[i], amounts[i], false);
+            amounts[i] = _depositAmountInVault(loanTokens[i], amounts[i], true);
             margins[i] = _giveMarginToUser(loanTokens[i], margins[i], true);
-            loans[i] = amounts[i] > 0 ? loans[i] % amounts[i] : 0;
+            // amounts are bumped so the following never reverts
+            loans[i] = loans[i] % amounts[i];
         }
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;

@@ -3,8 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { IVault, Vault } from "../src/Vault.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 
@@ -30,9 +29,8 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// - ERC4626 -> constructor(IERC20 asset_): totalSupply(), balanceOf(address(this)), balanceOf(msg.sender),
 /// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
 
-contract VaultTest is PRBTest, StdCheats {
+contract VaultTest is Test {
     using GeneralMath for uint256;
-    using GeneralMath for int256;
 
     Vault internal immutable vault;
     ERC20PresetMinterPauser internal immutable token;
