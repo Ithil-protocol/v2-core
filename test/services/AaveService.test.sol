@@ -18,10 +18,7 @@ contract AaveServiceTest is BaseServiceTest {
     using GeneralMath for uint256;
 
     AaveService internal immutable service;
-    IERC20 internal constant dai = IERC20(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
-    IAToken internal constant aDai = IAToken(0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE);
 
-    address internal constant daiWhale = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
@@ -31,92 +28,44 @@ contract AaveServiceTest is BaseServiceTest {
         vm.startPrank(admin);
         service = new AaveService(address(manager), aavePool);
         vm.stopPrank();
+        loanLength = 1;
+        loanTokens = new address[](loanLength);
+        collateralTokens = new address[](1);
+        loanTokens[0] = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1; // DAI
+        whales[loanTokens[0]] = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
+        collateralTokens[0] = 0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE;
+        serviceAddress = address(service);
     }
 
-    function setUp() public {
-        dai.approve(address(service), type(uint256).max);
-
-        vm.deal(daiWhale, 1 ether);
-
-        vm.startPrank(admin);
-        // Create Vault: DAI
-        manager.create(address(dai));
-        // No caps for this service -> 100% of the liquidity can be used initially
-        manager.setCap(address(service), address(dai), GeneralMath.RESOLUTION);
-
-        vm.stopPrank();
-    }
-
-    function _prepareVaultsAndUser(uint256 daiAmount, uint256 daiMargin) internal returns (uint256, uint256) {
-        // Modifications to be sure daiAmount + daiMargin <= dai.balanceOf(daiWhale) and same for weth
-        daiAmount = daiAmount % dai.balanceOf(daiWhale);
-        daiMargin = daiMargin % (dai.balanceOf(daiWhale) - daiAmount);
-        daiAmount++;
-        daiMargin++;
-
-        // Fill DAI vault
-        IVault daiVault = IVault(manager.vaults(address(dai)));
-        vm.startPrank(daiWhale);
-        dai.transfer(address(this), daiMargin);
-        dai.approve(address(daiVault), daiAmount);
-        daiVault.deposit(daiAmount, daiWhale);
-        vm.stopPrank();
-
-        return (daiAmount, daiMargin);
-    }
-
-    function _createOrder(uint256 daiLoan, uint256 daiMargin) internal returns (IService.Order memory) {
-        address[] memory tokens = new address[](1);
-        tokens[0] = address(dai);
-
-        uint256[] memory loans = new uint256[](1);
+    function _openOrder(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) internal {
+        uint256[] memory amounts = new uint256[](loanLength);
+        uint256[] memory loans = new uint256[](loanLength);
+        uint256[] memory margins = new uint256[](loanLength);
+        amounts[0] = daiAmount;
         loans[0] = daiLoan;
-
-        uint256[] memory margins = new uint256[](1);
         margins[0] = daiMargin;
-
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
-
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = address(aDai);
-
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = daiLoan + daiMargin;
-
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
+        uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
+        uint256 collateralExpected = (daiAmount % whaleBalance) > 0
+            ? (daiLoan % (daiAmount % whaleBalance)) + (daiMargin % (whaleBalance - (daiAmount % whaleBalance))) + 1
+            : (daiMargin % whaleBalance) + 1;
+        IService.Order memory order = _prepareOpenOrder(
+            amounts,
             loans,
             margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
+            collateralExpected,
             block.timestamp,
             ""
         );
-        return order;
-    }
-
-    function _openOrder(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin)
-        internal
-        returns (uint256, uint256, uint256)
-    {
-        (daiAmount, daiMargin) = _prepareVaultsAndUser(daiAmount, daiMargin);
-        // Loan must be less than amount otherwise Vault will revert
-        // Since daiAmount > 0, the following does not revert for division by zero
-        daiLoan = daiLoan % daiAmount;
-        IService.Order memory order = _createOrder(daiLoan, daiMargin);
 
         service.open(order);
-        return (daiAmount, daiLoan, daiMargin);
     }
 
     function testOpen(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
-        (daiAmount, daiLoan, daiMargin) = _openOrder(daiAmount, daiLoan, daiMargin);
+        _openOrder(daiAmount, daiLoan, daiMargin);
     }
 
     function testClose(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin, uint256 minAmountsOutDai) public {
-        (daiAmount, daiLoan, daiMargin) = _openOrder(daiAmount, daiLoan, daiMargin);
+        _openOrder(daiAmount, daiLoan, daiMargin);
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
@@ -131,7 +80,7 @@ contract AaveServiceTest is BaseServiceTest {
     }
 
     function testQuote(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
-        (daiAmount, daiLoan, daiMargin) = _openOrder(daiAmount, daiLoan, daiMargin);
+        _openOrder(daiAmount, daiLoan, daiMargin);
 
         (
             IService.Loan[] memory loan,

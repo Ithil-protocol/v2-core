@@ -34,22 +34,24 @@ contract WhitelistedServiceTest is BaseServiceTest {
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
 
-    string internal constant rpcUrl = "MAINNET_RPC_URL"; 
+    string internal constant rpcUrl = "MAINNET_RPC_URL";
     uint256 internal constant blockNumber = 16448665;
+
     constructor() BaseServiceTest(rpcUrl, blockNumber) {
         token = new ERC20PresetMinterPauser("test", "TEST");
 
         vm.startPrank(admin);
         service = new TestService(address(manager));
         vm.stopPrank();
+        serviceAddress = address(service);
+        loanLength = 1;
     }
 
-    function setUp() public {
+    function setUp() public override {
         token.mint(whitelistedUser, type(uint128).max);
         token.mint(address(this), type(uint128).max);
 
         vm.prank(whitelistedUser);
-        token.approve(address(service), type(uint256).max);
         token.approve(address(service), type(uint256).max);
 
         vm.startPrank(admin);

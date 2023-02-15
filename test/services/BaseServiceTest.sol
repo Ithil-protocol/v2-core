@@ -6,11 +6,21 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
+import { Helper } from "./Helper.sol";
+import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 
 contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
     address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
+
+    address[] internal loanTokens;
+    mapping(address => address) internal whales;
+    address[] internal collateralTokens;
+    uint256 internal loanLength;
+
+    address internal serviceAddress;
 
     constructor(string memory rpcUrl, uint256 blockNumber) {
         uint256 forkId = vm.createFork(vm.envString(rpcUrl), blockNumber);
@@ -22,29 +32,126 @@ contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
         vm.stopPrank();
     }
 
+    function setUp() public virtual {
+        for (uint i = 0; i < loanLength; i++) {
+            IERC20(loanTokens[i]).approve(serviceAddress, type(uint256).max);
+
+            vm.deal(whales[loanTokens[i]], 1 ether);
+        }
+
+        for (uint i = 0; i < loanLength; i++) {
+            // Create Vault: DAI
+            vm.startPrank(admin);
+            manager.create(loanTokens[i]);
+            // No caps for this service -> 100% of the liquidity can be used initially
+            manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
+
+            vm.stopPrank();
+        }
+    }
+
     function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
         external
         returns (bytes4)
     {
         return IERC721Receiver.onERC721Received.selector;
     }
-    
-    /// Fills the vault and the user 
-    /// @param amount the amount which will be deposited in the vault 
-    /// @param margin the amount the user (address(this)) is refilled
-    /// @param token the token 
-    /// @param whale the address of the whale from whom tokens will be snatched
-    function _prepareVaultsAndUser(uint256 amount, uint256 margin, IERC20 token, address whale) public returns (uint256, uint256) {
-        amount = amount % token.balanceOf(whale); // 0 <= amount <= dai.balanceOf(whale) - 1
-        margin = margin % (token.balanceOf(whale) - amount); // 0 <= margin + amount <= dai.balanceOf(whale) - 1
 
-        IVault vault = IVault(manager.vaults(address(token)));
-        vm.startPrank(whale);
-        token.transfer(address(this), margin);
-        token.approve(address(vault), amount);
-        vault.deposit(amount, whale);
+    /// Fills the vault
+    /// @param amount the amount which will be deposited in the vault
+    /// @param token the token
+    /// @param needsBumping whether we need to have amount > 0 (some services could fail)
+    function _depositAmountInVault(address token, uint256 amount, bool needsBumping) internal returns (uint256) {
+        amount = amount % IERC20(token).balanceOf(whales[address(token)]); // 0 <= amount <= dai.balanceOf(whale) - 1
+        if (needsBumping) amount++;
+
+        IVault vault = IVault(manager.vaults(token));
+        vm.startPrank(whales[token]);
+        IERC20(token).approve(address(vault), amount);
+        vault.deposit(amount, whales[token]);
         vm.stopPrank();
 
-        return (amount, margin);
+        // amount is modified, so we return new value
+        return amount;
+    }
+
+    /// Fills the user
+    /// @param margin the amount which will be deposited in the vault
+    /// @param token the token
+    /// @param needsBumping whether we need to have amount > 0 (some services could fail if not)
+    function _giveMarginToUser(address token, uint256 margin, bool needsBumping) internal returns (uint256) {
+        margin = margin % (IERC20(token).balanceOf(whales[token])); // 0 <= margin <= dai.balanceOf(whale) - 1
+        if (needsBumping) margin++;
+
+        vm.startPrank(whales[token]);
+        IERC20(token).transfer(address(this), margin);
+        vm.stopPrank();
+
+        // margin is modified, so we return new value
+        return margin;
+    }
+
+    function _prepareOpenOrder(
+        uint256[] memory amounts,
+        uint256[] memory loans,
+        uint256[] memory margins,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory) {
+        for (uint i = 0; i < loanLength; i++) {
+            amounts[i] = _depositAmountInVault(loanTokens[i], amounts[i], false);
+            margins[i] = _giveMarginToUser(loanTokens[i], margins[i], true);
+            loans[i] = amounts[i] > 0 ? loans[i] % amounts[i] : 0;
+        }
+        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
+        itemTypes[0] = IService.ItemType.ERC20;
+
+        uint256[] memory collateralAmounts = new uint256[](1);
+        collateralAmounts[0] = collateralAmount;
+        return
+            Helper.createAdvancedOrder(
+                loanTokens,
+                loans,
+                margins,
+                itemTypes,
+                collateralTokens,
+                collateralAmounts,
+                time,
+                data
+            );
+    }
+
+    function _prepareOpenOrder(
+        uint256 amountA,
+        uint256 loanA,
+        uint256 marginA,
+        uint256 amountB,
+        uint256 loanB,
+        uint256 marginB,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory) {
+        amountA = _depositAmountInVault(loanTokens[0], amountA, false);
+        marginA = _giveMarginToUser(loanTokens[0], marginA, true);
+        amountB = _depositAmountInVault(loanTokens[1], amountB, false);
+        marginB = _giveMarginToUser(loanTokens[1], marginB, true);
+        // Loan must be less than amount otherwise Vault will revert
+        loanA = amountA > 0 ? loanA % amountA : 0;
+        loanB = amountB > 0 ? loanB % amountB : 0;
+        return
+            Helper.createERC20Order1Collateral2Tokens(
+                address(loanTokens[0]),
+                loanA,
+                marginA,
+                address(loanTokens[1]),
+                loanB,
+                marginB,
+                collateralTokens[0],
+                collateralAmount,
+                time,
+                data
+            );
     }
 }
