@@ -51,31 +51,19 @@ contract StargateServiceTest is BaseServiceTest {
         expected = (amountSD * pool.totalSupply()) / pool.totalLiquidity();
     }
 
-    function _openOrder(uint256 usdcAmount, uint256 usdcLoan, uint256 usdcMargin) internal returns (bool) {
-        uint256[] memory amounts = new uint256[](loanLength);
-        uint256[] memory loans = new uint256[](loanLength);
-        uint256[] memory margins = new uint256[](loanLength);
-        amounts[0] = usdcAmount;
-        loans[0] = usdcLoan;
-        margins[0] = usdcMargin;
-        IService.Order memory order = _prepareOpenOrder(amounts, loans, margins, 0, block.timestamp, "");
-
+    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0) public returns (bool) {
+        IService.Order memory order = _openOrder1(amount0, loan0, margin0, 0, block.timestamp, "");
         bool success = true;
         if (_expectedMintedTokens(order.agreement.loans[0].amount + order.agreement.loans[0].margin) == 0) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("AmountTooLow()"))));
             service.open(order);
             success = false;
         } else service.open(order);
-
         return success;
     }
 
-    function testOpen(uint256 usdcAmount, uint256 usdcLoan, uint256 usdcMargin) public returns (bool) {
-        return _openOrder(usdcAmount, usdcLoan, usdcMargin);
-    }
-
-    function testClose(uint256 usdcAmount, uint256 usdcLoan, uint256 usdcMargin, uint256 minAmountsOutusdc) public {
-        bool success = testOpen(usdcAmount, usdcLoan, usdcMargin);
+    function testClose(uint256 amount0, uint256 loan0, uint256 margin0, uint256 minAmountsOutusdc) public {
+        bool success = testOpen(amount0, loan0, margin0);
 
         // TODO: add slippage check
         uint256 minAmountsOutusdc = 0;
@@ -92,8 +80,8 @@ contract StargateServiceTest is BaseServiceTest {
         }
     }
 
-    function testQuote(uint256 usdcAmount, uint256 usdcLoan, uint256 usdcMargin) public {
-        bool success = testOpen(usdcAmount, usdcLoan, usdcMargin);
+    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0) public {
+        bool success = testOpen(amount0, loan0, margin0);
         if (success) {
             (
                 IService.Loan[] memory loan,

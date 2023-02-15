@@ -46,48 +46,27 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseServiceTest {
         service.addPool(curvePool, convexPid, loanTokens, new address[](0));
     }
 
-    function _openOrder(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal {
-        uint256[] memory amounts = new uint256[](loanLength);
-        uint256[] memory loans = new uint256[](loanLength);
-        uint256[] memory margins = new uint256[](loanLength);
-        amounts[0] = daiAmount;
-        loans[0] = daiLoan;
-        margins[0] = daiMargin;
-        amounts[1] = wethAmount;
-        loans[1] = wethLoan;
-        margins[1] = wethMargin;
-        IService.Order memory order = _prepareOpenOrder(amounts, loans, margins, 0, block.timestamp, "");
-
+    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        IService.Order memory order = _openOrder2(
+            amount0,
+            loan0,
+            margin0,
+            amount1,
+            loan1,
+            margin1,
+            0,
+            block.timestamp,
+            ""
+        );
         service.open(order);
     }
 
-    function testOpen(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin
-    ) public {
-        _openOrder(renBTCAmount, renBTCLoan, renBTCMargin, wbtcAmount, wbtcLoan, wbtcMargin);
-    }
-
-    function testClose(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin
-    ) public {
-        testOpen(renBTCAmount, renBTCLoan, renBTCMargin, wbtcAmount, wbtcLoan, wbtcMargin);
+    function testClose(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
         // Allow for any loss
         // TODO: insert minAmountsOut and use quoter to check for slippage
         uint256[2] memory minAmountsOut = [uint256(0), uint256(0)];
@@ -96,15 +75,10 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseServiceTest {
         service.close(0, data);
     }
 
-    function testQuote(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin
-    ) public {
-        testOpen(renBTCAmount, renBTCLoan, renBTCMargin, wbtcAmount, wbtcLoan, wbtcMargin);
+    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
         (
             IService.Loan[] memory loan,
             IService.Collateral[] memory collateral,

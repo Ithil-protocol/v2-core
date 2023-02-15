@@ -88,32 +88,21 @@ contract SushiServiceTest is BaseServiceTest {
         return (IERC20(collateralTokens[0]).totalSupply() * (rootK - rootKLast)) / (5 * rootK + rootKLast);
     }
 
-    function _openOrder(
-        uint256 usdcAmount,
-        uint256 usdcLoan,
-        uint256 usdcMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal returns (bool) {
-        uint256[] memory amounts = new uint256[](loanLength);
-        uint256[] memory loans = new uint256[](loanLength);
-        uint256[] memory margins = new uint256[](loanLength);
-        amounts[0] = wethAmount;
-        loans[0] = wethLoan;
-        margins[0] = wethMargin;
-        amounts[1] = usdcAmount;
-        loans[1] = usdcLoan;
-        margins[1] = usdcMargin;
-        IService.Order memory order = _prepareOpenOrder(
-            amounts,
-            loans,
-            margins,
+    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+        returns (bool)
+    {
+        IService.Order memory order = _openOrder2(
+            amount0,
+            loan0,
+            margin0,
+            amount1,
+            loan1,
+            margin1,
             0,
             block.timestamp,
             abi.encode([uint256(0), uint256(0)])
         );
-
         (uint256 wethQuoted, uint256 usdcQuoted, uint256 fees) = _calculateDeposit(
             order.agreement.loans[1].amount,
             order.agreement.loans[1].margin,
@@ -134,26 +123,10 @@ contract SushiServiceTest is BaseServiceTest {
         return success;
     }
 
-    function testOpen(
-        uint256 usdcAmount,
-        uint256 usdcLoan,
-        uint256 usdcMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public returns (bool) {
-        return _openOrder(usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin);
-    }
-
-    function testClose(
-        uint256 usdcAmount,
-        uint256 usdcLoan,
-        uint256 usdcMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        bool success = testOpen(usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin);
+    function testClose(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        bool success = testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
 
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
@@ -178,15 +151,10 @@ contract SushiServiceTest is BaseServiceTest {
         }
     }
 
-    function testQuote(
-        uint256 usdcAmount,
-        uint256 usdcLoan,
-        uint256 usdcMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        bool success = testOpen(usdcAmount, usdcLoan, usdcMargin, wethAmount, wethLoan, wethMargin);
+    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        bool success = testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
         if (success) {
             (
                 IService.Loan[] memory loan,

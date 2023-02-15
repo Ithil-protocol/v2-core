@@ -80,46 +80,30 @@ contract BalancerServiceWeightedDAIWETH is BaseServiceTest {
         service.addPool(collateralTokens[0], balancerPoolID, gauge);
     }
 
-    function _openOrder(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal {
-        uint256[] memory amounts = new uint256[](loanLength);
-        uint256[] memory loans = new uint256[](loanLength);
-        uint256[] memory margins = new uint256[](loanLength);
-        amounts[0] = daiAmount;
-        loans[0] = daiLoan;
-        margins[0] = daiMargin;
-        amounts[1] = wethAmount;
-        loans[1] = wethLoan;
-        margins[1] = wethMargin;
-        IService.Order memory order = _prepareOpenOrder(amounts, loans, margins, 0, block.timestamp, "");
-
+    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        IService.Order memory order = _openOrder2(
+            amount0,
+            loan0,
+            margin0,
+            amount1,
+            loan1,
+            margin1,
+            0,
+            block.timestamp,
+            ""
+        );
         service.open(order);
     }
 
-    function testOpen(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        _openOrder(daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin);
-    }
-
     function testClose(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin,
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1,
         uint256 minAmountsOutDai,
         uint256 minAmountsOutWeth
     ) public {
@@ -128,7 +112,7 @@ contract BalancerServiceWeightedDAIWETH is BaseServiceTest {
         vm.assume(minAmountsOutDai <= totalBalances[0]);
         vm.assume(minAmountsOutWeth <= totalBalances[1]);
 
-        testOpen(daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin);
+        testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
 
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
@@ -170,15 +154,10 @@ contract BalancerServiceWeightedDAIWETH is BaseServiceTest {
         }
     }
 
-    function testQuote(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        testOpen(daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin);
+    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
+        public
+    {
+        testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
         (
             IService.Loan[] memory loan,
             IService.Collateral[] memory collateral,
@@ -257,55 +236,30 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseServiceTest {
         service.addPool(collateralTokens[0], balancerPoolID, gauge);
     }
 
-    function _openOrder(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal {
-        uint256[] memory amounts = new uint256[](loanLength);
-        uint256[] memory loans = new uint256[](loanLength);
-        uint256[] memory margins = new uint256[](loanLength);
-        amounts[0] =
-            IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]) -
-            (lusdMargin % IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]));
-        loans[0] = lusdLoan;
-        margins[0] = lusdMargin;
-        amounts[1] =
-            IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]]) -
-            (lusdMargin % (IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]])));
-        loans[1] = lqtyLoan;
-        margins[1] = lqtyMargin;
-        amounts[2] =
-            IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]]) -
-            (lusdMargin % (IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])));
-        loans[1] = wethLoan;
-        margins[1] = wethMargin;
-        IService.Order memory order = _prepareOpenOrder(amounts, loans, margins, 0, block.timestamp, "");
-
+    function testOpen(uint256 loan0, uint256 margin0, uint256 loan1, uint256 margin1, uint256 loan2, uint256 margin2)
+        public
+    {
+        IService.Order memory order = _openOrder3(
+            loan0,
+            margin0,
+            loan1,
+            margin1,
+            loan2,
+            margin2,
+            0,
+            block.timestamp,
+            ""
+        );
         service.open(order);
     }
 
-    function testOpen(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        _openOrder(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
-    }
-
     function testClose(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 loan2,
+        uint256 margin2,
         uint256 minAmountsOutlusd,
         uint256 minAmountsOutlqty,
         uint256 minAmountsOutWeth
@@ -316,7 +270,7 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseServiceTest {
         vm.assume(minAmountsOutlqty <= totalBalances[1]);
         vm.assume(minAmountsOutWeth <= totalBalances[2]);
 
-        testOpen(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
+        testOpen(loan0, margin0, loan1, margin1, loan2, margin2);
 
         uint256[] memory minAmountsOut = new uint256[](3);
         // Fees make the initial investment always at a loss

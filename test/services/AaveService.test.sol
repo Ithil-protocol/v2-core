@@ -37,35 +37,24 @@ contract AaveServiceTest is BaseServiceTest {
         serviceAddress = address(service);
     }
 
-    function _openOrder(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) internal {
-        uint256[] memory amounts = new uint256[](loanLength);
-        uint256[] memory loans = new uint256[](loanLength);
-        uint256[] memory margins = new uint256[](loanLength);
-        amounts[0] = daiAmount;
-        loans[0] = daiLoan;
-        margins[0] = daiMargin;
+    function testOpen(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 collateralExpected = (daiAmount % whaleBalance) > 0
             ? (daiLoan % (daiAmount % whaleBalance)) + (daiMargin % (whaleBalance - (daiAmount % whaleBalance))) + 1
             : (daiMargin % whaleBalance) + 1;
-        IService.Order memory order = _prepareOpenOrder(
-            amounts,
-            loans,
-            margins,
+        IService.Order memory order = _openOrder1(
+            daiAmount,
+            daiLoan,
+            daiMargin,
             collateralExpected,
             block.timestamp,
             ""
         );
-
         service.open(order);
     }
 
-    function testOpen(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
-        _openOrder(daiAmount, daiLoan, daiMargin);
-    }
-
     function testClose(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin, uint256 minAmountsOutDai) public {
-        _openOrder(daiAmount, daiLoan, daiMargin);
+        testOpen(daiAmount, daiLoan, daiMargin);
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
@@ -80,7 +69,7 @@ contract AaveServiceTest is BaseServiceTest {
     }
 
     function testQuote(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
-        _openOrder(daiAmount, daiLoan, daiMargin);
+        testOpen(daiAmount, daiLoan, daiMargin);
 
         (
             IService.Loan[] memory loan,

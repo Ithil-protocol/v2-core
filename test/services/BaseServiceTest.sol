@@ -91,7 +91,7 @@ contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
         return margin;
     }
 
-    function _prepareOpenOrder(
+    function _vectorizedOpenOrder(
         uint256[] memory amounts,
         uint256[] memory loans,
         uint256[] memory margins,
@@ -122,36 +122,76 @@ contract BaseServiceTest is PRBTest, StdCheats, IERC721Receiver {
             );
     }
 
-    function _prepareOpenOrder(
-        uint256 amountA,
-        uint256 loanA,
-        uint256 marginA,
-        uint256 amountB,
-        uint256 loanB,
-        uint256 marginB,
+    function _openOrder1(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
         uint256 collateralAmount,
         uint256 time,
         bytes memory data
-    ) internal returns (IService.Order memory) {
-        amountA = _depositAmountInVault(loanTokens[0], amountA, false);
-        marginA = _giveMarginToUser(loanTokens[0], marginA, true);
-        amountB = _depositAmountInVault(loanTokens[1], amountB, false);
-        marginB = _giveMarginToUser(loanTokens[1], marginB, true);
-        // Loan must be less than amount otherwise Vault will revert
-        loanA = amountA > 0 ? loanA % amountA : 0;
-        loanB = amountB > 0 ? loanB % amountB : 0;
-        return
-            Helper.createERC20Order1Collateral2Tokens(
-                address(loanTokens[0]),
-                loanA,
-                marginA,
-                address(loanTokens[1]),
-                loanB,
-                marginB,
-                collateralTokens[0],
-                collateralAmount,
-                time,
-                data
-            );
+    ) internal returns (IService.Order memory order) {
+        uint256[] memory amounts = new uint256[](loanLength);
+        uint256[] memory loans = new uint256[](loanLength);
+        uint256[] memory margins = new uint256[](loanLength);
+        amounts[0] = amount0;
+        loans[0] = loan0;
+        margins[0] = margin0;
+        return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
+    }
+
+    function _openOrder2(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory order) {
+        uint256[] memory amounts = new uint256[](loanLength);
+        uint256[] memory loans = new uint256[](loanLength);
+        uint256[] memory margins = new uint256[](loanLength);
+        amounts[0] = amount0;
+        loans[0] = loan0;
+        margins[0] = margin0;
+        amounts[1] = amount1;
+        loans[1] = loan1;
+        margins[1] = margin1;
+        return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
+    }
+
+    function _openOrder3(
+        uint256 loan0,
+        uint256 margin0,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 loan2,
+        uint256 margin2,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory order) {
+        uint256[] memory amounts = new uint256[](loanLength);
+        uint256[] memory loans = new uint256[](loanLength);
+        uint256[] memory margins = new uint256[](loanLength);
+        // amount calculation is necessary to avoid a stack too deep
+        amounts[0] =
+            IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]) -
+            (margin0 % IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]));
+        loans[0] = loan0;
+        margins[0] = margin0;
+        amounts[1] =
+            IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]]) -
+            (margin1 % (IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]])));
+        loans[1] = loan1;
+        margins[1] = margin1;
+        amounts[2] =
+            IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]]) -
+            (margin2 % (IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])));
+        loans[1] = loan2;
+        margins[1] = margin2;
+        return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 }
