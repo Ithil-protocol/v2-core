@@ -9,30 +9,28 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { GmxService } from "../../src/services/debit/GmxService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract GmxServiceTest is PRBTest, StdCheats, BaseServiceTest {
-    IManager internal immutable manager;
+contract GmxServiceTest is BaseIntegrationServiceTest {
     GmxService internal immutable service;
     address internal constant gmxRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     address internal constant whale = 0x8b8149Dd385955DC1cE77a4bE7700CCD6a212e65;
     uint256 internal constant amount = 100 * 1e18;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"), 59783387);
-        vm.selectFork(forkId);
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 58581858;
+
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.deal(admin, 1 ether);
         vm.deal(whale, 1 ether);
 
-        vm.startPrank(admin);
-        manager = IManager(new Manager());
+        vm.prank(admin);
         service = new GmxService(address(manager), gmxRouter);
-        vm.stopPrank();
     }
 
-    function setUp() public {
+    function setUp() public override {
         weth.approve(address(service), type(uint256).max);
 
         vm.startPrank(admin);
@@ -79,6 +77,7 @@ contract GmxServiceTest is PRBTest, StdCheats, BaseServiceTest {
         );
 
         service.open(order);
+        service.quote(order.agreement);
         service.close(0, "");
     }
 }
