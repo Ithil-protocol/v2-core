@@ -63,8 +63,6 @@ contract CurveConvexService is SecuritisableService {
 
         pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
 
-        uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement);
-
         CurveHelper.withdraw(pool.curve, agreement, data);
     }
 
@@ -84,7 +82,7 @@ contract CurveConvexService is SecuritisableService {
 
         uint256[] memory quoted = new uint256[](agreement.loans.length);
         uint256[] memory fees = new uint256[](agreement.loans.length);
-        uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement);
+        uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             // This is literally Curve's code, therefore we do NOT use GeneralMath
             quoted[index] =

@@ -12,9 +12,9 @@ library CurveHelper {
     //     return (amount * 10**36) / ICurvePool(pool).get_virtual_price();
     // }
 
-    function getBalances(address pool, IService.Agreement memory agreement) internal view returns (uint256[] memory) {
-        uint256[] memory balances = new uint256[](agreement.loans.length);
-        for (uint256 index = 0; index < agreement.loans.length; index++) {
+    function getBalances(address pool, uint256 length) internal view returns (uint256[] memory) {
+        uint256[] memory balances = new uint256[](length);
+        for (uint256 index = 0; index < length; index++) {
             balances[index] = ICurvePool(pool).balances(int128(int256(index)));
         }
         return balances;
