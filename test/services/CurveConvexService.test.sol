@@ -41,7 +41,7 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
     function setUp() public virtual override {
         super.setUp();
         vm.prank(admin);
-        service.addPool(curvePool, convexPid, loanTokens, new address[](0));
+        service.addPool(curvePool, convexPid, loanTokens);
     }
 
     function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)

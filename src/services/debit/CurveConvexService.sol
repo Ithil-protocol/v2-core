@@ -59,7 +59,7 @@ contract CurveConvexService is SecuritisableService {
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
-        _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
+        _harvest(pool, agreement.collaterals[0].amount);
 
         pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
 
@@ -68,11 +68,14 @@ contract CurveConvexService is SecuritisableService {
         CurveHelper.withdraw(pool.curve, agreement, data);
     }
 
-    function _harvest(PoolData memory pool, address wanted) internal {
+    function _harvest(PoolData memory pool, uint256 ownership) internal {
         pool.baseRewardPool.getReward(address(this), true);
 
         for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
-            /// @todo swap reward for notional
+            IERC20 token = IERC20(pool.rewardTokens[i]);
+            uint256 amount = (token.balanceOf(address(this)) * ownership) / 1e18; // TODO calc
+
+            token.safeTransfer(msg.sender, amount);
         }
     }
 
@@ -91,10 +94,7 @@ contract CurveConvexService is SecuritisableService {
         return (quoted, fees);
     }
 
-    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens, address[] calldata rewardTokens)
-        external
-        onlyOwner
-    {
+    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens) external onlyOwner {
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(convexPid);
         assert(!poolInfo.shutdown);
 
@@ -115,13 +115,13 @@ contract CurveConvexService is SecuritisableService {
         // Allow Convex to take Curve LP tokens
         IERC20(poolInfo.lptoken).safeApprove(address(booster), type(uint256).max);
 
-        pools[poolInfo.lptoken] = PoolData(
-            curvePool,
-            convexPid,
-            IBaseRewardPool(poolInfo.crvRewards),
-            tokens,
-            rewardTokens
-        );
+        // Add reward tokens
+        IBaseRewardPool rewardPool = IBaseRewardPool(poolInfo.crvRewards);
+        length = rewardPool.extraRewardsLength();
+        address[] memory rewardTokens = new address[](length);
+        for (uint256 i = 0; i < length; i++) rewardTokens[i] = rewardPool.extraRewards(i);
+
+        pools[poolInfo.lptoken] = PoolData(curvePool, convexPid, rewardPool, tokens, rewardTokens);
 
         emit PoolWasAdded(curvePool, convexPid);
     }

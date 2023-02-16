@@ -18,4 +18,8 @@ interface IBaseRewardPool {
     function stake(uint256 _amount) external returns (bool);
 
     function stakeAll() external returns (bool);
+
+    function extraRewardsLength() external view returns (uint256);
+
+    function extraRewards(uint256 i) external view returns (address);
 }
