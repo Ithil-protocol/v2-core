@@ -37,12 +37,12 @@ contract CurveConvexService is SecuritisableService {
     IERC20 internal immutable crv;
     IERC20 internal immutable cvx;
 
-    constructor(address _manager, address _booster, address _cvx)
+    constructor(address _manager, address _booster, address _crv, address _cvx)
         Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
     {
         booster = IConvexBooster(_booster);
         cvx = IERC20(_cvx);
-        crv = IERC20(booster.crv());
+        crv = IERC20(_crv);
     }
 
     function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
@@ -53,7 +53,7 @@ contract CurveConvexService is SecuritisableService {
 
         agreement.collaterals[0].amount = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
 
-        if (!booster.deposit(pool.convex, agreement.collaterals[0].amount, true)) revert ConvexStakingFailed();
+        if (!booster.deposit(pool.convex, agreement.collaterals[0].amount)) revert ConvexStakingFailed();
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
@@ -116,7 +116,7 @@ contract CurveConvexService is SecuritisableService {
         pools[poolInfo.lptoken] = PoolData(
             curvePool,
             convexPid,
-            IBaseRewardPool(poolInfo.crvRewards),
+            IBaseRewardPool(poolInfo.rewards),
             tokens,
             rewardTokens
         );
