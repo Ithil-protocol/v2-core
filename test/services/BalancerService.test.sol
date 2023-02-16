@@ -165,7 +165,7 @@ contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
 
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
-        (uint256[] memory profits, ) = service.quote(agreement);
+        service.quote(agreement);
     }
 
     // testAddPool() public {
@@ -333,7 +333,7 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
 
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
-        (uint256[] memory profits, ) = service.quote(agreement);
+        service.quote(agreement);
     }
 
     // testAddPool() public {

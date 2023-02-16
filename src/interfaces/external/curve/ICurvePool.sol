@@ -3,6 +3,8 @@ pragma solidity =0.8.17;
 
 /// @title    Interface of the Curve contract
 interface ICurvePool {
+    function exchange(int128 i, int128 j, uint256 _dx, uint256 _min_dy) external returns (uint256);
+
     function coins(uint256 arg0) external view returns (address);
 
     function coins(int128 arg0) external view returns (address);
