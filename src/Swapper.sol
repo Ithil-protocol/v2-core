@@ -28,8 +28,8 @@ contract Swapper is ISwapper, Ownable {
 
         if (pool.dex == Dex.NONE || router == address(0)) revert SwapNotPossible();
 
-        if (IERC20(from).allowance(address(this), address(router)) == 0)
-            IERC20(from).safeApprove(address(router), type(uint256).max);
+        if (IERC20(from).allowance(address(this), address(router)) < amountIn)
+            IERC20(from).approve(address(router), type(uint256).max);
 
         if (pool.dex == Dex.BALANCER) {
             bytes32 poolID = abi.decode(pool.data, (bytes32));

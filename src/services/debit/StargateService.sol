@@ -104,10 +104,10 @@ contract StargateService is SecuritisableService {
 
         // Approval for the main token
         if (IERC20(token).allowance(address(this), address(stargateRouter)) == 0)
-            IERC20(token).safeApprove(address(stargateRouter), type(uint256).max);
+            IERC20(token).approve(address(stargateRouter), type(uint256).max);
         // Approval for the lpToken
         if (pool.allowance(address(this), address(stargateLPStaking)) == 0)
-            pool.safeApprove(address(stargateLPStaking), type(uint256).max);
+            pool.approve(address(stargateLPStaking), type(uint256).max);
 
         emit PoolWasAdded(token);
     }

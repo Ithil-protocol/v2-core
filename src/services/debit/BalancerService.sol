@@ -169,14 +169,14 @@ contract BalancerService is SecuritisableService {
         assert(length > 0);
 
         IBalancerPool bpool = IBalancerPool(poolAddress);
-        bpool.safeApprove(gauge, type(uint256).max);
+        bpool.approve(gauge, type(uint256).max);
 
         uint256 fee = bpool.getSwapFeePercentage();
         uint256[] memory weights = bpool.getNormalizedWeights();
 
         for (uint8 i = 0; i < length; i++) {
             if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
-                IERC20(poolTokens[i]).safeApprove(address(balancerVault), type(uint256).max);
+                IERC20(poolTokens[i]).approve(address(balancerVault), type(uint256).max);
         }
 
         pools[poolAddress] = PoolData(balancerPoolID, poolTokens, weights, uint8(length), fee, gauge);

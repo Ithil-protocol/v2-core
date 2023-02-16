@@ -111,9 +111,9 @@ contract SushiService is SecuritisableService {
 
         for (uint8 i = 0; i < 2; i++) {
             if (IERC20(tokens[i]).allowance(address(this), address(router)) == 0)
-                IERC20(tokens[i]).safeApprove(address(router), type(uint256).max);
+                IERC20(tokens[i]).approve(address(router), type(uint256).max);
         }
-        IERC20(lpToken).safeApprove(address(minichef), type(uint256).max);
+        IERC20(lpToken).approve(address(minichef), type(uint256).max);
 
         pools[lpToken] = PoolData(poolID, tokens);
 

@@ -109,11 +109,11 @@ contract CurveConvexService is SecuritisableService {
             }
 
             // Allow Curve pool to take tokens
-            IERC20(tokens[i]).safeApprove(curvePool, type(uint256).max);
+            IERC20(tokens[i]).approve(curvePool, type(uint256).max);
         }
 
         // Allow Convex to take Curve LP tokens
-        IERC20(poolInfo.lptoken).safeApprove(address(booster), type(uint256).max);
+        IERC20(poolInfo.lptoken).approve(address(booster), type(uint256).max);
 
         pools[poolInfo.lptoken] = PoolData(
             curvePool,
