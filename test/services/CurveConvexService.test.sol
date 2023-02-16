@@ -115,22 +115,6 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
         return (IERC20(collateralTokens[0]).totalSupply() * (d2 - d0)) / d0;
     }
 
-    function _getExtraReward(uint256 index) internal view returns (address) {
-        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
-        (, bytes memory extraRewardData) = poolInfo.crvRewards.staticcall(
-            abi.encodeWithSignature("extraRewards(uint256)", index)
-        );
-        return abi.decode(extraRewardData, (address));
-    }
-
-    function _getExtraRewardLength() internal view returns (uint256) {
-        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
-        (, bytes memory extraRewardLengthData) = poolInfo.crvRewards.staticcall(
-            abi.encodeWithSignature("extraRewardsLength()")
-        );
-        return abi.decode(extraRewardLengthData, (uint256));
-    }
-
     function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
         public
     {
