@@ -67,13 +67,17 @@ contract CurveConvexService is SecuritisableService {
     }
 
     function _harvest(PoolData memory pool, uint256 ownership) internal {
+        IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(pool.convex);
+        // Total base rewards token
+        // If they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
+        uint256 totalOwnership = IERC20(poolInfo.crvRewards).balanceOf(address(this));
+
         pool.baseRewardPool.getReward(address(this), true);
 
         for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
             IERC20 token = IERC20(pool.rewardTokens[i]);
-            uint256 amount = (token.balanceOf(address(this)) * ownership) / 1e18; // TODO calc
 
-            token.safeTransfer(msg.sender, amount);
+            token.safeTransfer(msg.sender, token.balanceOf(address(this)).safeMulDiv(ownership, totalOwnership));
         }
     }
 
@@ -139,13 +143,4 @@ contract CurveConvexService is SecuritisableService {
 
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
-
-    /*
-    function quote(uint256 amount) public view override returns (uint256) {
-        PoolData memory pool = pools[token];
-        if (pool.tokens.length == 0) revert InexistentPool();
-
-        return CurveHelper.quote(pool.curve, amount);
-    }
-    */
 }
