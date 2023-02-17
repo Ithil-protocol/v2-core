@@ -9,6 +9,7 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { Helper } from "./Helper.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     address internal constant admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
@@ -37,7 +38,6 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
 
             vm.deal(whales[loanTokens[i]], 1 ether);
         }
-
         for (uint i = 0; i < loanLength; i++) {
             // Create Vault: DAI
             vm.startPrank(admin);
