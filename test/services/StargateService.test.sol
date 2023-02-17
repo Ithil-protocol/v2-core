@@ -14,12 +14,12 @@ import { Helper } from "./Helper.sol";
 
 contract StargateServiceTest is BaseIntegrationServiceTest {
     StargateService internal immutable service;
-    address internal constant stargateRouter = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
-    address internal constant stargateLPStaking = 0xB0D502E938ed5f4df2E681fE6E419ff29631d62b;
+    address internal constant stargateRouter = 0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614;
+    address internal constant stargateLPStaking = 0xeA8DfEE1898a7e0a59f7527F076106d7e44c2176;
     uint16 internal constant usdcPoolID = 1;
 
-    string internal constant rpcUrl = "MAINNET_RPC_URL";
-    uint256 internal constant blockNumber = 16448665;
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 55895589;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
@@ -28,9 +28,9 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
-        loanTokens[0] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // usdc
-        whales[loanTokens[0]] = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-        collateralTokens[0] = 0xdf0770dF86a8034b3EFEf0A1Bb3c889B8332FF56; //lpToken
+        loanTokens[0] = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc
+        whales[loanTokens[0]] = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+        collateralTokens[0] = 0x892785f33CdeE22A30AEF750F285E18c18040c3e; //lpToken
         serviceAddress = address(service);
     }
 
