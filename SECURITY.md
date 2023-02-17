@@ -2,7 +2,8 @@
 
 ## Overview
 
-Starting from the public testnet release in XX/XX/XXXX we want to incentivize community involvement and pre-launch bug disclosure. We are open to all severity bugs and are offering a reward of up to $10,000, happy hacking!
+Starting from the public testnet release in XX/XX/XXXX we want to incentivize community involvement and pre-launch bug
+disclosure. We are open to all severity bugs and are offering a reward of up to $10,000, happy hacking!
 
 ## Scope
 
