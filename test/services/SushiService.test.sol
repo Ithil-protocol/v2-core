@@ -16,7 +16,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     SushiService internal immutable service;
-    address internal constant sushirouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
+    address internal constant sushiRouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     address internal constant minichef = 0xF4d73326C13a4Fc5FD7A064217e12780e9Bd62c3;
     uint256 internal constant poolID = 0;
 
@@ -25,7 +25,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        service = new SushiService(address(manager), sushirouter, minichef);
+        service = new SushiService(address(manager), sushiRouter, minichef);
         vm.stopPrank();
         loanLength = 2;
         loanTokens = new address[](loanLength);
@@ -49,7 +49,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         view
         returns (uint256, uint256, uint256)
     {
-        (, bytes memory wethQuotedData) = sushirouter.staticcall(
+        (, bytes memory wethQuotedData) = sushiRouter.staticcall(
             abi.encodeWithSignature(
                 "quote(uint256,uint256,uint256)",
                 wethMargin + wethLoan,
@@ -57,7 +57,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
                 IERC20(loanTokens[1]).balanceOf(collateralTokens[0])
             )
         );
-        (, bytes memory usdcQuotedData) = sushirouter.staticcall(
+        (, bytes memory usdcQuotedData) = sushiRouter.staticcall(
             abi.encodeWithSignature(
                 "quote(uint256,uint256,uint256)",
                 usdcMargin + usdcLoan,

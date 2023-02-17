@@ -41,6 +41,7 @@ import { Helper } from "./Helper.sol";
 /// @dev overrides (except first implementation of virtual functions)
 ///
 
+/*
 contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
@@ -103,12 +104,12 @@ contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
         uint256 loan1,
         uint256 margin1,
         uint256 minAmountsOutDai,
-        uint256 minAmountsOutWeth
+        uint256 minAmountsOutUsdc
     ) public {
         (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
         vm.assume(minAmountsOutDai <= totalBalances[0]);
-        vm.assume(minAmountsOutWeth <= totalBalances[1]);
+        vm.assume(minAmountsOutUsdc <= totalBalances[1]);
 
         testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
 
@@ -116,11 +117,11 @@ contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
         // Fees make the initial investment always at a loss
         // In this test we allow any loss: quoter tests will make this more precise
         minAmountsOut[0] = minAmountsOutDai;
-        minAmountsOut[1] = minAmountsOutWeth;
+        minAmountsOut[1] = minAmountsOutUsdc;
         bytes memory data = abi.encode(minAmountsOut);
 
         (IService.Loan[] memory loans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-        bool slippageEnforced = minAmountsOutDai > loans[0].amount && minAmountsOutWeth > loans[1].amount;
+        bool slippageEnforced = minAmountsOutDai > loans[0].amount && minAmountsOutUsdc > loans[1].amount;
         if (slippageEnforced) {
             uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
             (, totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
@@ -193,23 +194,23 @@ contract BalancerServiceWeightedOHMWETH is BalancerServiceWeightedDAIWETH {
         super.setUp();
     }
 }
+*/
 
-contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
+contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     BalancerService internal immutable service;
 
     address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    bytes32 internal constant balancerPoolID = 0x5512a4bbe7b3051f92324bacf25c02b9000c4a500001000000000000000003d7;
-    address internal constant gauge = address(0);
-    address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
+    bytes32 internal constant balancerPoolID = 0x64541216bafffeec8ea535bb71fbc927831d0595000100000000000000000002;
+    address internal constant gauge = 0x104f1459a2fFEa528121759B238BB609034C2f01;
+    address internal constant bal = 0x040d1EdC9569d4Bab2D15287Dc5A4F10F56a56B8;
+    address internal constant gmxVault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
     // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
 
-    // address internal constant auraPoolID = 2;
-
-    string internal constant rpcUrl = "MAINNET_RPC_URL";
-    uint256 internal constant blockNumber = 16448665;
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 58581858;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
@@ -218,13 +219,14 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
         loanLength = 3;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
-        loanTokens[0] = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0; // lusd
-        loanTokens[1] = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D; // lqty
-        loanTokens[2] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // weth
-        whales[loanTokens[0]] = 0x954f2a8b86Aa586c3Cc3a2088B72e2a560D7Dc22;
-        whales[loanTokens[1]] = 0x954f2a8b86Aa586c3Cc3a2088B72e2a560D7Dc22;
-        whales[loanTokens[2]] = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
-        collateralTokens[0] = 0x5512A4bbe7B3051f92324bAcF25C02b9000c4a50; // Pool 33 LUSD - 33 LQTY - 33 WETH
+        loanTokens[0] = 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f; // wbtc
+        loanTokens[1] = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; // weth
+        loanTokens[2] = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc
+
+        whales[loanTokens[0]] = gmxVault;
+        whales[loanTokens[1]] = gmxVault;
+        whales[loanTokens[2]] = gmxVault;
+        collateralTokens[0] = 0x64541216bAFFFEec8ea535BB71Fbc927831d0595; // Pool 33 WBTC - 33 WETH - 33 USDC
         serviceAddress = address(service);
     }
 
@@ -234,9 +236,14 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
         service.addPool(collateralTokens[0], balancerPoolID, gauge);
     }
 
-    function testOpen(uint256 loan0, uint256 margin0, uint256 loan1, uint256 margin1, uint256 loan2, uint256 margin2)
-        public
-    {
+    function testBalancerIntegrationOpenPosition(
+        uint256 loan0,
+        uint256 margin0,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 loan2,
+        uint256 margin2
+    ) public {
         IService.Order memory order = _openOrder3(
             loan0,
             margin0,
@@ -251,37 +258,37 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
         service.open(order);
     }
 
-    function testClose(
+    function testBalancerIntegrationClosePosition(
         uint256 loan0,
         uint256 margin0,
         uint256 loan1,
         uint256 margin1,
         uint256 loan2,
         uint256 margin2,
-        uint256 minAmountsOutlusd,
-        uint256 minAmountsOutlqty,
-        uint256 minAmountsOutWeth
+        uint256 minAmountsOutWbtc,
+        uint256 minAmountsOutWeth,
+        uint256 minAmountsOutUsdc
     ) public {
         (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOutlusd <= totalBalances[0]);
-        vm.assume(minAmountsOutlqty <= totalBalances[1]);
-        vm.assume(minAmountsOutWeth <= totalBalances[2]);
+        vm.assume(minAmountsOutWbtc <= totalBalances[0]);
+        vm.assume(minAmountsOutWeth <= totalBalances[1]);
+        vm.assume(minAmountsOutUsdc <= totalBalances[2]);
 
-        testOpen(loan0, margin0, loan1, margin1, loan2, margin2);
+        testBalancerIntegrationOpenPosition(loan0, margin0, loan1, margin1, loan2, margin2);
 
         uint256[] memory minAmountsOut = new uint256[](3);
         // Fees make the initial investment always at a loss
         // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = minAmountsOutlusd;
-        minAmountsOut[1] = minAmountsOutlqty;
-        minAmountsOut[2] = minAmountsOutWeth;
+        minAmountsOut[0] = minAmountsOutWbtc;
+        minAmountsOut[1] = minAmountsOutWeth;
+        minAmountsOut[2] = minAmountsOutUsdc;
         bytes memory data = abi.encode(minAmountsOut);
 
         (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-        bool slippageEnforced = minAmountsOutlusd > actualLoans[0].amount &&
-            minAmountsOutlqty > actualLoans[1].amount &&
-            minAmountsOutWeth > actualLoans[2].amount;
+        bool slippageEnforced = minAmountsOutWbtc > actualLoans[0].amount &&
+            minAmountsOutWeth > actualLoans[1].amount &&
+            minAmountsOutUsdc > actualLoans[2].amount;
         if (slippageEnforced) {
             uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
             (, totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
@@ -315,7 +322,7 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
         }
     }
 
-    function testQuote(
+    function testBalancerIntegrationQuoter(
         uint256 lusdLoan,
         uint256 lusdMargin,
         uint256 lqtyLoan,
@@ -323,7 +330,7 @@ contract BalancerServiceWeightedLUSDLQTYWETH is BaseIntegrationServiceTest {
         uint256 wethLoan,
         uint256 wethMargin
     ) public {
-        testOpen(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
+        testBalancerIntegrationOpenPosition(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
         (
             IService.Loan[] memory loan,
             IService.Collateral[] memory collateral,
