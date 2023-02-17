@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
+import { ICurvePool } from "../../src/interfaces/external/curve/ICurvePool.sol";
 import { IConvexBooster } from "../../src/interfaces/external/convex/IConvexBooster.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
@@ -13,30 +14,31 @@ import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 import { console2 } from "forge-std/console2.sol";
 
-contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
+contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     CurveConvexService internal immutable service;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
-    address internal constant cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address internal constant crv = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
+    address internal constant cvx = 0xb952A807345991BD529FDded05009F5e80Fe8F45;
 
-    address internal constant curvePool = 0x93054188d876f558f4a66B2EF1d97d16eDf0895B;
-    uint256 internal constant convexPid = 6;
+    address internal constant curvePool = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
+    uint256 internal constant convexPid = 1;
 
-    string internal constant rpcUrl = "MAINNET_RPC_URL";
-    uint256 internal constant blockNumber = 16448665;
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 55895589;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        service = new CurveConvexService(address(manager), convexBooster, cvx);
+        service = new CurveConvexService(address(manager), convexBooster, crv, cvx);
         vm.stopPrank();
         loanLength = 2;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
-        loanTokens[0] = 0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D; // renBTC
-        loanTokens[1] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599; // wbtc
-        whales[loanTokens[0]] = 0xaAde032DC41DbE499deBf54CFEe86d13358E9aFC;
-        whales[loanTokens[1]] = 0x218B95BE3ed99141b0144Dba6cE88807c4AD7C09;
-        collateralTokens[0] = 0x49849C98ae39Fff122806C06791Fa73784FB3675;
+        loanTokens[0] = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc
+        loanTokens[1] = 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9; // usdt
+        whales[loanTokens[0]] = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+        whales[loanTokens[1]] = 0x0D0707963952f2fBA59dD06f2b425ace40b492Fe;
+        collateralTokens[0] = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
         serviceAddress = address(service);
     }
 
@@ -62,62 +64,80 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
         } else return a1;
     }
 
-    // WARNING! this is a simplification of the USELENDING array of Curve
-    // which is an internal constant in Curve, thus different pools have different arrays
-    // luckily we do not need this in the contract, but we should be careful in the frontend
-    function _rates() internal view returns (uint256[2] memory) {
-        (, bytes memory rateData) = loanTokens[0].staticcall(abi.encodeWithSignature("exchangeRateCurrent()"));
-        return [(10**10) * abi.decode(rateData, (uint256)), 10**28];
-    }
-
-    function _xpMem(uint256[2] memory balances) internal view returns (uint256[2] memory) {
-        uint256[2] memory rates = _rates();
-        return [(rates[0] * balances[0]) / (10**18), (rates[1] * balances[1]) / (10**18)];
-    }
+    error EndOfLoop();
 
     function _getDMem(uint256[2] memory balances) internal view returns (uint256) {
-        uint256[2] memory xpmem = _xpMem(balances);
+        uint256[2] memory xpmem = [balances[0] * 10**12, balances[1] * 10**12];
         uint256 s = xpmem[0] + xpmem[1];
         uint256 d = s;
         uint256 ann = _calculateA() * 2;
         for (uint i = 0; i < 256; i++) {
-            uint256 dp = (((d * d) / (xpmem[0] * 2)) * d) / (xpmem[1] * 2); // Curve allows division by zero: "borking"
+            uint256 dp = (((d * d) / xpmem[0]) * d) / xpmem[1] / 4; // Curve allows division by zero: "borking"
             uint256 dprev = d;
-            d = ((ann * s + dp * 2) * d) / ((ann - 1) * d + 3 * dp);
-            if (d > dprev)
-                if (d - dprev <= 1) break;
-                else if (dprev - d <= 1) break;
+            d = (((ann * s) / 100 + dp * 2) * d) / (((ann - 100) * d) / 100 + 3 * dp);
+            if (d > dprev) {
+                if (d - dprev <= 1) return d;
+            } else if (dprev - d <= 1) return d;
         }
-        return d;
+        revert EndOfLoop();
     }
 
     function _getBalances(int128 index) internal view returns (uint256) {
-        (, bytes memory balanceData) = curvePool.staticcall(abi.encodeWithSignature("balances(int128)", index));
-        return abi.decode(balanceData, (uint256));
+        uint256 balanceData = 0;
+
+        try ICurvePool(curvePool).balances(index) returns (uint256 val) {
+            balanceData = val;
+        } catch {
+            balanceData = ICurvePool(curvePool).balances(uint256(uint128(index)));
+        }
+
+        return balanceData;
     }
 
     function _calculateExpectedTokens(uint256 amount0, uint256 amount1) internal view returns (uint256) {
-        (, bytes memory feeData) = curvePool.staticcall(abi.encodeWithSignature("fee()"));
-        uint256 fee = abi.decode(feeData, (uint256)) / 2;
         uint256[2] memory oldBalances = [_getBalances(0), _getBalances(1)];
         uint256 d0 = _getDMem([oldBalances[0], oldBalances[1]]);
         uint256[2] memory newBalances = [oldBalances[0] + amount0, oldBalances[1] + amount1];
         uint256 d1 = _getDMem([newBalances[0], newBalances[1]]);
         uint256 d2 = d1;
+        (, bytes memory feeData) = curvePool.staticcall(abi.encodeWithSignature("fee()"));
+        uint256 fee = abi.decode(feeData, (uint256)) / 2;
         for (uint256 i = 0; i < 2; i++) {
             uint256 idealBalance = (d1 * oldBalances[i]) / d0;
             uint256 difference = 0;
-            if (idealBalance > newBalances[i]) difference = idealBalance - newBalances[i];
-            else difference = newBalances[i] - idealBalance;
+            uint256 newBalance = newBalances[i];
+            if (idealBalance > newBalance) difference = idealBalance - newBalance;
+            else difference = newBalance - idealBalance;
             newBalances[i] -= (fee * difference) / 10**10;
         }
         d2 = _getDMem(newBalances);
         return (IERC20(collateralTokens[0]).totalSupply() * (d2 - d0)) / d0;
     }
 
-    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-    {
+    function _getExtraReward(uint256 index) internal view returns (address) {
+        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
+        (, bytes memory extraRewardData) = poolInfo.rewards.staticcall(
+            abi.encodeWithSignature("extraRewards(uint256)", index)
+        );
+        return abi.decode(extraRewardData, (address));
+    }
+
+    function _getExtraRewardLength() internal view returns (uint256) {
+        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
+        (, bytes memory extraRewardLengthData) = poolInfo.rewards.staticcall(
+            abi.encodeWithSignature("extraRewardsLength()")
+        );
+        return abi.decode(extraRewardLengthData, (uint256));
+    }
+
+    function testCurveConvexOpenPosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public {
         IService.Order memory order = _openOrder2(
             amount0,
             loan0,
@@ -135,19 +155,17 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
         );
         IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
         uint256 initialBalance = IERC20(collateralTokens[0]).balanceOf(address(service));
-        uint256 initialRewardsBalance = IERC20(poolInfo.crvRewards).balanceOf(address(service));
+        uint256 initialRewardsBalance = IERC20(poolInfo.rewards).balanceOf(address(service));
         service.open(order);
 
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
         assertTrue(collaterals[0].amount == expectedCollateral);
         // No change: all the balance is deposited in Convex
         assertTrue(IERC20(collateralTokens[0]).balanceOf(address(service)) == initialBalance);
-        assertTrue(
-            IERC20(poolInfo.crvRewards).balanceOf(address(service)) == initialRewardsBalance + expectedCollateral
-        );
+        assertTrue(IERC20(poolInfo.rewards).balanceOf(address(service)) == initialRewardsBalance + expectedCollateral);
     }
 
-    function testClose(
+    function testCurveConvexClosePosition(
         uint256 amount0,
         uint256 loan0,
         uint256 margin0,
@@ -157,7 +175,7 @@ contract CurveConvexServiceTestRenBTCWBTC is BaseIntegrationServiceTest {
         uint256 minAmount1,
         uint256 minAmount2
     ) public {
-        testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
+        testCurveConvexOpenPosition(amount0, loan0, margin0, amount1, loan1, margin1);
 
         (
             IService.Loan[] memory loan,
