@@ -15,7 +15,11 @@ library CurveHelper {
     function getBalances(address pool, uint256 length) internal view returns (uint256[] memory) {
         uint256[] memory balances = new uint256[](length);
         for (uint256 index = 0; index < length; index++) {
-            balances[index] = ICurvePool(pool).balances(int128(int256(index)));
+            try ICurvePool(pool).balances(index) returns (uint256 val) {
+                balances[index] = val;
+            } catch {
+                balances[index] = ICurvePool(pool).balances(int128(int256(index)));
+            }
         }
         return balances;
     }

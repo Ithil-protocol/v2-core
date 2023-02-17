@@ -9,6 +9,7 @@ import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
@@ -61,13 +62,13 @@ contract CurveConvexService is SecuritisableService {
 
         _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
 
-        pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
+        pool.baseRewardPool.withdraw(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
     }
 
     function _harvest(PoolData memory pool, address wanted) internal {
-        pool.baseRewardPool.getReward(address(this), true);
+        pool.baseRewardPool.getReward(address(this));
 
         for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
             /// @todo swap reward for notional

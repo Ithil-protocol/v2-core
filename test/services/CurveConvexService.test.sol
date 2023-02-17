@@ -64,33 +64,22 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
         } else return a1;
     }
 
-    // WARNING! this is a simplification of the USELENDING array of Curve
-    // which is an internal constant in Curve, thus different pools have different arrays
-    // luckily we do not need this in the contract, but we should be careful in the frontend
-    function _rates() internal view returns (uint256[2] memory) {
-        (, bytes memory rateData) = loanTokens[0].staticcall(abi.encodeWithSignature("exchangeRateCurrent()"));
-        return [(10**10) * abi.decode(rateData, (uint256)), 10**28];
-    }
-
-    function _xpMem(uint256[2] memory balances) internal view returns (uint256[2] memory) {
-        uint256[2] memory rates = _rates();
-        return [(rates[0] * balances[0]) / (10**18), (rates[1] * balances[1]) / (10**18)];
-    }
+    error EndOfLoop();
 
     function _getDMem(uint256[2] memory balances) internal view returns (uint256) {
-        uint256[2] memory xpmem = _xpMem(balances);
+        uint256[2] memory xpmem = [balances[0] * 10**12, balances[1] * 10**12];
         uint256 s = xpmem[0] + xpmem[1];
         uint256 d = s;
         uint256 ann = _calculateA() * 2;
         for (uint i = 0; i < 256; i++) {
-            uint256 dp = (((d * d) / (xpmem[0] * 2)) * d) / (xpmem[1] * 2); // Curve allows division by zero: "borking"
+            uint256 dp = (((d * d) / xpmem[0]) * d) / xpmem[1] / 4; // Curve allows division by zero: "borking"
             uint256 dprev = d;
-            d = ((ann * s + dp * 2) * d) / ((ann - 1) * d + 3 * dp);
-            if (d > dprev)
-                if (d - dprev <= 1) break;
-                else if (dprev - d <= 1) break;
+            d = (((ann * s) / 100 + dp * 2) * d) / (((ann - 100) * d) / 100 + 3 * dp);
+            if (d > dprev) {
+                if (d - dprev <= 1) return d;
+            } else if (dprev - d <= 1) return d;
         }
-        return d;
+        revert EndOfLoop();
     }
 
     function _getBalances(int128 index) internal view returns (uint256) {
@@ -106,18 +95,19 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     }
 
     function _calculateExpectedTokens(uint256 amount0, uint256 amount1) internal view returns (uint256) {
-        (, bytes memory feeData) = curvePool.staticcall(abi.encodeWithSignature("fee()"));
-        uint256 fee = abi.decode(feeData, (uint256)) / 2;
         uint256[2] memory oldBalances = [_getBalances(0), _getBalances(1)];
         uint256 d0 = _getDMem([oldBalances[0], oldBalances[1]]);
         uint256[2] memory newBalances = [oldBalances[0] + amount0, oldBalances[1] + amount1];
         uint256 d1 = _getDMem([newBalances[0], newBalances[1]]);
         uint256 d2 = d1;
+        (, bytes memory feeData) = curvePool.staticcall(abi.encodeWithSignature("fee()"));
+        uint256 fee = abi.decode(feeData, (uint256)) / 2;
         for (uint256 i = 0; i < 2; i++) {
             uint256 idealBalance = (d1 * oldBalances[i]) / d0;
             uint256 difference = 0;
-            if (idealBalance > newBalances[i]) difference = idealBalance - newBalances[i];
-            else difference = newBalances[i] - idealBalance;
+            uint256 newBalance = newBalances[i];
+            if (idealBalance > newBalance) difference = idealBalance - newBalance;
+            else difference = newBalance - idealBalance;
             newBalances[i] -= (fee * difference) / 10**10;
         }
         d2 = _getDMem(newBalances);
