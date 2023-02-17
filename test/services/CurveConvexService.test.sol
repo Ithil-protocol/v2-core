@@ -45,7 +45,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     function setUp() public virtual override {
         super.setUp();
         vm.prank(admin);
-        service.addPool(curvePool, convexPid, loanTokens, new address[](0));
+        service.addPool(curvePool, convexPid, loanTokens);
     }
 
     // _A()
