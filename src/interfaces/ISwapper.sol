@@ -8,10 +8,11 @@ interface ISwapper {
     enum Dex {
         NONE,
         SUSHI,
-        UNISWAPV2,
+        UNISWAP,
         BALANCER,
         CURVE,
-        GMX
+        GMX,
+        CAMELOT
     }
 
     struct SwapData {

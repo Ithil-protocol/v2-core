@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ISwapper } from "./interfaces/ISwapper.sol";
+import { IUniswapV3Router } from "./interfaces/external/uniswap/IUniswapV3Router.sol";
 import { IUniswapV2Router } from "./interfaces/external/sushi/IUniswapV2Router.sol";
 import { BalancerHelper } from "./libraries/BalancerHelper.sol";
 import { CurveHelper } from "./libraries/CurveHelper.sol";
@@ -40,6 +41,28 @@ contract Swapper is ISwapper, Ownable {
         } else if (pool.dex == Dex.GMX) {
             // TODO add
             // IGmxRouter(router).swap(address[] _path, uint256 _amountIn, uint256 _minOut, address _receiver)
+        } else if (pool.dex == Dex.CAMELOT) {
+            // Camelot uses UniV2 router
+            IUniswapV2Router(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                amountIn,
+                minOut,
+                pool.path,
+                msg.sender,
+                address(0),
+                block.timestamp
+            );
+        } else if (pool.dex == Dex.UNISWAP) {
+            IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
+                tokenIn: from,
+                tokenOut: to,
+                fee: abi.decode(pool.data, (uint24)),
+                recipient: msg.sender,
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: minOut,
+                sqrtPriceLimitX96: 0
+            });
+            IUniswapV3Router(router).exactInputSingle(params);
         } else {
             // Sushi and UniV2 share the same codebase
             IUniswapV2Router(router).swapExactTokensForTokens(amountIn, minOut, pool.path, msg.sender, block.timestamp);
