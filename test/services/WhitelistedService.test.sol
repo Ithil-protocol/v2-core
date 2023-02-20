@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Test } from "forge-std/Test.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { Service, IService } from "../../src/services/Service.sol";
 import { WhitelistedService } from "../../src/services/WhitelistedService.sol";
@@ -21,31 +23,29 @@ contract TestService is WhitelistedService {
     function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {}
 }
 
-contract WhitelistedServiceTest is BaseIntegrationServiceTest {
+contract WhitelistedServiceTest is Test, IERC721Receiver {
     using SafeERC20 for IERC20;
 
+    Manager internal immutable manager;
     TestService internal immutable service;
     ERC20PresetMinterPauser internal immutable token;
+    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     address internal constant whitelistedUser = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted")))));
     address internal constant whitelistedUser2 = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted2")))));
     uint256 internal constant collateral = 1e18;
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
 
-    string internal constant rpcUrl = "MAINNET_RPC_URL";
-    uint256 internal constant blockNumber = 16448665;
-
-    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
+    constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
 
         vm.startPrank(admin);
+        manager = new Manager();
         service = new TestService(address(manager));
         vm.stopPrank();
-        serviceAddress = address(service);
-        loanLength = 1;
     }
 
-    function setUp() public override {
+    function setUp() public {
         token.mint(whitelistedUser, type(uint128).max);
         token.mint(address(this), type(uint128).max);
 
@@ -100,5 +100,12 @@ contract WhitelistedServiceTest is BaseIntegrationServiceTest {
         service.open(order);
         vm.prank(whitelistedUser);
         service.open(order);
+    }
+
+    function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
+        external
+        returns (bytes4)
+    {
+        return IERC721Receiver.onERC721Received.selector;
     }
 }
