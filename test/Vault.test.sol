@@ -334,7 +334,8 @@ contract VaultTest is Test {
 
         deal({ token: address(token), to: signer, give: amount });
         vm.prank(signer);
-        vault.depositWithPermit(permit.value, receiver, permit.deadline, v, r, s);
+        uint256 shares = vault.depositWithPermit(permit.value, receiver, permit.deadline, v, r, s);
+        assertTrue(vault.balanceOf(address(receiver)) == shares);
     }
 
     function testMint(
