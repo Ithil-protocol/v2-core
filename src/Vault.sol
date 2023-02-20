@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -79,6 +80,15 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Therefore we need to cap with the current free liquidity
     function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
         return freeLiquidity().min(super.maxWithdraw(owner));
+    }
+
+    function depositWithPermit(uint256 assets, address receiver, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+        returns (uint256)
+    {
+        IERC20Permit(asset()).permit(msg.sender, address(this), assets, deadline, v, r, s);
+
+        return deposit(assets, receiver);
     }
 
     // Throws 'ERC20: transfer amount exceeds balance
