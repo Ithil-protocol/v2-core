@@ -20,7 +20,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
     uint256 internal constant amount = 100 * 1e18;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 58581858;
+    uint256 internal constant blockNumber = 55895589;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.deal(admin, 1 ether);
@@ -73,11 +73,11 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
             collateralTokens,
             collateralAmounts,
             block.timestamp,
-            ""
+            abi.encode(uint256(1))
         );
 
         service.open(order);
         service.quote(order.agreement);
-        service.close(0, "");
+        service.close(0, abi.encode(uint256(1)));
     }
 }

@@ -28,6 +28,15 @@ interface IRewardDistributor {
     function distribute() external returns (uint256);
 }
 
+interface IGlpManager {
+    function getAumInUsdg(bool maximise) external view returns (uint256);
+    function vault() external view returns (address);
+}
+
+interface IUsdgVault {
+    function getRedemptionAmount(address _token, uint256 _usdgAmount) external view returns (uint256);
+}
+
 /// @title    GmxService contract
 /// @author   Ithil
 /// @notice   A service to perform margin trading on the GLP token
@@ -37,7 +46,8 @@ contract GmxService is SecuritisableService {
     IRewardRouterV2 public immutable router;
     IERC20 public immutable glp;
     IERC20 public immutable weth;
-    address public immutable glpManager;
+    IGlpManager public immutable glpManager;
+    IUsdgVault public immutable usdgVault;
 
     constructor(address _manager, address _router)
         Service("GmxService", "GMX-SERVICE", _manager)
@@ -45,32 +55,37 @@ contract GmxService is SecuritisableService {
         router = IRewardRouterV2(_router);
         glp = IERC20(router.glp());
         weth = IERC20(router.weth());
-        glpManager = router.glpManager();
+        glpManager = IGlpManager(router.glpManager());
+        usdgVault = IUsdgVault(glpManager.vault());
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes calldata data) internal override {
+        uint256 minGlpOut = abi.decode(data, (uint256));
+
         address token = agreement.loans[0].token;
-        if (IERC20(token).allowance(address(this), glpManager) == 0)
-            IERC20(token).safeApprove(glpManager, type(uint256).max);
+        if (IERC20(token).allowance(address(this), address(glpManager)) == 0)
+            IERC20(token).safeApprove(address(glpManager), type(uint256).max);
 
         agreement.collaterals[0].token = address(glp);
         agreement.collaterals[0].amount = router.mintAndStakeGlp(
             token,
             agreement.loans[0].amount + agreement.loans[0].margin,
             0,
-            1 // minGlpOut
+            minGlpOut
         );
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+        uint256 minAmountOut = abi.decode(data, (uint256));
+
         router.unstakeAndRedeemGlp(
             agreement.loans[0].token,
             agreement.collaterals[0].amount,
-            1, // minimum out
+            minAmountOut,
             address(this)
         );
 
-        // TODO if(agreement.loans[0].token != address(weth)) _swap();
+        // TODO if(agreement.loans[0].token != address(weth)) _swapWethToToken();
     }
 
     function quote(Agreement memory agreement)
@@ -79,6 +94,11 @@ contract GmxService is SecuritisableService {
         override
         returns (uint256[] memory results, uint256[] memory)
     {
-        // TODO
+        uint256 aumInUsdg = glpManager.getAumInUsdg(false);
+        uint256 glpSupply = glp.totalSupply();
+
+        // agreement.collaterals[0].amount == GLP amount
+        uint256 usdgAmount = agreement.collaterals[0].amount * aumInUsdg / glpSupply;
+        results[0] = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
     }
 }
