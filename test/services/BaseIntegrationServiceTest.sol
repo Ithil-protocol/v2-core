@@ -189,8 +189,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         amounts[2] =
             IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]]) -
             (margin2 % (IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])));
-        loans[1] = loan2;
-        margins[1] = margin2;
+        loans[2] = loan2;
+        margins[2] = margin2;
         return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 }

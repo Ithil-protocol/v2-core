@@ -2,6 +2,7 @@
 pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
@@ -13,6 +14,7 @@ import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
 /// @dev Run Forge with `-vvvv` to see console logs.
@@ -79,6 +81,36 @@ contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
         service.addPool(collateralTokens[0], balancerPoolID, gauge);
     }
 
+    function _calculateExpectedTokens(uint256 amount0, uint256 amount1) internal view {
+
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        uint256[] memory amountsIn = new uint256[](loanLength);
+        amountsIn[0] = amount0;
+        amountsIn[1] = amount1;
+        uint256 maxWeightTokenIndex;
+        for(uint256 i = 0; i < loanLength; i++) {
+            if(normalizedWeights[i] > normalizedWeights[maxWeightTokenIndex])
+                maxWeightTokenIndex = i;
+        }    
+        uint256[] memory dueProtocolFeeAmounts = new uint256[](loanLength);
+        
+        dueProtocolFeeAmounts[maxWeightTokenIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
+            balances[maxWeightTokenIndex],
+            normalizedWeights[maxWeightTokenIndex],
+            previousInvariant,
+            currentInvariant,
+            protocolSwapFeePercentage
+        );
+        uint256 bptAmountOut = WeightedMath._calcBptOutGivenExactTokensIn(
+            balances,
+            normalizedWeights,
+            amountsIn,
+            IERC20(collateralTokens[0]).totalSupply(),
+            IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
+        );
+    }
+
     function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
         public
     {
@@ -92,8 +124,19 @@ contract BalancerServiceWeightedDAIWETH is BaseIntegrationServiceTest {
             0,
             block.timestamp,
             ""
-        );
+        );        
+        
         service.open(order);
+
+        (
+            ,
+            IService.Collateral[] memory collaterals,
+            ,
+            
+        ) = service.getAgreement(1);
+        console2.log("bptAmountOut", bptAmountOut);
+        console2.log("collaterals[0].amount", collaterals[0].amount);
+        assertTrue(collaterals[0].amount == bptAmountOut);
     }
 
     function testClose(
@@ -236,6 +279,61 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         service.addPool(collateralTokens[0], balancerPoolID, gauge);
     }
 
+    function _upscaleArray(uint256[] memory array) internal view {
+        uint256[] memory scaledArray = new uint256[](loanLength);
+        for (uint256 i = 0; i < loanLength; i++) {
+            // Tokens with more than 18 decimals are not supported.
+            uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
+            array[i] *= 10**decimalsDifference;
+        }
+    }
+
+    function _calculateExpectedTokens(uint256 amount0, uint256 amount1, uint256 amount2)
+        internal
+        view
+        returns (uint256)
+    {
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        uint256[] memory amountsIn = new uint256[](loanLength);
+        amountsIn[0] = amount0;
+        amountsIn[1] = amount1;
+        amountsIn[2] = amount2;
+        _upscaleArray(balances);
+        uint256 invariantBeforeJoin = WeightedMath._calculateInvariant(normalizedWeights, balances);
+        uint256 lastInvariant = IBalancerPool(collateralTokens[0]).getLastInvariant();
+
+        (, bytes memory feesData) = IBalancerVault(balancerVault).getProtocolFeesCollector().staticcall(
+            abi.encodeWithSignature("getSwapFeePercentage()")
+        );
+        uint256 protocolSwapFees = abi.decode(feesData, (uint256));
+        uint256 maxWeightTokenIndex = 0;
+
+        for (uint256 i = 1; i < loanLength; i++) {
+            if (normalizedWeights[i] > normalizedWeights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
+        }
+
+        uint256[] memory dueProtocolFeeAmounts = new uint256[](loanLength);
+        dueProtocolFeeAmounts[maxWeightTokenIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
+            balances[maxWeightTokenIndex],
+            normalizedWeights[maxWeightTokenIndex],
+            lastInvariant,
+            invariantBeforeJoin,
+            protocolSwapFees
+        );
+
+        balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
+        _upscaleArray(amountsIn);
+        return
+            WeightedMath._calcBptOutGivenExactTokensIn(
+                balances,
+                normalizedWeights,
+                amountsIn,
+                IERC20(collateralTokens[0]).totalSupply(),
+                IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
+            );
+    }
+
     function testBalancerIntegrationOpenPosition(
         uint256 loan0,
         uint256 margin0,
@@ -255,7 +353,15 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             block.timestamp,
             ""
         );
+        uint256 expectedTokens = _calculateExpectedTokens(
+            order.agreement.loans[0].amount + order.agreement.loans[0].margin,
+            order.agreement.loans[1].amount + order.agreement.loans[1].margin,
+            order.agreement.loans[2].amount + order.agreement.loans[2].margin
+        );
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         service.open(order);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        assertEq(collaterals[0].amount, expectedTokens);
     }
 
     function testBalancerIntegrationClosePosition(
