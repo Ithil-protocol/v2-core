@@ -163,7 +163,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return amountOut;
     }
 
-    function _calculateExpectedBPTFromExit(uint256[] memory balances, uint256[] memory amountsOut)
+    function _calculateExpectedBPTToExit(uint256[] memory balances, uint256[] memory amountsOut)
         internal
         view
         returns (uint256)
@@ -264,7 +264,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             minAmountsOut0 > actualLoans[0].amount &&
             minAmountsOut1 > actualLoans[1].amount &&
             minAmountsOut2 > actualLoans[2].amount &&
-            _calculateExpectedBPTFromExit(balances, minAmountsOut) > collaterals[0].amount
+            _calculateExpectedBPTToExit(balances, minAmountsOut) > collaterals[0].amount
         ) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
             service.close(0, data);
@@ -273,8 +273,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                 minAmountsOut[i] = GeneralMath.max(minAmountsOut[i], actualLoans[i].amount);
             }
 
-            (, balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-            uint256 firstStep = _calculateExpectedBPTFromExit(balances, minAmountsOut);
+            uint256 firstStep = _calculateExpectedBPTToExit(balances, minAmountsOut);
             if (firstStep > collaterals[0].amount) {
                 // In this case we must annihilate minAmountsOut to obtain correct assertEq at the end
                 firstStep = 0;
