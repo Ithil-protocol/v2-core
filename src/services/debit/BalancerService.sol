@@ -2,8 +2,10 @@
 pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
+import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
@@ -96,7 +98,6 @@ contract BalancerService is SecuritisableService {
         }
 
         uint256 spentBpt = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
-
         IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest({
             assets: tokens,
             minAmountsOut: minAmountsOut,
@@ -106,11 +107,13 @@ contract BalancerService is SecuritisableService {
         // If possible, try to obtain the minAmountsOut
         try balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request) {
             spentBpt -= IERC20(agreement.collaterals[0].token).balanceOf(address(this));
+            assert(spentBpt <= agreement.collaterals[0].amount);
         } catch {
             // It is not possible to obtain minAmountsOut
             // This could be a bad repay event but also a too strict slippage on user side
             // In the latter case, we simply revert
             if (slippageEnforced) revert SlippageError();
+            spentBpt = 0;
         }
         // Swap residual BPT for whatever the Balancer pool gives back and repay sender
         // This is done also if slippage is not enforced and the first exit failed

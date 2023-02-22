@@ -280,7 +280,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     }
 
     function _upscaleArray(uint256[] memory array) internal view {
-        uint256[] memory scaledArray = new uint256[](loanLength);
         for (uint256 i = 0; i < loanLength; i++) {
             // Tokens with more than 18 decimals are not supported.
             uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
@@ -288,17 +287,15 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         }
     }
 
-    function _calculateExpectedTokens(uint256 amount0, uint256 amount1, uint256 amount2)
-        internal
-        view
-        returns (uint256)
-    {
-        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
-        uint256[] memory amountsIn = new uint256[](loanLength);
-        amountsIn[0] = amount0;
-        amountsIn[1] = amount1;
-        amountsIn[2] = amount2;
+    function _downscaleArray(uint256[] memory array) internal view {
+        for (uint256 i = 0; i < loanLength; i++) {
+            // Tokens with more than 18 decimals are not supported.
+            uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
+            array[i] /= 10**decimalsDifference;
+        }
+    }
+
+    function _modifyBalancesWithFees(uint256[] memory balances, uint256[] memory normalizedWeights) internal view {
         _upscaleArray(balances);
         uint256 invariantBeforeJoin = WeightedMath._calculateInvariant(normalizedWeights, balances);
         uint256 lastInvariant = IBalancerPool(collateralTokens[0]).getLastInvariant();
@@ -323,15 +320,59 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         );
 
         balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
+    }
+
+    function _calculateExpectedBPTFromJoin(uint256[] memory balances, uint256[] memory amountsIn)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsIn);
-        return
-            WeightedMath._calcBptOutGivenExactTokensIn(
-                balances,
-                normalizedWeights,
-                amountsIn,
-                IERC20(collateralTokens[0]).totalSupply(),
-                IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
-            );
+        uint256 amountOut = WeightedMath._calcBptOutGivenExactTokensIn(
+            balances,
+            normalizedWeights,
+            amountsIn,
+            IERC20(collateralTokens[0]).totalSupply(),
+            IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
+        );
+        _downscaleArray(amountsIn);
+        _downscaleArray(balances);
+        return amountOut;
+    }
+
+    function _calculateExpectedBPTFromExit(uint256[] memory balances, uint256[] memory amountsOut)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        _modifyBalancesWithFees(balances, normalizedWeights);
+        _upscaleArray(amountsOut);
+        uint256 expectedBpt = WeightedMath._calcBptInGivenExactTokensOut(
+            balances,
+            normalizedWeights,
+            amountsOut,
+            IERC20(collateralTokens[0]).totalSupply(),
+            IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
+        );
+        _downscaleArray(amountsOut);
+        _downscaleArray(balances);
+        return expectedBpt;
+    }
+
+    function _calculateExpectedTokensFromBPT(uint256[] memory balances, uint256 amount, uint256 totalSupply)
+        internal
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        _modifyBalancesWithFees(balances, normalizedWeights);
+        uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);
+        _downscaleArray(balances);
+        _downscaleArray(expectedTokens);
+        return expectedTokens;
     }
 
     function testBalancerIntegrationOpenPosition(
@@ -353,15 +394,17 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             block.timestamp,
             ""
         );
-        uint256 expectedTokens = _calculateExpectedTokens(
-            order.agreement.loans[0].amount + order.agreement.loans[0].margin,
-            order.agreement.loans[1].amount + order.agreement.loans[1].margin,
-            order.agreement.loans[2].amount + order.agreement.loans[2].margin
-        );
+        uint256[] memory amountsIn = new uint256[](loanLength);
+        for (uint256 i = 0; i < loanLength; i++)
+            amountsIn[i] = order.agreement.loans[i].amount + order.agreement.loans[i].margin;
         (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        uint256 expectedTokens = _calculateExpectedBPTFromJoin(balances, amountsIn);
         service.open(order);
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+
         assertEq(collaterals[0].amount, expectedTokens);
+        // Gauge token is 1:1 both at deposit and withdraw
+        assertEq(IERC20(gauge).balanceOf(address(service)), expectedTokens);
     }
 
     function testBalancerIntegrationClosePosition(
@@ -371,60 +414,71 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         uint256 margin1,
         uint256 loan2,
         uint256 margin2,
-        uint256 minAmountsOutWbtc,
-        uint256 minAmountsOutWeth,
-        uint256 minAmountsOutUsdc
+        uint256 minAmountsOut0,
+        uint256 minAmountsOut1,
+        uint256 minAmountsOut2
     ) public {
-        (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-        // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOutWbtc <= totalBalances[0]);
-        vm.assume(minAmountsOutWeth <= totalBalances[1]);
-        vm.assume(minAmountsOutUsdc <= totalBalances[2]);
-
         testBalancerIntegrationOpenPosition(loan0, margin0, loan1, margin1, loan2, margin2);
+
+        (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        // this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
+        vm.assume(minAmountsOut0 <= totalBalances[0]);
+        vm.assume(minAmountsOut1 <= totalBalances[1]);
+        vm.assume(minAmountsOut2 <= totalBalances[2]);
+
+        uint256[] memory initialBalances = new uint256[](loanLength);
+        for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
+
+        uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
 
         uint256[] memory minAmountsOut = new uint256[](3);
         // Fees make the initial investment always at a loss
-        // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = minAmountsOutWbtc;
-        minAmountsOut[1] = minAmountsOutWeth;
-        minAmountsOut[2] = minAmountsOutUsdc;
+        minAmountsOut[0] = minAmountsOut0;
+        minAmountsOut[1] = minAmountsOut1;
+        minAmountsOut[2] = minAmountsOut2;
         bytes memory data = abi.encode(minAmountsOut);
-
-        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-        bool slippageEnforced = minAmountsOutWbtc > actualLoans[0].amount &&
-            minAmountsOutWeth > actualLoans[1].amount &&
-            minAmountsOutUsdc > actualLoans[2].amount;
-        if (slippageEnforced) {
-            uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
-            (, totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-            uint256 swapFee = IBalancerPool(collateralTokens[0]).getSwapFeePercentage();
-            uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
-            uint256 bptAmountOut = WeightedMath._calcBptInGivenExactTokensOut(
-                totalBalances,
-                normalizedWeights,
-                minAmountsOut,
-                bptTotalSupply,
-                swapFee
-            );
-            if (bptAmountOut > collaterals[0].amount) {
-                // This case is when slippage is exceeded
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
-                service.close(0, data);
-            } else {
-                uint256 initiallusdBalance = IERC20(loanTokens[0]).balanceOf(address(service));
-                uint256 initiallqtyBalance = IERC20(loanTokens[1]).balanceOf(address(service));
-                uint256 initialWethBalance = IERC20(loanTokens[2]).balanceOf(address(service));
-                service.close(0, data);
-                // collateral tokens have been burned
-                assertTrue(IERC20(collateralTokens[0]).totalSupply() == bptTotalSupply - collaterals[0].amount);
-                // min amounts out are respected
-                assertTrue(IERC20(loanTokens[0]).balanceOf(address(service)) >= initiallusdBalance + minAmountsOut[0]);
-                assertTrue(IERC20(loanTokens[1]).balanceOf(address(service)) >= initiallqtyBalance + minAmountsOut[1]);
-                assertTrue(IERC20(loanTokens[2]).balanceOf(address(service)) >= initialWethBalance + minAmountsOut[2]);
-            }
-        } else {
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        if (
+            minAmountsOut0 > actualLoans[0].amount &&
+            minAmountsOut1 > actualLoans[1].amount &&
+            minAmountsOut2 > actualLoans[2].amount &&
+            _calculateExpectedBPTFromExit(balances, minAmountsOut) > collaterals[0].amount
+        ) {
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
             service.close(0, data);
+        } else {
+            for (uint256 i = 0; i < loanLength; i++) {
+                if (minAmountsOut[i] < actualLoans[i].amount) minAmountsOut[i] = actualLoans[i].amount;
+            }
+
+            (, balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+            uint256 firstStep = _calculateExpectedBPTFromExit(balances, minAmountsOut);
+            if (firstStep > collaterals[0].amount) {
+                firstStep = 0;
+            } else {
+                for (uint256 i = 0; i < loanLength; i++) {
+                    balances[i] -= minAmountsOut[i];
+                }
+            }
+            uint256[] memory finalAmounts = _calculateExpectedTokensFromBPT(
+                balances,
+                collaterals[0].amount - firstStep,
+                bptTotalSupply - firstStep
+            );
+            service.close(0, data);
+            // total supply as expected
+            assertEq(IERC20(collateralTokens[0]).totalSupply(), bptTotalSupply - collaterals[0].amount);
+            // min amounts out are respected
+            for (uint256 i = 0; i < loanLength; i++) {
+                // If firstStep > 0, minAmountsOut were obtained
+                if (firstStep > 0)
+                    assertEq(
+                        IERC20(loanTokens[i]).balanceOf(address(service)),
+                        initialBalances[i] + minAmountsOut[i] + finalAmounts[i]
+                    );
+                else assertEq(IERC20(loanTokens[i]).balanceOf(address(service)), initialBalances[i] + finalAmounts[i]);
+            }
         }
     }
 
