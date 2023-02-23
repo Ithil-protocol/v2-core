@@ -14,3 +14,15 @@ forge script \
 -f http://localhost:8545 \
 script/DeployManager.script.sol --broadcast
 ```
+
+# Credit many USDC
+
+```
+USDC_CONTRACT="0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
+USDC_WHALE="0x637842536b989BCFFe15c1678Fc558986c503548"
+WALLET0="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+cast send $USDC_WHALE --from $WALLET0 --value 1ether
+cast rpc anvil_impersonateAccount $USDC_WHALE
+cast send $USDC_CONTRACT "transfer(address,uint256)" $WALLET0 10000000000 --rpc-url localhost:8545 --from $USDC_WHALE
+```
+
