@@ -150,14 +150,18 @@ contract BalancerService is SecuritisableService {
             // TODO: add fees
             totalBalances[index] -= amountsOut[index];
         }
-        if (bptAmountOut < agreement.collaterals[0].amount)
+        if (bptAmountOut < agreement.collaterals[0].amount) {
             profits = _calculateExpectedTokensFromBPT(
                 agreement.collaterals[0].token,
                 totalBalances,
                 agreement.collaterals[0].amount - bptAmountOut,
                 IERC20(agreement.collaterals[0].token).totalSupply() - bptAmountOut
             );
-
+            // Besides spurious tokens, also amountsOut had been obtained at the first exit
+            for (uint256 index = 0; index < agreement.loans.length; index++) {
+                profits[index] += amountsOut[index];
+            }
+        }
         return (profits, fees);
     }
 
