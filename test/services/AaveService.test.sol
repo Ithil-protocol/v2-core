@@ -48,7 +48,12 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             block.timestamp,
             ""
         );
+        uint256 initialAllowance = service.totalAllowance();
         service.open(order);
+
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        assertEq(collaterals[0].amount, (daiLoan % transformedAmount) + transformedMargin);
+        assertEq(service.totalAllowance(), initialAllowance + collaterals[0].amount);
     }
 
     function testClose(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin, uint256 minAmountsOutDai) public {
@@ -62,7 +67,15 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
             service.close(0, data);
         } else {
+            uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(service));
+            uint256 initialAllowance = service.totalAllowance();
+            uint256 toRedeem = IERC20(collateralTokens[0]).balanceOf(address(service)).safeMulDiv(
+                collaterals[0].amount,
+                initialAllowance
+            );
             service.close(0, data);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), initialBalance + toRedeem);
+            assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
         }
     }
 
