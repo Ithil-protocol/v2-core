@@ -25,4 +25,3 @@ cast send $USDC_WHALE --from $WALLET0 --value 1ether
 cast rpc anvil_impersonateAccount $USDC_WHALE
 cast send $USDC_CONTRACT "transfer(address,uint256)" $WALLET0 10000000000 --rpc-url localhost:8545 --from $USDC_WHALE
 ```
-
