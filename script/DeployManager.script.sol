@@ -20,7 +20,7 @@ contract DeployManager is Script {
         manager.create(token0);
         manager.create(token1);
 
-        IVault vault0 = IVault(manager.vaults(token1));
+        IVault vault0 = IVault(manager.vaults(token0));
         assert(vault0.asset() == token0);
 
         IVault vault1 = IVault(manager.vaults(token1));
