@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.17;
+pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
@@ -18,7 +18,6 @@ contract StargateService is SecuritisableService {
         uint16 poolID;
         uint256 stakingPoolID;
         address lpToken;
-        bool locked;
     }
     IStargateRouter public immutable stargateRouter;
     IStargateLPStaking public immutable stargateLPStaking;
@@ -27,7 +26,6 @@ contract StargateService is SecuritisableService {
     mapping(address => uint256) public totalDeposits;
 
     event PoolWasAdded(address indexed token);
-    event PoolLockWasToggled(address indexed token, bool status);
     error InexistentPool();
     error AmountTooLow();
     error InsufficientAmountOut();
@@ -68,6 +66,8 @@ contract StargateService is SecuritisableService {
         );
         if (IERC20(agreement.loans[0].token).balanceOf(address(this)) - initialBalance < minAmountsOut)
             revert InsufficientAmountOut();
+
+        // TODO swap STG to notional
     }
 
     function quote(Agreement memory agreement)
@@ -84,7 +84,7 @@ contract StargateService is SecuritisableService {
         quoted[0] = _expectedObtainedTokens(agreement.collaterals[0].amount, pool.lpToken);
         return (quoted, fees);
 
-        // TODO: quote swap STG to notional
+        // TODO: consider accrued STG when quoting
     }
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {
@@ -95,12 +95,7 @@ contract StargateService is SecuritisableService {
         // check that the token provided and staking pool ID are correct
         assert(token == pool.token());
 
-        pools[token] = PoolData({
-            poolID: uint16(pool.poolId()),
-            stakingPoolID: stakingPoolID,
-            lpToken: lpToken,
-            locked: false
-        });
+        pools[token] = PoolData({ poolID: uint16(pool.poolId()), stakingPoolID: stakingPoolID, lpToken: lpToken });
 
         // Approval for the main token
         if (IERC20(token).allowance(address(this), address(stargateRouter)) == 0)
@@ -110,17 +105,6 @@ contract StargateService is SecuritisableService {
             pool.safeApprove(address(stargateLPStaking), type(uint256).max);
 
         emit PoolWasAdded(token);
-    }
-
-    function togglePoolLock(address token) external onlyOwner {
-        assert(pools[token].poolID != 0);
-        pools[token].locked = !pools[token].locked;
-
-        // Reset token approvals
-        IERC20(token).approve(address(stargateRouter), 0);
-        IERC20(pools[token].lpToken).approve(address(stargateLPStaking), 0);
-
-        emit PoolLockWasToggled(token, pools[token].locked);
     }
 
     function _expectedMintedTokens(uint256 amount, address lpToken) internal view returns (uint256 expected) {

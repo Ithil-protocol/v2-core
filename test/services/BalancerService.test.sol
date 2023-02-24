@@ -14,7 +14,6 @@ import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
 /// @dev Run Forge with `-vvvv` to see console logs.
@@ -323,11 +322,5 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         (uint256[] memory profits, ) = service.quote(agreement);
     }
 
-    // testAddPool() public {
-
-    // }
-
-    // testRemovePool() public {
-
-    // }
+    // TODO test quoter
 }

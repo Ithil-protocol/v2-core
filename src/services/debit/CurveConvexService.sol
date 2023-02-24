@@ -9,7 +9,6 @@ import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
 import { SecuritisableService } from "../SecuritisableService.sol";
 import { Service } from "../Service.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
@@ -65,9 +64,13 @@ contract CurveConvexService is SecuritisableService {
         pool.baseRewardPool.withdraw(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
+
+        // TODO swap CRV and CVX for collateral tokens
     }
 
     function _harvest(PoolData memory pool, uint256 ownership) internal {
+        // TODO check
+
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(pool.convex);
         // Total base rewards token
         // If they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
@@ -93,6 +96,9 @@ contract CurveConvexService is SecuritisableService {
                 (balances[index] * agreement.collaterals[0].amount) /
                 IERC20(agreement.collaterals[0].token).totalSupply();
         }
+
+        // TODO consider CRV and CVX when quoting
+
         return (quoted, fees);
     }
 
@@ -132,7 +138,6 @@ contract CurveConvexService is SecuritisableService {
         PoolData memory pool = pools[token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
-        ICurvePool curve = ICurvePool(pool.curve);
         uint256 length = pool.tokens.length;
         for (uint256 i = 0; i < length; i++) {
             // Remove Curve pool allowance

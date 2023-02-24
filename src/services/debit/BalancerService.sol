@@ -128,6 +128,8 @@ contract BalancerService is SecuritisableService {
             toInternalBalance: false
         });
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
+
+        // TODO swap BAL for collateral tokens
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
@@ -162,6 +164,9 @@ contract BalancerService is SecuritisableService {
                 profits[index] += amountsOut[index];
             }
         }
+
+        // TODO consider accrued BAL rewards when quoting
+
         return (profits, fees);
     }
 
