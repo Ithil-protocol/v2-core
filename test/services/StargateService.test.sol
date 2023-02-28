@@ -63,11 +63,7 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
         return success;
     }
 
-    function testStargateIntegrationClosePosition(
-        uint256 amount0,
-        uint256 loan0,
-        uint256 margin0
-    ) public {
+    function testStargateIntegrationClosePosition(uint256 amount0, uint256 loan0, uint256 margin0) public {
         bool success = testStargateIntegrationOpenPosition(amount0, loan0, margin0);
 
         uint256 minAmountsOut = 0; // TODO make it fuzzy
