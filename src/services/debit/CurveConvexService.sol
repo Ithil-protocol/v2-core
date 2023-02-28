@@ -7,13 +7,13 @@ import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Curve pool plus staking on Convex
-contract CurveConvexService is SecuritisableService {
+contract CurveConvexService is DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 

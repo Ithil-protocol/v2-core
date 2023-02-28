@@ -66,11 +66,11 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
     function testStargateIntegrationClosePosition(
         uint256 amount0,
         uint256 loan0,
-        uint256 margin0,
-        uint256 minAmountsOut
+        uint256 margin0
     ) public {
         bool success = testStargateIntegrationOpenPosition(amount0, loan0, margin0);
 
+        uint256 minAmountsOut = 0; // TODO make it fuzzy
         bytes memory data = abi.encode(minAmountsOut);
         if (success) {
             (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);

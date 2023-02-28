@@ -4,13 +4,13 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    StargateService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Stargate pool
-contract StargateService is SecuritisableService {
+contract StargateService is DebitService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IStargatePool;
 

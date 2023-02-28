@@ -15,10 +15,6 @@ import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// @dev Run Forge with `-vvvv` to see console logs.
-/// https://book.getfoundry.sh/forge/writing-tests
-
 /// @dev State study
 /// BalancerService native state:
 /// mapping(address => PoolData) public pools;

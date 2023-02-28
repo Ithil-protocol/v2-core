@@ -7,13 +7,13 @@ import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Fac
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    SushiService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Sushi pool
-contract SushiService is SecuritisableService {
+contract SushiService is DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
