@@ -37,7 +37,7 @@ abstract contract DebitService is Service {
     /// is less than liquidationThreshold
     /// @dev it MUST be such that a liquidable agreement has liquidationScore > 0
     function liquidationScore(uint256 id) public view virtual returns (uint256) {
-        if(status == ServiceStatus.LOCKED) return 1;
+        if (status == ServiceStatus.LOCKED) return 1;
 
         Agreement memory agreement = agreements[id];
         (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
