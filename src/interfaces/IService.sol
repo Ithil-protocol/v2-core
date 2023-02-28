@@ -4,6 +4,12 @@ pragma solidity =0.8.17;
 import { IERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 interface IService is IERC721Enumerable {
+    enum ServiceStatus {
+        ACTIVE,
+        SUSPENDED,
+        LOCKED
+    }
+
     // Owed is forcefully ERC20: the Manager only deals with ERC20/ERC4626
     struct Loan {
         address token;
@@ -44,7 +50,7 @@ interface IService is IERC721Enumerable {
     }
 
     event BaseRiskSpreadWasUpdated(address indexed asset, uint256 indexed id, uint256 newValue);
-    event LockWasToggled(bool status);
+    event ServiceStatusWasChanged(ServiceStatus indexed status);
     event GuardianWasUpdated(address indexed newGuardian);
 
     error Locked();

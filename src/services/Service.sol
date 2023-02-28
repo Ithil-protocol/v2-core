@@ -17,12 +17,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     address public guardian;
     mapping(address => uint256) public exposures;
     Agreement[] public agreements;
-    bool public locked;
+    ServiceStatus public status;
     uint256 public id;
 
     constructor(string memory _name, string memory _symbol, address _manager) ERC721(_name, _symbol) {
         manager = IManager(_manager);
-        locked = false;
+        status = ServiceStatus.ACTIVE;
         id = 0;
     }
 
@@ -32,7 +32,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     }
 
     modifier unlocked() {
-        if (locked) revert Locked();
+        if (status != ServiceStatus.ACTIVE) revert Locked();
         _;
     }
 
@@ -49,10 +49,24 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         emit GuardianWasUpdated(guardian);
     }
 
-    function toggleLock(bool _locked) external onlyGuardian {
-        locked = _locked;
+    function suspend() external onlyGuardian {
+        status = ServiceStatus.SUSPENDED;
 
-        emit LockWasToggled(locked);
+        emit ServiceStatusWasChanged(status);
+    }
+
+    function liftSuspension() external onlyOwner {
+        assert(status != ServiceStatus.LOCKED);
+
+        status = ServiceStatus.ACTIVE;
+
+        emit ServiceStatusWasChanged(status);
+    }
+
+    function lock() external onlyOwner {
+        status = ServiceStatus.LOCKED;
+
+        emit ServiceStatusWasChanged(status);
     }
 
     ///// Service functions /////
