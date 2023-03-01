@@ -9,10 +9,6 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 import { SignUtils } from "./utils/SignUtils.sol";
 import { PermitToken } from "./utils/PermitToken.sol";
 
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// @dev Run Forge with `-vvvv` to see console logs.
-/// https://book.getfoundry.sh/forge/writing-tests
-
 /// @dev Vault native state:
 /// - Native:
 /// address public immutable manager;

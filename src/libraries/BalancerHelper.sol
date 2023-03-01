@@ -10,7 +10,7 @@ import { WeightedMath } from "./external/Balancer/WeightedMath.sol";
 library BalancerHelper {
     function exitExactBPTInForTokensOut(uint256[] memory balances, uint256 bptAmountIn, uint256 totalSupply)
         public
-        view
+        pure
         returns (uint256[] memory)
     {
         uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalSupply);
@@ -23,7 +23,7 @@ library BalancerHelper {
         uint256[] memory amountsOut,
         uint256 totalSupply,
         uint256 swapFee
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         // _upscaleArray(amountsOut);
 
         uint256 bptAmountIn = WeightedMath._calcBptInGivenExactTokensOut(
@@ -37,9 +37,11 @@ library BalancerHelper {
         return bptAmountIn;
     }
 
-    function getTokenIndex(address[] memory tokens, address token) internal pure returns (uint8) {
+    function getTokenIndex(address[] memory tokens, address token) public pure returns (uint8) {
         for (uint8 i = 0; i < tokens.length; i++) {
             if (tokens[i] == token) return i;
         }
+
+        return type(uint8).max;
     }
 }

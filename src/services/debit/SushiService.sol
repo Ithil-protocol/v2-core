@@ -7,13 +7,13 @@ import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Fac
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    SushiService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Sushi pool
-contract SushiService is SecuritisableService {
+contract SushiService is DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -64,7 +64,7 @@ contract SushiService is SecuritisableService {
             minAmountsOut[0],
             minAmountsOut[1],
             address(this),
-            block.timestamp // @todo pass via bytes data ?
+            block.timestamp // TODO pass via bytes data ?
         );
 
         agreement.collaterals[0].amount = liquidity;
@@ -84,8 +84,10 @@ contract SushiService is SecuritisableService {
             minAmountsOut[0],
             minAmountsOut[1],
             address(this),
-            block.timestamp // @todo pass via bytes data ?
+            block.timestamp // TODO pass via bytes data ?
         );
+
+        // TODO swap SUSHI for collateral tokens
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
@@ -95,12 +97,16 @@ contract SushiService is SecuritisableService {
         uint256 balanceB = IERC20(agreement.loans[1].token).balanceOf(agreement.collaterals[0].token);
         uint256 totalSupply = IERC20(agreement.collaterals[0].token).totalSupply();
         (, bytes memory klast) = agreement.collaterals[0].token.staticcall(abi.encodeWithSignature("kLast()"));
-        // Todo: add fees
+        // TODO: add fees
+
         uint256 rootK = Math.sqrt(balanceA + agreement.loans[0].amount) * (balanceB + agreement.loans[1].amount);
         uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
         totalSupply += (totalSupply * (rootK - rootKLast)) / (5 * rootK + rootKLast);
         quoted[0] = (agreement.collaterals[0].amount * balanceA) / totalSupply;
         quoted[1] = (agreement.collaterals[0].amount * balanceB) / totalSupply;
+
+        // TODO consider accrued SUSHI when quoting
+
         return (fees, quoted);
     }
 

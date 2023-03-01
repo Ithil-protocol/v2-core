@@ -3,14 +3,16 @@ pragma solidity =0.8.17;
 
 import { Script } from "forge-std/Script.sol";
 
-contract Deployer is Script {
+abstract contract Base is Script {
     uint256 internal deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
     function run() external {
         vm.startBroadcast(deployerPrivateKey);
 
-        // deploy
+        _run();
 
         vm.stopBroadcast();
     }
+
+    function _run() internal virtual;
 }
