@@ -34,7 +34,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         serviceAddress = address(service);
     }
 
-    function testOpen(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
+    function testAaveIntegrationOpenPosition(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = daiAmount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;
@@ -56,8 +56,13 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         assertEq(service.totalAllowance(), initialAllowance + collaterals[0].amount);
     }
 
-    function testClose(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin, uint256 minAmountsOutDai) public {
-        testOpen(daiAmount, daiLoan, daiMargin);
+    function testAaveIntegrationClosePosition(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 minAmountsOutDai
+    ) public {
+        testAaveIntegrationOpenPosition(daiAmount, daiLoan, daiMargin);
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
@@ -79,8 +84,8 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         }
     }
 
-    function testQuote(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
-        testOpen(daiAmount, daiLoan, daiMargin);
+    function testAaveIntegrationQuoter(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
+        testAaveIntegrationOpenPosition(daiAmount, daiLoan, daiMargin);
 
         (
             IService.Loan[] memory loan,
@@ -90,6 +95,9 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         ) = service.getAgreement(1);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
+
         (uint256[] memory profits, ) = service.quote(agreement);
+
+        // TODO check quoter
     }
 }

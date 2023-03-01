@@ -85,10 +85,14 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         return (IERC20(collateralTokens[0]).totalSupply() * (rootK - rootKLast)) / (5 * rootK + rootKLast);
     }
 
-    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-        returns (bool)
-    {
+    function testSushiIntegrationOpenPosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public returns (bool) {
         IService.Order memory order = _openOrder2(
             amount0,
             loan0,
@@ -120,10 +124,15 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         return success;
     }
 
-    function testClose(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-    {
-        bool success = testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
+    function testSushiIntegrationClosePosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public {
+        bool success = testSushiIntegrationOpenPosition(amount0, loan0, margin0, amount1, loan1, margin1);
 
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
@@ -148,10 +157,15 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         }
     }
 
-    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-    {
-        bool success = testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
+    function testSushiIntegrationQuoter(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public {
+        bool success = testSushiIntegrationOpenPosition(amount0, loan0, margin0, amount1, loan1, margin1);
         if (success) {
             (
                 IService.Loan[] memory loan,
@@ -165,4 +179,6 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
             (uint256[] memory profits, ) = service.quote(agreement);
         }
     }
+
+    // TODO test quoter
 }
