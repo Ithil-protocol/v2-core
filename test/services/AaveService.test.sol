@@ -79,7 +79,8 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
                 initialAllowance
             );
             service.close(0, data);
-            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), initialBalance + toRedeem);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + toRedeem);
             assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
         }
     }

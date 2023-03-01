@@ -75,10 +75,7 @@ contract ManagerTest is Test {
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
-    function _setupArbitraryState(uint256 previousDeposit, uint256 cap)
-        private
-        returns (uint256)
-    {
+    function _setupArbitraryState(uint256 previousDeposit, uint256 cap) private returns (uint256) {
         address vaultAddress = manager.vaults(address(firstToken));
         vm.startPrank(tokenSink);
         firstToken.approve(vaultAddress, previousDeposit);
@@ -101,9 +98,7 @@ contract ManagerTest is Test {
         assertTrue(storedCap == cap);
     }
 
-    function testFeeUnlockTime(uint256 previousDeposit, uint256 debitCap, uint256 feeUnlockTime)
-        public
-    {
+    function testFeeUnlockTime(uint256 previousDeposit, uint256 debitCap, uint256 feeUnlockTime) public {
         _setupArbitraryState(previousDeposit, debitCap);
         feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
@@ -122,12 +117,7 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(
-        uint256 previousDeposit,
-        uint256 debitCap,
-        uint256 currentExposure,
-        uint256 borrowed
-    ) public {
+    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 currentExposure, uint256 borrowed) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
@@ -149,9 +139,7 @@ contract ManagerTest is Test {
         }
     }
 
-    function testRepay(uint256 previousDeposit, uint256 debitCap, uint256 repaid, uint256 debt)
-        public
-    {
+    function testRepay(uint256 previousDeposit, uint256 debitCap, uint256 repaid, uint256 debt) public {
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         vm.assume(repaid <= firstToken.balanceOf(tokenSink));
         vm.startPrank(tokenSink);
@@ -194,12 +182,7 @@ contract ManagerTest is Test {
         }
     }
 
-    function testDirectBurn(
-        uint256 previousDeposit,
-        uint256 debitCap,
-        uint256 burned,
-        uint256 maxAmountIn
-    ) public {
+    function testDirectBurn(uint256 previousDeposit, uint256 debitCap, uint256 burned, uint256 maxAmountIn) public {
         IVault vault = IVault(manager.vaults(address(firstToken)));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
 

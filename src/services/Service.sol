@@ -98,9 +98,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @notice closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param data extra custom data required by the specific service
-    function close(uint256 tokenID, bytes calldata data) public virtual editable(tokenID) {
+    function close(uint256 tokenID, bytes calldata data) public virtual editable(tokenID) returns (uint256[] memory) {
         Agreement memory agreement = agreements[tokenID];
 
+        uint256[] memory amountsOut = new uint256[](agreement.loans.length);
+        for (uint256 index = 0; index < agreement.loans.length; index++)
+            amountsOut[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
         // Hook
         _beforeClosing(tokenID, agreement, data);
 
@@ -108,9 +111,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         agreements[tokenID].status = Status.CLOSED;
         _burn(tokenID);
         _close(tokenID, agreement, data);
+        for (uint256 index = 0; index < agreement.loans.length; index++)
+            amountsOut[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - amountsOut[index];
 
         // Hook
         _afterClosing(tokenID, agreement, data);
+        return amountsOut;
     }
 
     function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual {}

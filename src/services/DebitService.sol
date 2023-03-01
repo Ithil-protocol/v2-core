@@ -72,44 +72,46 @@ abstract contract DebitService is Service {
                 address(this)
             );
 
-            (uint256 computedIR, uint256 computedSpread) = _baseInterestRateAndSpread(agreement, freeLiquidity);
-            (uint256 requestedIR, uint256 requestedSpread) = agreement.loans[index].interestAndSpread.unpackUint();
-            if (computedIR > requestedIR || computedSpread > requestedSpread) revert AboveRiskThreshold();
+            _checkRiskiness(agreement.loans[index].amount, freeLiquidity);
         }
-
         super.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override {
+    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory) {
         if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
 
-        super.close(tokenID, data);
+        uint256[] memory obtained = super.close(tokenID, data);
 
         Agreement memory agreement = agreements[tokenID];
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.loans[index].amount
             );
-
-            manager.repay(
-                agreement.loans[index].token,
-                _computeDuePayment(agreement, data),
-                agreement.loans[index].amount,
-                address(this)
-            );
+            uint256 duePayment = _computeDuePayment(agreement, data);
+            if (obtained[index] > duePayment) {
+                // Good repay: the difference is transferred to the user
+                manager.repay(agreement.loans[index].token, duePayment, agreement.loans[index].amount, address(this));
+                IERC20(agreement.loans[index].token).transfer(msg.sender, obtained[index] - duePayment);
+            } else {
+                // Bad repay: all the obtained amount is given to the vault
+                manager.repay(
+                    agreement.loans[index].token,
+                    obtained[index],
+                    agreement.loans[index].amount,
+                    address(this)
+                );
+            }
         }
+        return obtained;
     }
 
     /// @dev When quoting we need to return values for all owed items
     /// how: for first to last index, calculate minimum obtained >= loan amount + fees
     function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory) {}
 
-    function _baseInterestRateAndSpread(Agreement memory agreement, uint256 freeLiquidity)
-        internal
-        virtual
-        returns (uint256, uint256)
-    {}
-
     // Computes the payment due to the vault or lender
     function _computeDuePayment(Agreement memory agreement, bytes calldata data) internal virtual returns (uint256) {}
+
+    // Checks the riskiness of the agreement and eventually reverts with AboveRiskThreshold()
+    function _checkRiskiness(uint256 loanAmount, uint256 freeLiquidity) internal virtual {}
 }

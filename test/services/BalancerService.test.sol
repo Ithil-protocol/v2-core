@@ -288,9 +288,12 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             assertEq(IERC20(collateralTokens[0]).totalSupply(), bptTotalSupply - collaterals[0].amount);
             // min amounts out are respected
             for (uint256 i = 0; i < loanLength; i++) {
+                // Service is emptied
+                assertEq(IERC20(loanTokens[i]).balanceOf(address(service)), 0);
                 // If firstStep = 0, minAmountsOut are also zero
+                // Payoff is paid to address(this) which is the user
                 assertEq(
-                    IERC20(loanTokens[i]).balanceOf(address(service)),
+                    IERC20(loanTokens[i]).balanceOf(address(this)),
                     initialBalances[i] + minAmountsOut[i] + finalAmounts[i]
                 );
             }

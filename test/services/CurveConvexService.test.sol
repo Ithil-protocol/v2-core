@@ -196,8 +196,10 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             service.close(0, data);
         } else {
             service.close(0, data);
-            assertTrue(IERC20(loanTokens[0]).balanceOf(address(service)) == initialBalance0 + quoted[0]);
-            assertTrue(IERC20(loanTokens[1]).balanceOf(address(service)) == initialBalance1 + quoted[1]);
+            assertTrue(IERC20(loanTokens[0]).balanceOf(address(service)) == 0);
+            assertTrue(IERC20(loanTokens[1]).balanceOf(address(service)) == 0);
+            assertTrue(IERC20(loanTokens[0]).balanceOf(address(this)) == initialBalance0 + quoted[0]);
+            assertTrue(IERC20(loanTokens[1]).balanceOf(address(this)) == initialBalance1 + quoted[1]);
         }
     }
 
