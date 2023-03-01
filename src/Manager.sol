@@ -14,11 +14,11 @@ contract Manager is IManager, Ownable {
 
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    // service => token => RiskParams
-    mapping(address => mapping(address => RiskParams)) public override riskParams;
+    // service => token => cap
+    mapping(address => mapping(address => uint256)) public override caps;
 
     modifier supported(address token) {
-        if (riskParams[msg.sender][token].cap == 0) revert RestrictedToWhitelistedServices();
+        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelistedServices();
         _;
     }
 
@@ -40,14 +40,8 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function setSpread(address service, address token, uint256 spread) external override onlyOwner {
-        riskParams[service][token].spread = spread;
-
-        emit SpreadWasUpdated(service, token, spread);
-    }
-
     function setCap(address service, address token, uint256 cap) external override onlyOwner {
-        riskParams[service][token].cap = cap;
+        caps[service][token] = cap;
 
         emit CapWasUpdated(service, token, cap);
     }
@@ -68,7 +62,7 @@ contract Manager is IManager, Ownable {
         vaultExists(token)
         returns (uint256, uint256)
     {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 investmentCap = caps[msg.sender][token];
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
             currentExposure,
@@ -96,7 +90,7 @@ contract Manager is IManager, Ownable {
         vaultExists(token)
         returns (uint256)
     {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 investmentCap = caps[msg.sender][token];
         uint256 totalSupply = IVault(vaults[token]).totalSupply();
         uint256 investedPortion = totalSupply == 0
             ? GeneralMath.RESOLUTION
