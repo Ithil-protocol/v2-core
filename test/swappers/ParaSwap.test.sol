@@ -46,6 +46,7 @@ contract ParaSwapTest is Test {
         values[0] = 0;
         values[1] = 0;
 
+        // solhint-disable max-line-length
         IAugustusSwapper.SimpleData memory data = IAugustusSwapper.SimpleData({
             fromToken: address(usdc),
             toToken: address(weth),
@@ -65,7 +66,7 @@ contract ParaSwapTest is Test {
             deadline: 1677685667,
             uuid: bytes16(bytes("0x1396a2ac833c43e591d831708670f600"))
         });
-        // solhint-disable-previous-line max-line-length
+        // solhint-enable max-line-length
 
         vm.startPrank(whale);
         usdc.approve(address(swapper), amount);
