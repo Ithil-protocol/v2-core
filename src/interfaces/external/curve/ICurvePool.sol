@@ -55,8 +55,6 @@ interface ICurvePool {
 
     function remove_liquidity(uint256 _burn_amount, uint256[4] memory _min_amounts) external;
 
-    function balances(int128 _index) external view returns (uint256);
-
     /**
         @notice Withdraw a single coin from the pool
         @param _burn_amount Amount of LP tokens to burn in the withdrawal
@@ -67,4 +65,8 @@ interface ICurvePool {
     function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_received)
         external
         returns (uint256);
+
+    function balances(int128 _index) external view returns (uint256);
+
+    function balances(uint256 _index) external view returns (uint256);
 }

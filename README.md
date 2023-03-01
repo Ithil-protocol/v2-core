@@ -55,7 +55,6 @@ cp .env.example .env
 and add the following content:
 
 ```text
-MAINNET_RPC_URL="https://..." needed to run mainnet fork tests
 ARBITRUM_RPC_URL="https://..." needed to run arbitrum fork tests
 ```
 

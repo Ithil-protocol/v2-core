@@ -50,7 +50,7 @@ library Helper {
         uint256[] memory collateralAmounts,
         uint256 time,
         bytes memory data
-    ) public view returns (IService.Order memory) {
+    ) public pure returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
 
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
@@ -76,4 +76,69 @@ library Helper {
 
         return order;
     }
+
+    function createERC20Order1Collateral2Tokens(
+        address tokenA,
+        uint256 loanA,
+        uint256 marginA,
+        address tokenB,
+        uint256 loanB,
+        uint256 marginB,
+        address collateralToken,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) public pure returns (IService.Order memory) {
+        IService.Loan[] memory loans = new IService.Loan[](2);
+        loans[0].token = tokenA;
+        loans[0].amount = loanA;
+        loans[0].margin = marginA;
+        loans[1].token = tokenB;
+        loans[1].amount = loanB;
+        loans[1].margin = marginB;
+
+        IService.Collateral[] memory collaterals = new IService.Collateral[](2);
+        collaterals[0].itemType = IService.ItemType.ERC20;
+        collaterals[0].token = collateralToken;
+        collaterals[0].amount = collateralAmount;
+
+        IService.Agreement memory agreement = IService.Agreement({
+            loans: loans,
+            collaterals: collaterals,
+            createdAt: time,
+            status: IService.Status.OPEN
+        });
+        return IService.Order({ agreement: agreement, data: data });
+    }
+
+    // function createERC20Order1Collateral2Tokens(
+    //     address[2] memory tokens,
+    //     uint256[2] memory amounts,
+    //     uint256[2] memory margins,
+    //     address collateralToken,
+    //     uint256 collateralAmount,
+    //     uint256 time,
+    //     bytes memory data
+    // ) public view returns (IService.Order memory) {
+    //     IService.Loan[] memory loan = new IService.Loan[](tokens.length);
+    //     IService.Collateral[] memory collateral = new IService.Collateral[](tokens.length);
+    //     for (uint256 i = 0; i < 2; i++) {
+    //         loan[i].token = tokens[i];
+    //         loan[i].amount = amounts[i];
+    //         loan[i].margin = margins[i];
+    //     }
+    //     collateral[0].itemType = IService.ItemType.ERC20;
+    //     collateral[0].token = collateralToken;
+    //     collateral[0].amount = collateralAmount;
+
+    //     IService.Agreement memory agreement = IService.Agreement({
+    //         loans: loan,
+    //         collaterals: collateral,
+    //         createdAt: time,
+    //         status: IService.Status.OPEN
+    //     });
+    //     IService.Order memory order = IService.Order({ agreement: agreement, data: data });
+
+    //     return order;
+    // }
 }

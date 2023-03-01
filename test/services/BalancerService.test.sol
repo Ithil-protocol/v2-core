@@ -2,9 +2,8 @@
 pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
@@ -13,12 +12,8 @@ import { BalancerService } from "../../src/services/debit/BalancerService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
-
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// @dev Run Forge with `-vvvv` to see console logs.
-/// https://book.getfoundry.sh/forge/writing-tests
 
 /// @dev State study
 /// BalancerService native state:
@@ -43,846 +38,266 @@ import { Helper } from "./Helper.sol";
 /// @dev overrides (except first implementation of virtual functions)
 ///
 
-contract BalancerServiceWeightedDAIWETH is PRBTest, StdCheats, BaseServiceTest {
+// contract BalancerServiceWeightedOHMWETH is BalancerServiceWeightedDAIWETH {
+//     using GeneralMath for uint256;
+
+//     // address internal constant auraPoolID = 2;
+
+//     function setUp() public override {
+//         loanTokens[0] = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5; // ohm
+//         loanTokens[1] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // weth
+//         whales[loanTokens[0]] = 0x64C0fe73Dff66a8b9b803A1796082a575899DD26;
+//         whales[loanTokens[1]] = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
+//         collateralTokens[0] = 0xD1eC5e215E8148D76F4460e4097FD3d5ae0A3558; // Pool 50 OHM - 50 WETH
+//         balancerPoolID = 0xd1ec5e215e8148d76f4460e4097fd3d5ae0a35580002000000000000000003d3;
+//         gauge = address(0);
+//         super.setUp();
+//     }
+// }
+
+contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
-    IManager internal immutable manager;
     BalancerService internal immutable service;
-    IERC20 internal constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    // Block 16448665 dai whale balance = 193908563885609559262031126 > 193908563 * 10^18
-    address internal constant daiWhale = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-    IERC20 internal constant weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    // Block 16448665 weth whale balance = 13813826751282430350873 > 13813 * 10
-    address internal constant wethWhale = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
+
     address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    // address internal constant auraBooster = 0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10;
-    // Pool 60 WETH - 40 DAI
-    address internal constant balancerPoolAddress = 0x0b09deA16768f0799065C475bE02919503cB2a35;
-    bytes32 internal constant balancerPoolID = 0x0b09dea16768f0799065c475be02919503cb2a3500020000000000000000001a;
-    address internal constant gauge = 0x4ca6AC0509E6381Ca7CD872a6cdC0Fbf00600Fa1;
-    address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
+    bytes32 internal constant balancerPoolID = 0x64541216bafffeec8ea535bb71fbc927831d0595000100000000000000000002;
+    address internal constant gauge = 0x104f1459a2fFEa528121759B238BB609034C2f01;
+    address internal constant bal = 0x040d1EdC9569d4Bab2D15287Dc5A4F10F56a56B8;
+    address internal constant gmxVault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
     // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
 
-    // address internal constant auraPoolID = 2;
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 58581858;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
         service = new BalancerService(address(manager), balancerVault, bal);
         vm.stopPrank();
+        loanLength = 3;
+        loanTokens = new address[](loanLength);
+        collateralTokens = new address[](1);
+        loanTokens[0] = 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f; // wbtc
+        loanTokens[1] = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; // weth
+        loanTokens[2] = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc
+
+        whales[loanTokens[0]] = gmxVault;
+        whales[loanTokens[1]] = gmxVault;
+        whales[loanTokens[2]] = gmxVault;
+        collateralTokens[0] = 0x64541216bAFFFEec8ea535BB71Fbc927831d0595; // Pool 33 WBTC - 33 WETH - 33 USDC
+        serviceAddress = address(service);
     }
 
-    function setUp() public {
-        dai.approve(address(service), type(uint256).max);
-        weth.approve(address(service), type(uint256).max);
-
-        vm.deal(daiWhale, 1 ether);
-        vm.deal(wethWhale, 1 ether);
-
-        vm.startPrank(admin);
-        // Create Vaults: DAI and WETH
-        manager.create(address(dai));
-        manager.create(address(weth));
-        // No caps for this service -> 100% of the liquidity can be used initially
-        manager.setCap(address(service), address(dai), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
-
-        service.addPool(balancerPoolAddress, balancerPoolID, gauge);
-        vm.stopPrank();
+    function setUp() public virtual override {
+        super.setUp();
+        vm.prank(admin);
+        service.addPool(collateralTokens[0], balancerPoolID, gauge);
     }
 
-    function _prepareVaultsAndUser(uint256 daiAmount, uint256 daiMargin, uint256 wethAmount, uint256 wethMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
-        // Modifications to be sure daiAmount + daiMargin <= dai.balanceOf(daiWhale) and same for weth
-        daiAmount = daiAmount % dai.balanceOf(daiWhale);
-        daiMargin = daiMargin % (dai.balanceOf(daiWhale) - daiAmount);
-        wethAmount = wethAmount % weth.balanceOf(wethWhale);
-        wethMargin = wethMargin % (weth.balanceOf(wethWhale) - wethAmount);
-        daiAmount++;
-        wethAmount++;
-
-        // Fill DAI vault
-        IVault daiVault = IVault(manager.vaults(address(dai)));
-        vm.startPrank(daiWhale);
-        dai.transfer(address(this), daiMargin);
-        dai.approve(address(daiVault), daiAmount);
-        daiVault.deposit(daiAmount, daiWhale);
-        vm.stopPrank();
-
-        // Fill WETH vault
-        IVault wethVault = IVault(manager.vaults(address(weth)));
-        vm.startPrank(wethWhale);
-        weth.transfer(address(this), wethMargin);
-        weth.approve(address(wethVault), wethAmount);
-        wethVault.deposit(wethAmount, wethWhale);
-        vm.stopPrank();
-        return (daiAmount, daiMargin, wethAmount, wethMargin);
-    }
-
-    function _createOrder(uint256 daiLoan, uint256 daiMargin, uint256 wethLoan, uint256 wethMargin)
-        internal
-        returns (IService.Order memory)
-    {
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(dai);
-        tokens[1] = address(weth);
-
-        uint256[] memory loans = new uint256[](2);
-        loans[0] = daiLoan;
-        loans[1] = wethLoan;
-
-        uint256[] memory margins = new uint256[](2);
-        margins[0] = daiMargin;
-        margins[1] = wethMargin;
-
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
-
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = balancerPoolAddress;
-
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = 0;
-
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
-            block.timestamp,
-            ""
-        );
-        return order;
-    }
-
-    function _openOrder(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal returns (uint256, uint256, uint256, uint256, uint256, uint256) {
-        (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
-            daiAmount,
-            daiMargin,
-            wethAmount,
-            wethMargin
-        );
-        // Loan must be less than amount otherwise Vault will revert
-        // Since daiAmount > 0 and wethAmount > 0, the following does not revert for division by zero
-        daiLoan = daiLoan % daiAmount;
-        wethLoan = wethLoan % wethAmount;
-        IService.Order memory order = _createOrder(daiLoan, daiMargin, wethLoan, wethMargin);
-
-        service.open(order);
-        return (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin);
-    }
-
-    function testOpen(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        uint256 timestamp = block.timestamp;
-        (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
-            daiAmount,
-            daiLoan,
-            daiMargin,
-            wethAmount,
-            wethLoan,
-            wethMargin
-        );
-
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collateral,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(1);
-
-        assertTrue(loan[0].token == address(dai));
-        assertTrue(loan[0].amount == daiLoan);
-        assertTrue(loan[0].margin == daiMargin);
-        assertTrue(loan[1].token == address(weth));
-        assertTrue(loan[1].amount == wethLoan);
-        assertTrue(loan[1].margin == wethMargin);
-        assertTrue(collateral[0].token == balancerPoolAddress);
-        assertTrue(collateral[0].identifier == 0);
-        assertTrue(collateral[0].itemType == IService.ItemType.ERC20);
-        assertTrue(createdAt == timestamp);
-        assertTrue(status == IService.Status.OPEN);
-    }
-
-    function testClose(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin,
-        uint256 minAmountsOutDai,
-        uint256 minAmountsOutWeth
-    ) public {
-        (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-        // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOutDai <= totalBalances[0]);
-        vm.assume(minAmountsOutWeth <= totalBalances[1]);
-        (daiAmount, daiLoan, daiMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
-            daiAmount,
-            daiLoan,
-            daiMargin,
-            wethAmount,
-            wethLoan,
-            wethMargin
-        );
-
-        uint256[] memory minAmountsOut = new uint256[](2);
-        // Fees make the initial investment always at a loss
-        // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = minAmountsOutDai;
-        minAmountsOut[1] = minAmountsOutWeth;
-        bytes memory data = abi.encode(minAmountsOut);
-
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-        bool slippageEnforced = minAmountsOutDai > daiLoan && minAmountsOutWeth > wethLoan;
-        if (slippageEnforced) {
-            uint256[] memory normalizedWeights = IBalancerPool(balancerPoolAddress).getNormalizedWeights();
-            (, totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-            uint256 swapFee = IBalancerPool(balancerPoolAddress).getSwapFeePercentage();
-            uint256 bptTotalSupply = IERC20(balancerPoolAddress).totalSupply();
-            uint256 bptAmountOut = WeightedMath._calcBptInGivenExactTokensOut(
-                totalBalances,
-                normalizedWeights,
-                minAmountsOut,
-                bptTotalSupply,
-                swapFee
-            );
-            if (bptAmountOut > collaterals[0].amount) {
-                // This case is when slippage is exceeded
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
-                service.close(0, data);
-            } else {
-                uint256 initialDaiBalance = dai.balanceOf(address(service));
-                uint256 initialWethBalance = weth.balanceOf(address(service));
-                service.close(0, data);
-                // collateral tokens have been burned
-                assertTrue(IERC20(balancerPoolAddress).totalSupply() == bptTotalSupply - collaterals[0].amount);
-                // min amounts out are respected
-                assertTrue(dai.balanceOf(address(service)) >= initialDaiBalance + minAmountsOut[0]);
-                assertTrue(weth.balanceOf(address(service)) >= initialWethBalance + minAmountsOut[1]);
-            }
-        } else {
-            service.close(0, data);
+    function _upscaleArray(uint256[] memory array) internal view {
+        for (uint256 i = 0; i < loanLength; i++) {
+            // Tokens with more than 18 decimals are not supported.
+            uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
+            array[i] *= 10**decimalsDifference;
         }
     }
 
-    function testQuote(
-        uint256 daiAmount,
-        uint256 daiLoan,
-        uint256 daiMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        (daiAmount, daiMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
-            daiAmount,
-            daiMargin,
-            wethAmount,
-            wethMargin
-        );
-        daiLoan = daiLoan % daiAmount;
-        wethLoan = wethLoan % wethAmount;
-        IService.Order memory order = _createOrder(daiLoan, daiMargin, wethLoan, wethMargin);
-
-        service.open(order);
-
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collateral,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(1);
-
-        IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
-
-        (uint256[] memory profits, ) = service.quote(agreement);
-    }
-
-    // testAddPool() public {
-
-    // }
-
-    // testRemovePool() public {
-
-    // }
-}
-
-contract BalancerServiceWeightedOHMWETH is PRBTest, StdCheats, BaseServiceTest {
-    using GeneralMath for uint256;
-
-    IManager internal immutable manager;
-    BalancerService internal immutable service;
-    IERC20 internal constant ohm = IERC20(0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5);
-    address internal constant ohmWhale = 0x64C0fe73Dff66a8b9b803A1796082a575899DD26;
-    IERC20 internal constant weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address internal constant wethWhale = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
-    address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    // address internal constant auraBooster = 0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10;
-    // Pool 50 OHM - 50 WETH
-    address internal constant balancerPoolAddress = 0xD1eC5e215E8148D76F4460e4097FD3d5ae0A3558;
-    bytes32 internal constant balancerPoolID = 0xd1ec5e215e8148d76f4460e4097fd3d5ae0a35580002000000000000000003d3;
-    address internal constant gauge = address(0);
-    address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
-
-    // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
-
-    // address internal constant auraPoolID = 2;
-
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
-        vm.startPrank(admin);
-        manager = IManager(new Manager());
-        service = new BalancerService(address(manager), balancerVault, bal);
-        vm.stopPrank();
-    }
-
-    function setUp() public {
-        ohm.approve(address(service), type(uint256).max);
-        weth.approve(address(service), type(uint256).max);
-
-        vm.deal(ohmWhale, 1 ether);
-        vm.deal(wethWhale, 1 ether);
-
-        vm.startPrank(admin);
-        // Create Vaults: ohm and WETH
-        manager.create(address(ohm));
-        manager.create(address(weth));
-        // No caps for this service -> 100% of the liquidity can be used initially
-        manager.setCap(address(service), address(ohm), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
-
-        service.addPool(balancerPoolAddress, balancerPoolID, gauge);
-        vm.stopPrank();
-    }
-
-    function _prepareVaultsAndUser(uint256 ohmAmount, uint256 ohmMargin, uint256 wethAmount, uint256 wethMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
-        // Modifications to be sure ohmAmount + ohmMargin <= ohm.balanceOf(ohmWhale) and same for weth
-        ohmAmount = ohmAmount % ohm.balanceOf(ohmWhale);
-        ohmMargin = ohmMargin % (ohm.balanceOf(ohmWhale) - ohmAmount);
-        wethAmount = wethAmount % weth.balanceOf(wethWhale);
-        wethMargin = wethMargin % (weth.balanceOf(wethWhale) - wethAmount);
-        ohmAmount++;
-        wethAmount++;
-
-        // Fill ohm vault
-        IVault ohmVault = IVault(manager.vaults(address(ohm)));
-        vm.startPrank(ohmWhale);
-        ohm.transfer(address(this), ohmMargin);
-        ohm.approve(address(ohmVault), ohmAmount);
-        ohmVault.deposit(ohmAmount, ohmWhale);
-        vm.stopPrank();
-
-        // Fill WETH vault
-        IVault wethVault = IVault(manager.vaults(address(weth)));
-        vm.startPrank(wethWhale);
-        weth.transfer(address(this), wethMargin);
-        weth.approve(address(wethVault), wethAmount);
-        wethVault.deposit(wethAmount, wethWhale);
-        vm.stopPrank();
-        return (ohmAmount, ohmMargin, wethAmount, wethMargin);
-    }
-
-    function _createOrder(uint256 ohmLoan, uint256 ohmMargin, uint256 wethLoan, uint256 wethMargin)
-        internal
-        returns (IService.Order memory)
-    {
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(ohm);
-        tokens[1] = address(weth);
-
-        uint256[] memory loans = new uint256[](2);
-        loans[0] = ohmLoan;
-        loans[1] = wethLoan;
-
-        uint256[] memory margins = new uint256[](2);
-        margins[0] = ohmMargin;
-        margins[1] = wethMargin;
-
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
-
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = balancerPoolAddress;
-
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = 0;
-
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
-            block.timestamp,
-            ""
-        );
-        return order;
-    }
-
-    function _openOrder(
-        uint256 ohmAmount,
-        uint256 ohmLoan,
-        uint256 ohmMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal returns (uint256, uint256, uint256, uint256, uint256, uint256) {
-        (ohmAmount, ohmMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
-            ohmAmount,
-            ohmMargin,
-            wethAmount,
-            wethMargin
-        );
-        // Loan must be less than amount otherwise Vault will revert
-        // Since ohmAmount > 0 and wethAmount > 0, the following does not revert for division by zero
-        ohmLoan = ohmLoan % ohmAmount;
-        wethLoan = wethLoan % wethAmount;
-        IService.Order memory order = _createOrder(ohmLoan, ohmMargin, wethLoan, wethMargin);
-
-        service.open(order);
-        return (ohmAmount, ohmLoan, ohmMargin, wethAmount, wethLoan, wethMargin);
-    }
-
-    function testOpen(
-        uint256 ohmAmount,
-        uint256 ohmLoan,
-        uint256 ohmMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        uint256 timestamp = block.timestamp;
-        (ohmAmount, ohmLoan, ohmMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
-            ohmAmount,
-            ohmLoan,
-            ohmMargin,
-            wethAmount,
-            wethLoan,
-            wethMargin
-        );
-
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collateral,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(1);
-
-        assertTrue(loan[0].token == address(ohm));
-        assertTrue(loan[0].amount == ohmLoan);
-        assertTrue(loan[0].margin == ohmMargin);
-        assertTrue(loan[1].token == address(weth));
-        assertTrue(loan[1].amount == wethLoan);
-        assertTrue(loan[1].margin == wethMargin);
-        assertTrue(collateral[0].token == balancerPoolAddress);
-        assertTrue(collateral[0].identifier == 0);
-        assertTrue(collateral[0].itemType == IService.ItemType.ERC20);
-        assertTrue(createdAt == timestamp);
-        assertTrue(status == IService.Status.OPEN);
-    }
-
-    function testClose(
-        uint256 ohmAmount,
-        uint256 ohmLoan,
-        uint256 ohmMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin,
-        uint256 minAmountsOutohm,
-        uint256 minAmountsOutWeth
-    ) public {
-        (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-        // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOutohm <= totalBalances[0]);
-        vm.assume(minAmountsOutWeth <= totalBalances[1]);
-        (ohmAmount, ohmLoan, ohmMargin, wethAmount, wethLoan, wethMargin) = _openOrder(
-            ohmAmount,
-            ohmLoan,
-            ohmMargin,
-            wethAmount,
-            wethLoan,
-            wethMargin
-        );
-
-        uint256[] memory minAmountsOut = new uint256[](2);
-        // Fees make the initial investment always at a loss
-        // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = minAmountsOutohm;
-        minAmountsOut[1] = minAmountsOutWeth;
-        bytes memory data = abi.encode(minAmountsOut);
-
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-        bool slippageEnforced = minAmountsOutohm > ohmLoan && minAmountsOutWeth > wethLoan;
-        if (slippageEnforced) {
-            uint256[] memory normalizedWeights = IBalancerPool(balancerPoolAddress).getNormalizedWeights();
-            (, totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-            uint256 bptTotalSupply = IERC20(balancerPoolAddress).totalSupply();
-            uint256 bptAmountOut = WeightedMath._calcBptInGivenExactTokensOut(
-                totalBalances,
-                normalizedWeights,
-                minAmountsOut,
-                bptTotalSupply,
-                IBalancerPool(balancerPoolAddress).getSwapFeePercentage()
-            );
-            if (bptAmountOut > collaterals[0].amount) {
-                // This case is when slippage is exceeded
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
-                service.close(0, data);
-            } else {
-                uint256 initialohmBalance = ohm.balanceOf(address(service));
-                uint256 initialWethBalance = weth.balanceOf(address(service));
-                service.close(0, data);
-                // collateral tokens have been burned
-                assertTrue(IERC20(balancerPoolAddress).totalSupply() == bptTotalSupply - collaterals[0].amount);
-                // min amounts out are respected
-                assertTrue(ohm.balanceOf(address(service)) >= initialohmBalance + minAmountsOut[0]);
-                assertTrue(weth.balanceOf(address(service)) >= initialWethBalance + minAmountsOut[1]);
-            }
-        } else {
-            service.close(0, data);
+    function _downscaleArray(uint256[] memory array) internal view {
+        for (uint256 i = 0; i < loanLength; i++) {
+            // Tokens with more than 18 decimals are not supported.
+            uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
+            array[i] /= 10**decimalsDifference;
         }
     }
 
-    function testQuote(
-        uint256 ohmAmount,
-        uint256 ohmLoan,
-        uint256 ohmMargin,
-        uint256 wethAmount,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) public {
-        (ohmAmount, ohmMargin, wethAmount, wethMargin) = _prepareVaultsAndUser(
-            ohmAmount,
-            ohmMargin,
-            wethAmount,
-            wethMargin
+    function _modifyBalancesWithFees(uint256[] memory balances, uint256[] memory normalizedWeights) internal view {
+        _upscaleArray(balances);
+        uint256 invariantBeforeJoin = WeightedMath._calculateInvariant(normalizedWeights, balances);
+        uint256 lastInvariant = IBalancerPool(collateralTokens[0]).getLastInvariant();
+
+        (, bytes memory feesData) = IBalancerVault(balancerVault).getProtocolFeesCollector().staticcall(
+            abi.encodeWithSignature("getSwapFeePercentage()")
         );
-        ohmLoan = ohmLoan % ohmAmount;
-        wethLoan = wethLoan % wethAmount;
-        IService.Order memory order = _createOrder(ohmLoan, ohmMargin, wethLoan, wethMargin);
+        uint256 protocolSwapFees = abi.decode(feesData, (uint256));
+        uint256 maxWeightTokenIndex = 0;
 
-        service.open(order);
+        for (uint256 i = 1; i < loanLength; i++) {
+            if (normalizedWeights[i] > normalizedWeights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
+        }
 
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collateral,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(1);
+        uint256[] memory dueProtocolFeeAmounts = new uint256[](loanLength);
+        dueProtocolFeeAmounts[maxWeightTokenIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
+            balances[maxWeightTokenIndex],
+            normalizedWeights[maxWeightTokenIndex],
+            lastInvariant,
+            invariantBeforeJoin,
+            protocolSwapFees
+        );
 
-        IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
-
-        (uint256[] memory profits, ) = service.quote(agreement);
+        balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
     }
 
-    // testAddPool() public {
-
-    // }
-
-    // testRemovePool() public {
-
-    // }
-}
-
-contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceTest {
-    using GeneralMath for uint256;
-
-    IManager internal immutable manager;
-    BalancerService internal immutable service;
-    IERC20 internal constant lusd = IERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
-    address internal constant lusdWhale = 0x954f2a8b86Aa586c3Cc3a2088B72e2a560D7Dc22;
-    IERC20 internal constant lqty = IERC20(0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D);
-    address internal constant lqtyWhale = 0x954f2a8b86Aa586c3Cc3a2088B72e2a560D7Dc22;
-    IERC20 internal constant weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address internal constant wethWhale = 0x2fEb1512183545f48f6b9C5b4EbfCaF49CfCa6F3;
-    address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    // address internal constant auraBooster = 0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10;
-    // Pool 33 LUSD - 33 LQTY - 33 WETH
-    address internal constant balancerPoolAddress = 0x5512A4bbe7B3051f92324bAcF25C02b9000c4a50;
-    bytes32 internal constant balancerPoolID = 0x5512a4bbe7b3051f92324bacf25c02b9000c4a500001000000000000000003d7;
-    address internal constant gauge = address(0);
-    address internal constant bal = 0xba100000625a3754423978a60c9317c58a424e3D;
-
-    // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
-
-    // address internal constant auraPoolID = 2;
-
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
-        vm.startPrank(admin);
-        manager = IManager(new Manager());
-        service = new BalancerService(address(manager), balancerVault, bal);
-        vm.stopPrank();
-    }
-
-    function setUp() public {
-        lusd.approve(address(service), type(uint256).max);
-        lqty.approve(address(service), type(uint256).max);
-        weth.approve(address(service), type(uint256).max);
-
-        vm.deal(lusdWhale, 1 ether);
-        vm.deal(lqtyWhale, 1 ether);
-        vm.deal(wethWhale, 1 ether);
-
-        vm.startPrank(admin);
-        // Create Vaults: lusd and WETH
-        manager.create(address(lusd));
-        manager.create(address(lqty));
-        manager.create(address(weth));
-
-        // No caps for this service -> 100% of the liquidity can be used initially
-        manager.setCap(address(service), address(lusd), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(lqty), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
-
-        service.addPool(balancerPoolAddress, balancerPoolID, gauge);
-        vm.stopPrank();
-    }
-
-    function _prepareVaultsAndUser(uint256 lusdMargin, uint256 lqtyMargin, uint256 wethMargin)
+    function _calculateExpectedBPTFromJoin(uint256[] memory balances, uint256[] memory amountsIn)
         internal
-        returns (uint256, uint256, uint256)
+        view
+        returns (uint256)
     {
-        // Modifications to be sure lusdAmount + lusdMargin <= lusd.balanceOf(lusdWhale) and same for weth
-        lusdMargin = lusdMargin % lusd.balanceOf(lusdWhale);
-        lqtyMargin = lqtyMargin % lqty.balanceOf(lqtyWhale);
-        wethMargin = wethMargin % weth.balanceOf(wethWhale);
-
-        // Fill lusd vault
-        IVault lusdVault = IVault(manager.vaults(address(lusd)));
-        vm.startPrank(lusdWhale);
-        lusd.approve(address(lusdVault), lusd.balanceOf(lusdWhale) - lusdMargin);
-        lusdVault.deposit(lusd.balanceOf(lusdWhale) - lusdMargin, lusdWhale);
-        lusd.transfer(address(this), lusdMargin);
-        vm.stopPrank();
-
-        // Fill lqty vault
-        IVault lqtyVault = IVault(manager.vaults(address(lqty)));
-        vm.startPrank(lqtyWhale);
-        lqty.approve(address(lqtyVault), lqty.balanceOf(lqtyWhale) - lqtyMargin);
-        lqtyVault.deposit(lqty.balanceOf(lqtyWhale) - lqtyMargin, lqtyWhale);
-        lqty.transfer(address(this), lqtyMargin);
-        vm.stopPrank();
-
-        // Fill WETH vault
-        IVault wethVault = IVault(manager.vaults(address(weth)));
-        vm.startPrank(wethWhale);
-        weth.approve(address(wethVault), weth.balanceOf(wethWhale) - wethMargin);
-        wethVault.deposit(weth.balanceOf(wethWhale) - wethMargin, wethWhale);
-        weth.transfer(address(this), wethMargin);
-        vm.stopPrank();
-        return (lusdMargin, lqtyMargin, wethMargin);
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        _modifyBalancesWithFees(balances, normalizedWeights);
+        _upscaleArray(amountsIn);
+        uint256 amountOut = WeightedMath._calcBptOutGivenExactTokensIn(
+            balances,
+            normalizedWeights,
+            amountsIn,
+            IERC20(collateralTokens[0]).totalSupply(),
+            IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
+        );
+        _downscaleArray(amountsIn);
+        _downscaleArray(balances);
+        return amountOut;
     }
 
-    function _createOrder(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal returns (IService.Order memory) {
-        address[] memory tokens = new address[](3);
-        tokens[0] = address(lusd);
-        tokens[1] = address(lqty);
-        tokens[2] = address(weth);
+    function _calculateExpectedBPTToExit(uint256[] memory balances, uint256[] memory amountsOut)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        _modifyBalancesWithFees(balances, normalizedWeights);
+        _upscaleArray(amountsOut);
+        uint256 expectedBpt = WeightedMath._calcBptInGivenExactTokensOut(
+            balances,
+            normalizedWeights,
+            amountsOut,
+            IERC20(collateralTokens[0]).totalSupply(),
+            IBalancerPool(collateralTokens[0]).getSwapFeePercentage()
+        );
+        _downscaleArray(amountsOut);
+        _downscaleArray(balances);
+        return expectedBpt;
+    }
 
-        uint256[] memory loans = new uint256[](3);
-        loans[0] = lusdLoan;
-        loans[1] = lqtyLoan;
-        loans[2] = wethLoan;
+    function _calculateExpectedTokensFromBPT(uint256[] memory balances, uint256 amount, uint256 totalSupply)
+        internal
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
+        _modifyBalancesWithFees(balances, normalizedWeights);
+        uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);
+        _downscaleArray(balances);
+        _downscaleArray(expectedTokens);
+        return expectedTokens;
+    }
 
-        uint256[] memory margins = new uint256[](3);
-        margins[0] = lusdMargin;
-        margins[1] = lqtyMargin;
-        margins[2] = wethMargin;
-
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
-
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = balancerPoolAddress;
-
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = 0;
-
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
+    function testBalancerIntegrationOpenPosition(
+        uint256 loan0,
+        uint256 margin0,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 loan2,
+        uint256 margin2
+    ) public {
+        IService.Order memory order = _openOrder3(
+            loan0,
+            margin0,
+            loan1,
+            margin1,
+            loan2,
+            margin2,
+            0,
             block.timestamp,
             ""
         );
-        return order;
-    }
-
-    function _openOrder(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal returns (uint256, uint256, uint256, uint256, uint256, uint256) {
-        (lusdMargin, lqtyMargin, wethMargin) = _prepareVaultsAndUser(lusdMargin, lqtyMargin, wethMargin);
-        // Loan must be less than amount otherwise Vault will revert
-        // Since lusdAmount > 0 and wethAmount > 0, the following does not revert for division by zero
-        lusdLoan = lusdLoan % lusd.balanceOf(manager.vaults(address(lusd)));
-        lqtyLoan = lqtyLoan % lqty.balanceOf(manager.vaults(address(lqty)));
-        wethLoan = wethLoan % weth.balanceOf(manager.vaults(address(weth)));
-        IService.Order memory order = _createOrder(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
-
+        uint256[] memory amountsIn = new uint256[](loanLength);
+        for (uint256 i = 0; i < loanLength; i++)
+            amountsIn[i] = order.agreement.loans[i].amount + order.agreement.loans[i].margin;
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        uint256 expectedTokens = _calculateExpectedBPTFromJoin(balances, amountsIn);
         service.open(order);
-        return (lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+
+        assertEq(collaterals[0].amount, expectedTokens);
+        // Gauge token is 1:1 both at deposit and withdraw
+        assertEq(IERC20(gauge).balanceOf(address(service)), expectedTokens);
     }
 
-    function testOpen(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin
+    function testBalancerIntegrationClosePosition(
+        uint256 loan0,
+        uint256 margin0,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 loan2,
+        uint256 margin2,
+        uint256 minAmountsOut0,
+        uint256 minAmountsOut1,
+        uint256 minAmountsOut2
     ) public {
-        uint256 timestamp = block.timestamp;
-        (lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin) = _openOrder(
-            lusdLoan,
-            lusdMargin,
-            lqtyLoan,
-            lqtyMargin,
-            wethLoan,
-            wethMargin
-        );
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collateral,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(1);
+        testBalancerIntegrationOpenPosition(loan0, margin0, loan1, margin1, loan2, margin2);
 
-        assertTrue(loan[0].token == address(lusd));
-        assertTrue(loan[0].amount == lusdLoan);
-        assertTrue(loan[0].margin == lusdMargin);
-        assertTrue(loan[1].token == address(lqty));
-        assertTrue(loan[1].amount == lqtyLoan);
-        assertTrue(loan[1].margin == lqtyMargin);
-        assertTrue(loan[2].token == address(weth));
-        assertTrue(loan[2].amount == wethLoan);
-        assertTrue(loan[2].margin == wethMargin);
-        assertTrue(collateral[0].token == balancerPoolAddress);
-        assertTrue(collateral[0].identifier == 0);
-        assertTrue(collateral[0].itemType == IService.ItemType.ERC20);
-        assertTrue(createdAt == timestamp);
-        assertTrue(status == IService.Status.OPEN);
-    }
-
-    function testClose(
-        uint256 lusdLoan,
-        uint256 lusdMargin,
-        uint256 lqtyLoan,
-        uint256 lqtyMargin,
-        uint256 wethLoan,
-        uint256 wethMargin,
-        uint256 minAmountsOutlusd,
-        uint256 minAmountsOutlqty,
-        uint256 minAmountsOutWeth
-    ) public {
         (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-        // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOutlusd <= totalBalances[0]);
-        vm.assume(minAmountsOutlqty <= totalBalances[1]);
-        vm.assume(minAmountsOutWeth <= totalBalances[2]);
-        (lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin) = _openOrder(
-            lusdLoan,
-            lusdMargin,
-            lqtyLoan,
-            lqtyMargin,
-            wethLoan,
-            wethMargin
-        );
+        // this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
+        vm.assume(minAmountsOut0 <= totalBalances[0]);
+        vm.assume(minAmountsOut1 <= totalBalances[1]);
+        vm.assume(minAmountsOut2 <= totalBalances[2]);
+
+        uint256[] memory initialBalances = new uint256[](loanLength);
+        for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
+
+        uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
 
         uint256[] memory minAmountsOut = new uint256[](3);
         // Fees make the initial investment always at a loss
-        // In this test we allow any loss: quoter tests will make this more precise
-        minAmountsOut[0] = minAmountsOutlusd;
-        minAmountsOut[1] = minAmountsOutlqty;
-        minAmountsOut[2] = minAmountsOutWeth;
+        minAmountsOut[0] = minAmountsOut0;
+        minAmountsOut[1] = minAmountsOut1;
+        minAmountsOut[2] = minAmountsOut2;
         bytes memory data = abi.encode(minAmountsOut);
-
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-        bool slippageEnforced = minAmountsOutlusd > lusdLoan &&
-            minAmountsOutlqty > lqtyLoan &&
-            minAmountsOutWeth > wethLoan;
-        if (slippageEnforced) {
-            uint256[] memory normalizedWeights = IBalancerPool(balancerPoolAddress).getNormalizedWeights();
-            (, totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-            uint256 swapFee = IBalancerPool(balancerPoolAddress).getSwapFeePercentage();
-            uint256 bptTotalSupply = IERC20(balancerPoolAddress).totalSupply();
-            uint256 bptAmountOut = WeightedMath._calcBptInGivenExactTokensOut(
-                totalBalances,
-                normalizedWeights,
-                minAmountsOut,
-                bptTotalSupply,
-                swapFee
-            );
-            if (bptAmountOut > collaterals[0].amount) {
-                // This case is when slippage is exceeded
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
-                service.close(0, data);
-            } else {
-                uint256 initiallusdBalance = lusd.balanceOf(address(service));
-                uint256 initiallqtyBalance = lqty.balanceOf(address(service));
-                uint256 initialWethBalance = weth.balanceOf(address(service));
-                service.close(0, data);
-                // collateral tokens have been burned
-                assertTrue(IERC20(balancerPoolAddress).totalSupply() == bptTotalSupply - collaterals[0].amount);
-                // min amounts out are respected
-                assertTrue(lusd.balanceOf(address(service)) >= initiallusdBalance + minAmountsOut[0]);
-                assertTrue(lqty.balanceOf(address(service)) >= initiallqtyBalance + minAmountsOut[1]);
-                assertTrue(weth.balanceOf(address(service)) >= initialWethBalance + minAmountsOut[2]);
-            }
-        } else {
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        if (
+            minAmountsOut0 > actualLoans[0].amount &&
+            minAmountsOut1 > actualLoans[1].amount &&
+            minAmountsOut2 > actualLoans[2].amount &&
+            _calculateExpectedBPTToExit(balances, minAmountsOut) > collaterals[0].amount
+        ) {
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
             service.close(0, data);
+        } else {
+            for (uint256 i = 0; i < loanLength; i++) {
+                minAmountsOut[i] = GeneralMath.max(minAmountsOut[i], actualLoans[i].amount);
+            }
+
+            uint256 firstStep = _calculateExpectedBPTToExit(balances, minAmountsOut);
+            if (firstStep > collaterals[0].amount) {
+                // In this case we must annihilate minAmountsOut to obtain correct assertEq at the end
+                firstStep = 0;
+                minAmountsOut = new uint256[](loanLength);
+            } else {
+                for (uint256 i = 0; i < loanLength; i++) {
+                    balances[i] -= minAmountsOut[i];
+                }
+            }
+            uint256[] memory finalAmounts = _calculateExpectedTokensFromBPT(
+                balances,
+                collaterals[0].amount - firstStep,
+                bptTotalSupply - firstStep
+            );
+            service.close(0, data);
+            // total supply as expected
+            assertEq(IERC20(collateralTokens[0]).totalSupply(), bptTotalSupply - collaterals[0].amount);
+            // min amounts out are respected
+            for (uint256 i = 0; i < loanLength; i++) {
+                // If firstStep = 0, minAmountsOut are also zero
+                assertEq(
+                    IERC20(loanTokens[i]).balanceOf(address(service)),
+                    initialBalances[i] + minAmountsOut[i] + finalAmounts[i]
+                );
+            }
         }
     }
 
-    function testQuote(
+    function testBalancerIntegrationQuoter(
         uint256 lusdLoan,
         uint256 lusdMargin,
         uint256 lqtyLoan,
@@ -890,14 +305,7 @@ contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceT
         uint256 wethLoan,
         uint256 wethMargin
     ) public {
-        (lusdMargin, lqtyMargin, wethMargin) = _prepareVaultsAndUser(lusdMargin, lqtyMargin, wethMargin);
-        lusdLoan = lusdLoan % lusd.balanceOf(manager.vaults(address(lusd)));
-        lqtyLoan = lqtyLoan % lqty.balanceOf(manager.vaults(address(lqty)));
-        wethLoan = wethLoan % weth.balanceOf(manager.vaults(address(weth)));
-        IService.Order memory order = _createOrder(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
-
-        service.open(order);
-
+        testBalancerIntegrationOpenPosition(lusdLoan, lusdMargin, lqtyLoan, lqtyMargin, wethLoan, wethMargin);
         (
             IService.Loan[] memory loan,
             IService.Collateral[] memory collateral,
@@ -910,11 +318,5 @@ contract BalancerServiceWeightedLUSDLQTYWETH is PRBTest, StdCheats, BaseServiceT
         (uint256[] memory profits, ) = service.quote(agreement);
     }
 
-    // testAddPool() public {
-
-    // }
-
-    // testRemovePool() public {
-
-    // }
+    // TODO test quoter
 }

@@ -7,13 +7,13 @@ import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Curve pool plus staking on Convex
-contract CurveConvexService is SecuritisableService {
+contract CurveConvexService is DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -37,12 +37,12 @@ contract CurveConvexService is SecuritisableService {
     IERC20 internal immutable crv;
     IERC20 internal immutable cvx;
 
-    constructor(address _manager, address _booster, address _cvx)
+    constructor(address _manager, address _booster, address _crv, address _cvx)
         Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
     {
         booster = IConvexBooster(_booster);
         cvx = IERC20(_cvx);
-        crv = IERC20(booster.crv());
+        crv = IERC20(_crv);
     }
 
     function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
@@ -53,26 +53,34 @@ contract CurveConvexService is SecuritisableService {
 
         agreement.collaterals[0].amount = IERC20(agreement.collaterals[0].token).balanceOf(address(this));
 
-        if (!booster.deposit(pool.convex, agreement.collaterals[0].amount, true)) revert ConvexStakingFailed();
+        if (!booster.deposit(pool.convex, agreement.collaterals[0].amount)) revert ConvexStakingFailed();
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
-        _harvest(pool, agreement.loans[0].token); /// @todo loans[0] or loans[n]?
+        _harvest(pool, agreement.collaterals[0].amount);
 
-        pool.baseRewardPool.withdrawAndUnwrap(agreement.collaterals[0].amount, false);
-
-        uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement);
+        pool.baseRewardPool.withdraw(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
+
+        // TODO swap CRV and CVX for collateral tokens
     }
 
-    function _harvest(PoolData memory pool, address wanted) internal {
-        pool.baseRewardPool.getReward(address(this), true);
+    function _harvest(PoolData memory pool, uint256 ownership) internal {
+        // TODO check
+
+        IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(pool.convex);
+        // Total base rewards token
+        // If they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
+        uint256 totalOwnership = IERC20(poolInfo.rewards).balanceOf(address(this));
+        pool.baseRewardPool.getReward(address(this));
 
         for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
-            /// @todo swap reward for notional
+            IERC20 token = IERC20(pool.rewardTokens[i]);
+
+            token.safeTransfer(msg.sender, token.balanceOf(address(this)).safeMulDiv(ownership, totalOwnership));
         }
     }
 
@@ -81,20 +89,20 @@ contract CurveConvexService is SecuritisableService {
 
         uint256[] memory quoted = new uint256[](agreement.loans.length);
         uint256[] memory fees = new uint256[](agreement.loans.length);
-        uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement);
+        uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             // This is literally Curve's code, therefore we do NOT use GeneralMath
             quoted[index] =
                 (balances[index] * agreement.collaterals[0].amount) /
                 IERC20(agreement.collaterals[0].token).totalSupply();
         }
+
+        // TODO consider CRV and CVX when quoting
+
         return (quoted, fees);
     }
 
-    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens, address[] calldata rewardTokens)
-        external
-        onlyOwner
-    {
+    function addPool(address curvePool, uint256 convexPid, address[] calldata tokens) external onlyOwner {
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(convexPid);
         assert(!poolInfo.shutdown);
 
@@ -115,13 +123,13 @@ contract CurveConvexService is SecuritisableService {
         // Allow Convex to take Curve LP tokens
         IERC20(poolInfo.lptoken).safeApprove(address(booster), type(uint256).max);
 
-        pools[poolInfo.lptoken] = PoolData(
-            curvePool,
-            convexPid,
-            IBaseRewardPool(poolInfo.crvRewards),
-            tokens,
-            rewardTokens
-        );
+        // Add reward tokens
+        IBaseRewardPool rewardPool = IBaseRewardPool(poolInfo.rewards);
+        length = rewardPool.rewardLength();
+        address[] memory rewardTokens = new address[](length);
+        for (uint256 i = 0; i < length; i++) rewardTokens[i] = rewardPool.rewards(i);
+
+        pools[poolInfo.lptoken] = PoolData(curvePool, convexPid, rewardPool, tokens, rewardTokens);
 
         emit PoolWasAdded(curvePool, convexPid);
     }
@@ -130,7 +138,6 @@ contract CurveConvexService is SecuritisableService {
         PoolData memory pool = pools[token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
-        ICurvePool curve = ICurvePool(pool.curve);
         uint256 length = pool.tokens.length;
         for (uint256 i = 0; i < length; i++) {
             // Remove Curve pool allowance
@@ -141,13 +148,4 @@ contract CurveConvexService is SecuritisableService {
 
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
-
-    /*
-    function quote(uint256 amount) public view override returns (uint256) {
-        PoolData memory pool = pools[token];
-        if (pool.tokens.length == 0) revert InexistentPool();
-
-        return CurveHelper.quote(pool.curve, amount);
-    }
-    */
 }

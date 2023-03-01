@@ -3,251 +3,178 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
+import { ICurvePool } from "../../src/interfaces/external/curve/ICurvePool.sol";
+import { IConvexBooster } from "../../src/interfaces/external/convex/IConvexBooster.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { CurveConvexService } from "../../src/services/debit/CurveConvexService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseServiceTest } from "./BaseServiceTest.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { Helper } from "./Helper.sol";
 
-contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest {
-    IManager internal immutable manager;
+contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     CurveConvexService internal immutable service;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
-    address internal constant cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address internal constant crv = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
+    address internal constant cvx = 0xb952A807345991BD529FDded05009F5e80Fe8F45;
 
-    // OHM-wbtc
-    address internal constant curvePool = 0x93054188d876f558f4a66B2EF1d97d16eDf0895B;
-    address internal constant curveLpToken = 0x49849C98ae39Fff122806C06791Fa73784FB3675;
-    uint256 internal constant convexPid = 6;
+    address internal constant curvePool = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
+    uint256 internal constant convexPid = 1;
 
-    IERC20 internal constant renBTC = IERC20(0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D);
-    address internal constant renBTCWhale = 0xaAde032DC41DbE499deBf54CFEe86d13358E9aFC;
-    IERC20 internal constant wbtc = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-    address internal constant wbtcWhale = 0x218B95BE3ed99141b0144Dba6cE88807c4AD7C09;
+    string internal constant rpcUrl = "ARBITRUM_RPC_URL";
+    uint256 internal constant blockNumber = 55895589;
 
-    constructor() {
-        uint256 forkId = vm.createFork(vm.envString("MAINNET_RPC_URL"), 16448665);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-
+    constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        manager = IManager(new Manager());
-        service = new CurveConvexService(address(manager), convexBooster, cvx);
+        service = new CurveConvexService(address(manager), convexBooster, crv, cvx);
         vm.stopPrank();
+        loanLength = 2;
+        loanTokens = new address[](loanLength);
+        collateralTokens = new address[](1);
+        loanTokens[0] = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc
+        loanTokens[1] = 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9; // usdt
+        whales[loanTokens[0]] = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+        whales[loanTokens[1]] = 0x0D0707963952f2fBA59dD06f2b425ace40b492Fe;
+        collateralTokens[0] = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
+        serviceAddress = address(service);
     }
 
-    function setUp() public {
-        renBTC.approve(address(service), type(uint256).max);
-        wbtc.approve(address(service), type(uint256).max);
-
-        vm.deal(renBTCWhale, 1 ether);
-        vm.deal(wbtcWhale, 1 ether);
-
-        vm.startPrank(admin);
-        manager.create(address(renBTC));
-        manager.create(address(wbtc));
-        manager.setCap(address(service), address(renBTC), GeneralMath.RESOLUTION);
-        manager.setCap(address(service), address(wbtc), GeneralMath.RESOLUTION);
-
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(renBTC);
-        tokens[1] = address(wbtc);
-
-        service.addPool(curvePool, convexPid, tokens, new address[](0));
-        vm.stopPrank();
+    function setUp() public virtual override {
+        super.setUp();
+        vm.prank(admin);
+        service.addPool(curvePool, convexPid, loanTokens);
     }
 
-    function _prepareVaultsAndUser(uint256 renBTCAmount, uint256 renBTCMargin, uint256 wbtcAmount, uint256 wbtcMargin)
-        internal
-        returns (uint256, uint256, uint256, uint256)
-    {
-        // Modifications to be sure renBTCAmount + renBTCMargin <= renBTC.balanceOf(renBTCWhale) and same for wbtc
-        renBTCAmount = renBTCAmount % renBTC.balanceOf(renBTCWhale);
-        renBTCMargin = renBTCMargin % (renBTC.balanceOf(renBTCWhale) - renBTCAmount);
-        wbtcAmount = wbtcAmount % wbtc.balanceOf(wbtcWhale);
-        wbtcMargin = wbtcMargin % (wbtc.balanceOf(wbtcWhale) - wbtcAmount);
-
-        // add_liquidity() of the curve pool gives an EVM error when depositing 0
-        // we enforce the amount to be at least 1
-
-        renBTCAmount++;
-        wbtcAmount++;
-        renBTCMargin++;
-        wbtcMargin++;
-
-        // Fill renBTC vault
-        IVault renBTCVault = IVault(manager.vaults(address(renBTC)));
-        vm.startPrank(renBTCWhale);
-        renBTC.transfer(address(this), renBTCMargin);
-        renBTC.approve(address(renBTCVault), renBTCAmount);
-        renBTCVault.deposit(renBTCAmount, renBTCWhale);
-        vm.stopPrank();
-
-        // Fill wbtc vault
-        IVault wbtcVault = IVault(manager.vaults(address(wbtc)));
-        vm.startPrank(wbtcWhale);
-        wbtc.transfer(address(this), wbtcMargin);
-        wbtc.approve(address(wbtcVault), wbtcAmount);
-        wbtcVault.deposit(wbtcAmount, wbtcWhale);
-        vm.stopPrank();
-        return (renBTCAmount, renBTCMargin, wbtcAmount, wbtcMargin);
+    // _A()
+    function _calculateA() internal view returns (uint256) {
+        (, bytes memory t1Data) = curvePool.staticcall(abi.encodeWithSignature("future_A_time()"));
+        uint256 t1 = abi.decode(t1Data, (uint256));
+        (, bytes memory a1Data) = curvePool.staticcall(abi.encodeWithSignature("future_A()"));
+        uint256 a1 = abi.decode(a1Data, (uint256));
+        if (block.timestamp < t1) {
+            (, bytes memory t0Data) = curvePool.staticcall(abi.encodeWithSignature("initial_A_time()"));
+            uint256 t0 = abi.decode(t0Data, (uint256));
+            (, bytes memory a0Data) = curvePool.staticcall(abi.encodeWithSignature("initial_A()"));
+            uint256 a0 = abi.decode(a0Data, (uint256));
+            if (a1 > a0) return a0 + ((a1 - a0) * (block.timestamp - t0)) / (t1 - t0);
+            else return a0 - ((a0 - a1) * (block.timestamp - t0)) / (t1 - t0);
+        } else return a1;
     }
 
-    function _createOrder(uint256 renBTCLoan, uint256 renBTCMargin, uint256 wbtcLoan, uint256 wbtcMargin)
-        internal
-        returns (IService.Order memory)
-    {
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(renBTC);
-        tokens[1] = address(wbtc);
+    error EndOfLoop();
 
-        uint256[] memory loans = new uint256[](2);
-        loans[0] = renBTCLoan;
-        loans[1] = wbtcLoan;
+    function _getDMem(uint256[2] memory balances) internal view returns (uint256) {
+        uint256[2] memory xpmem = [balances[0] * 10**12, balances[1] * 10**12];
+        uint256 s = xpmem[0] + xpmem[1];
+        uint256 d = s;
+        uint256 ann = _calculateA() * 2;
+        for (uint i = 0; i < 256; i++) {
+            uint256 dp = (((d * d) / xpmem[0]) * d) / xpmem[1] / 4; // Curve allows division by zero: "borking"
+            uint256 dprev = d;
+            d = (((ann * s) / 100 + dp * 2) * d) / (((ann - 100) * d) / 100 + 3 * dp);
+            if (d > dprev) {
+                if (d - dprev <= 1) return d;
+            } else if (dprev - d <= 1) return d;
+        }
+        revert EndOfLoop();
+    }
 
-        uint256[] memory margins = new uint256[](2);
-        margins[0] = renBTCMargin;
-        margins[1] = wbtcMargin;
+    function _getBalances(int128 index) internal view returns (uint256) {
+        uint256 balanceData = 0;
 
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
+        try ICurvePool(curvePool).balances(index) returns (uint256 val) {
+            balanceData = val;
+        } catch {
+            balanceData = ICurvePool(curvePool).balances(uint256(uint128(index)));
+        }
 
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = curveLpToken;
+        return balanceData;
+    }
 
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = 0;
+    function _calculateExpectedTokens(uint256 amount0, uint256 amount1) internal view returns (uint256) {
+        uint256[2] memory oldBalances = [_getBalances(0), _getBalances(1)];
+        uint256 d0 = _getDMem([oldBalances[0], oldBalances[1]]);
+        uint256[2] memory newBalances = [oldBalances[0] + amount0, oldBalances[1] + amount1];
+        uint256 d1 = _getDMem([newBalances[0], newBalances[1]]);
+        uint256 d2 = d1;
+        (, bytes memory feeData) = curvePool.staticcall(abi.encodeWithSignature("fee()"));
+        uint256 fee = abi.decode(feeData, (uint256)) / 2;
+        for (uint256 i = 0; i < 2; i++) {
+            uint256 idealBalance = (d1 * oldBalances[i]) / d0;
+            uint256 difference = 0;
+            uint256 newBalance = newBalances[i];
+            if (idealBalance > newBalance) difference = idealBalance - newBalance;
+            else difference = newBalance - idealBalance;
+            newBalances[i] -= (fee * difference) / 10**10;
+        }
+        d2 = _getDMem(newBalances);
+        return (IERC20(collateralTokens[0]).totalSupply() * (d2 - d0)) / d0;
+    }
 
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
+    function _getExtraReward(uint256 index) internal view returns (address) {
+        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
+        (, bytes memory extraRewardData) = poolInfo.rewards.staticcall(
+            abi.encodeWithSignature("extraRewards(uint256)", index)
+        );
+        return abi.decode(extraRewardData, (address));
+    }
+
+    function _getExtraRewardLength() internal view returns (uint256) {
+        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
+        (, bytes memory extraRewardLengthData) = poolInfo.rewards.staticcall(
+            abi.encodeWithSignature("extraRewardsLength()")
+        );
+        return abi.decode(extraRewardLengthData, (uint256));
+    }
+
+    function testCurveConvexOpenPosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public {
+        IService.Order memory order = _openOrder2(
+            amount0,
+            loan0,
+            margin0,
+            amount1,
+            loan1,
+            margin1,
+            0,
             block.timestamp,
             ""
         );
-        return order;
-    }
-
-    function _openOrder(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin
-    ) internal returns (uint256, uint256, uint256, uint256, uint256, uint256) {
-        (renBTCAmount, renBTCMargin, wbtcAmount, wbtcMargin) = _prepareVaultsAndUser(
-            renBTCAmount,
-            renBTCMargin,
-            wbtcAmount,
-            wbtcMargin
+        uint256 expectedCollateral = _calculateExpectedTokens(
+            order.agreement.loans[0].amount + order.agreement.loans[0].margin,
+            order.agreement.loans[1].amount + order.agreement.loans[1].margin
         );
-        // Loan must be less than amount otherwise Vault will revert
-        // Since renBTCAmount > 0 and wbtcAmount > 0, the following does not revert for division by zero
-        renBTCLoan = renBTCLoan % renBTCAmount;
-        wbtcLoan = wbtcLoan % wbtcAmount;
-        IService.Order memory order = _createOrder(renBTCLoan, renBTCMargin, wbtcLoan, wbtcMargin);
-
+        IConvexBooster.PoolInfo memory poolInfo = IConvexBooster(convexBooster).poolInfo(convexPid);
+        uint256 initialBalance = IERC20(collateralTokens[0]).balanceOf(address(service));
+        uint256 initialRewardsBalance = IERC20(poolInfo.rewards).balanceOf(address(service));
         service.open(order);
-        return (renBTCAmount, renBTCLoan, renBTCMargin, wbtcAmount, wbtcLoan, wbtcMargin);
+
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        assertTrue(collaterals[0].amount == expectedCollateral);
+        // No change: all the balance is deposited in Convex
+        assertTrue(IERC20(collateralTokens[0]).balanceOf(address(service)) == initialBalance);
+        assertTrue(IERC20(poolInfo.rewards).balanceOf(address(service)) == initialRewardsBalance + expectedCollateral);
     }
 
-    function testOpen(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin
+    function testCurveConvexClosePosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1,
+        uint256 minAmount1,
+        uint256 minAmount2
     ) public {
-        uint256 timestamp = block.timestamp;
-        (renBTCAmount, renBTCLoan, renBTCMargin, wbtcAmount, wbtcLoan, wbtcMargin) = _openOrder(
-            renBTCAmount,
-            renBTCLoan,
-            renBTCMargin,
-            wbtcAmount,
-            wbtcLoan,
-            wbtcMargin
-        );
-
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collateral,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(1);
-
-        assertTrue(loan[0].token == address(renBTC));
-        assertTrue(loan[0].amount == renBTCLoan);
-        assertTrue(loan[0].margin == renBTCMargin);
-        assertTrue(loan[1].token == address(wbtc));
-        assertTrue(loan[1].amount == wbtcLoan);
-        assertTrue(loan[1].margin == wbtcMargin);
-        assertTrue(collateral[0].token == curveLpToken);
-        assertTrue(collateral[0].identifier == 0);
-        assertTrue(collateral[0].itemType == IService.ItemType.ERC20);
-        assertTrue(createdAt == timestamp);
-        assertTrue(status == IService.Status.OPEN);
-    }
-
-    function testClose(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin,
-        uint256 minAmountsOutrenBTC,
-        uint256 minAmountsOutwbtc
-    ) public {
-        // (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
-        // WARNING: this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        // vm.assume(minAmountsOutrenBTC <= totalBalances[0]);
-        // vm.assume(minAmountsOutwbtc <= totalBalances[1]);
-        (renBTCAmount, renBTCLoan, renBTCMargin, wbtcAmount, wbtcLoan, wbtcMargin) = _openOrder(
-            renBTCAmount,
-            renBTCLoan,
-            renBTCMargin,
-            wbtcAmount,
-            wbtcLoan,
-            wbtcMargin
-        );
-
-        // Allow for any loss
-        // TODO: insert minAmountsOut and use quoter to check for slippage
-        uint256[2] memory minAmountsOut = [uint256(0), uint256(0)];
-        bytes memory data = abi.encode(minAmountsOut);
-
-        service.close(0, data);
-    }
-
-    function testQuote(
-        uint256 renBTCAmount,
-        uint256 renBTCLoan,
-        uint256 renBTCMargin,
-        uint256 wbtcAmount,
-        uint256 wbtcLoan,
-        uint256 wbtcMargin
-    ) public {
-        (renBTCAmount, renBTCMargin, wbtcAmount, wbtcMargin) = _prepareVaultsAndUser(
-            renBTCAmount,
-            renBTCMargin,
-            wbtcAmount,
-            wbtcMargin
-        );
-        renBTCLoan = renBTCLoan % renBTCAmount;
-        wbtcLoan = wbtcLoan % wbtcAmount;
-        IService.Order memory order = _createOrder(renBTCLoan, renBTCMargin, wbtcLoan, wbtcMargin);
-
-        service.open(order);
+        testCurveConvexOpenPosition(amount0, loan0, margin0, amount1, loan1, margin1);
 
         (
             IService.Loan[] memory loan,
@@ -258,69 +185,21 @@ contract CurveConvexServiceTestRenBTCWBTC is PRBTest, StdCheats, BaseServiceTest
 
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
+        uint256[2] memory minAmountsOut = [minAmount1, minAmount2];
+        bytes memory data = abi.encode(minAmountsOut);
+
+        uint256 initialBalance0 = IERC20(loanTokens[0]).balanceOf(address(service));
+        uint256 initialBalance1 = IERC20(loanTokens[1]).balanceOf(address(service));
         (uint256[] memory quoted, ) = service.quote(agreement);
+        if (quoted[0] < minAmount1 || quoted[1] < minAmount2) {
+            vm.expectRevert("Withdrawal resulted in fewer coins than expected");
+            service.close(0, data);
+        } else {
+            service.close(0, data);
+            assertTrue(IERC20(loanTokens[0]).balanceOf(address(service)) == initialBalance0 + quoted[0]);
+            assertTrue(IERC20(loanTokens[1]).balanceOf(address(service)) == initialBalance1 + quoted[1]);
+        }
     }
 
-    function testCurveConvexIntegration() public {
-        uint256 renBTCAmount = 11 * 1e8;
-        uint256 renBTCLoan = 1 * 1e8;
-        uint256 renBTCMargin = 0.1 * 1e8;
-
-        uint256 wbtcAmount = 11 * 1e8;
-        uint256 wbtcLoan = 1 * 1e8;
-        uint256 wbtcMargin = 0.1 * 1e8;
-
-        // Fill OHM vault
-        IVault renBTCVault = IVault(manager.vaults(address(renBTC)));
-        vm.startPrank(renBTCWhale);
-        renBTC.transfer(address(this), renBTCMargin);
-        renBTC.approve(address(renBTCVault), renBTCAmount);
-        renBTCVault.deposit(renBTCAmount, renBTCWhale);
-        vm.stopPrank();
-
-        // Fill wbtc vault
-        IVault wbtcVault = IVault(manager.vaults(address(wbtc)));
-        vm.startPrank(wbtcWhale);
-        wbtc.transfer(address(this), wbtcMargin);
-        wbtc.approve(address(wbtcVault), wbtcAmount);
-        wbtcVault.deposit(wbtcAmount, wbtcWhale);
-        vm.stopPrank();
-
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(renBTC);
-        tokens[1] = address(wbtc);
-
-        uint256[] memory loans = new uint256[](2);
-        loans[0] = renBTCLoan;
-        loans[1] = wbtcLoan;
-
-        uint256[] memory margins = new uint256[](2);
-        margins[0] = renBTCMargin;
-        margins[1] = wbtcMargin;
-
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
-
-        address[] memory collateralTokens = new address[](1);
-        collateralTokens[0] = curveLpToken;
-
-        uint256[] memory collateralAmounts = new uint256[](1);
-        collateralAmounts[0] = 1e18;
-
-        IService.Order memory order = Helper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
-            block.timestamp,
-            ""
-        );
-
-        service.open(order);
-
-        uint256[2] memory amounts = [uint256(100), uint256(1e6)];
-        service.close(0, abi.encode(amounts));
-    }
+    // TODO test quoter
 }

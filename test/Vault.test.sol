@@ -3,14 +3,11 @@ pragma solidity =0.8.17;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { IVault, Vault } from "../src/Vault.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
-
-/// @dev See the "Writing Tests" section in the Foundry Book if this is your first time with Forge.
-/// @dev Run Forge with `-vvvv` to see console logs.
-/// https://book.getfoundry.sh/forge/writing-tests
+import { SignUtils } from "./utils/SignUtils.sol";
+import { PermitToken } from "./utils/PermitToken.sol";
 
 /// @dev Vault native state:
 /// - Native:
@@ -30,12 +27,11 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// - ERC4626 -> constructor(IERC20 asset_): totalSupply(), balanceOf(address(this)), balanceOf(msg.sender),
 /// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
 
-contract VaultTest is PRBTest, StdCheats {
+contract VaultTest is Test {
     using GeneralMath for uint256;
-    using GeneralMath for int256;
 
     Vault internal immutable vault;
-    ERC20PresetMinterPauser internal immutable token;
+    PermitToken internal immutable token;
     ERC20PresetMinterPauser internal immutable spuriousToken;
     address internal immutable tokenSink;
     address internal immutable notOwner;
@@ -46,7 +42,7 @@ contract VaultTest is PRBTest, StdCheats {
     address internal immutable repayer;
 
     constructor() {
-        token = new ERC20PresetMinterPauser("test", "TEST");
+        token = new PermitToken("test", "TEST");
         vault = new Vault(IERC20Metadata(address(token)));
         tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
         notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
@@ -104,7 +100,7 @@ contract VaultTest is PRBTest, StdCheats {
         vm.stopPrank();
     }
 
-    function _nativeStateCheck(
+    function _originalStateCheck(
         uint256 feeUnlockTime,
         uint256 totalSupply,
         uint256 balanceOf,
@@ -172,7 +168,15 @@ contract VaultTest is PRBTest, StdCheats {
         vm.prank(tokenSink);
         token.transfer(address(vault), balanceOf - initialBalance);
 
-        _nativeStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        _originalStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
         return (feeUnlockTime, currentProfits);
     }
 
@@ -204,7 +208,15 @@ contract VaultTest is PRBTest, StdCheats {
             feeUnlockTime = feeUnlockTimeSet;
         }
         // Recheck the remaining state is unchanged (except feeUnlockTime but it's already reassigned)
-        _nativeStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        _originalStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
     }
 
     function testSweep(
@@ -235,7 +247,15 @@ contract VaultTest is PRBTest, StdCheats {
         assertTrue(spuriousToken.balanceOf(anyAddress) == spuriousAmount);
 
         // Recheck the remaining state is unchanged (except feeUnlockTime)
-        _nativeStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        _originalStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
     }
 
     function testDeposit(
@@ -281,7 +301,7 @@ contract VaultTest is PRBTest, StdCheats {
         assertTrue(vault.balanceOf(address(depositor)) == initialDepositorShares);
 
         // Vault state change
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             initialVaultTotalSupply + shares,
             initialVaultAssets + deposited,
@@ -290,6 +310,28 @@ contract VaultTest is PRBTest, StdCheats {
             currentProfits,
             currentLosses
         );
+    }
+
+    function testDepositWithPermit(uint256 amount) public {
+        SignUtils utils = new SignUtils(token.DOMAIN_SEPARATOR());
+        uint256 signerPrivateKey = 0xA11CE;
+        address signer = vm.addr(signerPrivateKey);
+        vm.deal(signer, 1 ether);
+
+        SignUtils.Permit memory permit = SignUtils.Permit({
+            owner: signer,
+            spender: address(vault),
+            value: amount,
+            nonce: 0,
+            deadline: 1 seconds
+        });
+        bytes32 digest = utils.getTypedDataHash(permit);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
+
+        deal({ token: address(token), to: signer, give: amount });
+        vm.prank(signer);
+        uint256 shares = vault.depositWithPermit(permit.value, receiver, permit.deadline, v, r, s);
+        assertTrue(vault.balanceOf(address(receiver)) == shares);
     }
 
     function testMint(
@@ -340,7 +382,7 @@ contract VaultTest is PRBTest, StdCheats {
         assertTrue(vault.balanceOf(address(depositor)) == initialDepositorShares);
 
         // Vault state change
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             initialVaultTotalSupply + minted,
             initialVaultAssets + deposited,
@@ -392,7 +434,7 @@ contract VaultTest is PRBTest, StdCheats {
         vm.stopPrank();
 
         // Vault state change
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             totalSupply - shares,
             balanceOf - withdrawn,
@@ -445,7 +487,7 @@ contract VaultTest is PRBTest, StdCheats {
         vm.stopPrank();
 
         // Vault state change
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             totalSupply - redeemed,
             balanceOf - withdrawn,
@@ -495,7 +537,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 increasedAssets = vault.directMint(minted, anyAddress);
         assertTrue(vault.balanceOf(anyAddress) == initialShares + minted);
 
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             totalSupply + minted,
             balanceOf,
@@ -546,7 +588,7 @@ contract VaultTest is PRBTest, StdCheats {
         uint256 increasedAssets = vault.directBurn(burned, anyAddress);
         assertTrue(vault.balanceOf(anyAddress) == initialShares - burned);
 
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             totalSupply - burned,
             balanceOf,
@@ -583,7 +625,7 @@ contract VaultTest is PRBTest, StdCheats {
 
         assertTrue(token.balanceOf(receiver) == initialBalance + borrowed);
 
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             totalSupply,
             balanceOf - borrowed,
@@ -639,7 +681,7 @@ contract VaultTest is PRBTest, StdCheats {
         vm.stopPrank();
         vault.repay(repaid, debt, repayer);
 
-        _nativeStateCheck(
+        _originalStateCheck(
             feeUnlockTime,
             totalSupply,
             balanceOf + repaid,
