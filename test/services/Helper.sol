@@ -50,7 +50,7 @@ library Helper {
         uint256[] memory collateralAmounts,
         uint256 time,
         bytes memory data
-    ) public view returns (IService.Order memory) {
+    ) public pure returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
 
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
@@ -88,7 +88,7 @@ library Helper {
         uint256 collateralAmount,
         uint256 time,
         bytes memory data
-    ) internal returns (IService.Order memory) {
+    ) public pure returns (IService.Order memory) {
         IService.Loan[] memory loans = new IService.Loan[](2);
         loans[0].token = tokenA;
         loans[0].amount = loanA;

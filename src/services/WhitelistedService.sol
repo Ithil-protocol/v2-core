@@ -9,7 +9,7 @@ abstract contract WhitelistedService is Service {
     bool public enabled;
 
     event WhitelistAccessFlagWasToggled();
-    event WhitelistStatusWasChanged(address indexed user, bool status);
+    event WhitelistedStatusWasChanged(address indexed user, bool status);
     error UserIsNotWhitelisted();
 
     constructor() {
@@ -27,7 +27,7 @@ abstract contract WhitelistedService is Service {
         for (uint256 i = 0; i < length; i++) {
             whitelisted[users[i]] = true;
 
-            emit WhitelistStatusWasChanged(users[i], true);
+            emit WhitelistedStatusWasChanged(users[i], true);
         }
     }
 
@@ -36,11 +36,11 @@ abstract contract WhitelistedService is Service {
         for (uint256 i = 0; i < length; i++) {
             delete whitelisted[users[i]];
 
-            emit WhitelistStatusWasChanged(users[i], false);
+            emit WhitelistedStatusWasChanged(users[i], false);
         }
     }
 
-    function _beforeOpening(Agreement memory agreement, bytes calldata data) internal override {
+    function _beforeOpening(Agreement memory /*agreement*/, bytes calldata /*data*/) internal override {
         if (enabled && !whitelisted[msg.sender]) revert UserIsNotWhitelisted();
     }
 }

@@ -15,12 +15,6 @@ import { Helper } from "./Helper.sol";
 
 contract TestService is WhitelistedService {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager) {}
-
-    function _open(Agreement memory agreement, bytes calldata data) internal override {}
-
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public override {}
-
-    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {}
 }
 
 contract WhitelistedServiceTest is Test, IERC721Receiver {

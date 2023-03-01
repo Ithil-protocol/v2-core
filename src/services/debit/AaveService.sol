@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.17;
+pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
-contract AaveService is SecuritisableService {
+contract AaveService is DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
