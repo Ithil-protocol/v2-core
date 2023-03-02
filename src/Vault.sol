@@ -88,8 +88,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     function maxRedeem(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
         uint256 maxRedeem = balanceOf(owner);
         uint256 freeLiquidity = freeLiquidity();
-        if (convertToAssets(maxRedeem) == freeLiquidity && maxRedeem > 0)
-            maxRedeem--;
+        if (convertToAssets(maxRedeem) == freeLiquidity && maxRedeem > 0) maxRedeem--;
         return maxRedeem;
     }
 
