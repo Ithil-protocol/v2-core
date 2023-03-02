@@ -79,7 +79,18 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
-        return freeLiquidity().min(super.maxWithdraw(owner));
+        uint256 freeLiquidity = freeLiquidity();
+        return freeLiquidity == 0 ? 0 : (freeLiquidity - 1).min(super.maxWithdraw(owner));
+    }
+
+    // Assets include netLoans but they are not available for withdraw
+    // Therefore we need to cap with the current free liquidity
+    function maxRedeem(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
+        uint256 maxRedeem = balanceOf(owner);
+        uint256 freeLiquidity = freeLiquidity();
+        if (convertToAssets(maxRedeem) == freeLiquidity && maxRedeem > 0)
+            maxRedeem--;
+        return maxRedeem;
     }
 
     function depositWithPermit(uint256 assets, address receiver, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
