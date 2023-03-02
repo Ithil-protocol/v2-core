@@ -5,7 +5,7 @@ import { Script } from "forge-std/Script.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { Manager } from "../../src/Manager.sol";
 
-contract DeployManagerAndVaults is Script {
+contract LendingPageRequirements is Script {
     Manager internal manager;
     uint256 internal deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     address internal token0 = vm.envAddress("TOKEN0");

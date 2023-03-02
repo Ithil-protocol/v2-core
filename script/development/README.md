@@ -12,10 +12,10 @@ TOKEN0=0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8 \
 TOKEN1=0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9 \
 forge script \
 -f http://localhost:8545 \
-script/DeployManagerAndVaults.script.sol --broadcast
+LendingPageRequirements.script.sol --broadcast
 ```
 
-Outcome published in broadcast/DeployManagerAndVaults.script.sol/run-latest.json
+Outcome published in broadcast/LendingPageRequirements.script.sol/run-latest.json
 
 # Move Assets into wallet0
 
@@ -23,21 +23,21 @@ USDC
 
 ```
 USDC_CONTRACT="0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
-USDT_CONTRACT="0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
 USDC_WHALE="0x637842536b989BCFFe15c1678Fc558986c503548"
-USDT_WHALE="0xf89d7b9c864f589bbF53a82105107622B35EaA40"
 WALLET0="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 cast send $USDC_WHALE --from $WALLET0 --value 1ether
 cast rpc anvil_impersonateAccount $USDC_WHALE
-cast rpc anvil_impersonateAccount $USDT_WHALE
 cast send $USDC_CONTRACT "transfer(address,uint256)" $WALLET0 10000000000 --rpc-url localhost:8545 --from $USDC_WHALE
-cast send $USDT_CONTRACT "transfer(address,uint256)" $WALLET0 10000000000 --rpc-url localhost:8545 --from $USDT_WHALE
 ```
 
 USDT
 
 ```
-
+USDT_CONTRACT="0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
+USDT_WHALE="0xf89d7b9c864f589bbF53a82105107622B35EaA40"
+WALLET0="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+cast rpc anvil_impersonateAccount $USDT_WHALE
+cast send $USDT_CONTRACT "transfer(address,uint256)" $WALLET0 10000000000 --rpc-url localhost:8545 --from $USDT_WHALE
 ```
 
 Double check:
