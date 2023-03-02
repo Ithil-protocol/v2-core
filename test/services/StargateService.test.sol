@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
@@ -10,10 +11,14 @@ import { StargateService } from "../../src/services/debit/StargateService.sol";
 import { IStargatePool } from "../../src/interfaces/external/stargate/IStargateLPStaking.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 contract StargateServiceTest is BaseIntegrationServiceTest {
     StargateService internal immutable service;
+    Oracle internal immutable oracle;
+    MockSwapper internal immutable swapper;
+
     address internal constant stargateRouter = 0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614;
     address internal constant stargateLPStaking = 0xeA8DfEE1898a7e0a59f7527F076106d7e44c2176;
     uint16 internal constant usdcPoolID = 1;
@@ -23,8 +28,17 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        service = new StargateService(address(manager), stargateRouter, stargateLPStaking);
+        oracle = new Oracle();
+        swapper = new MockSwapper();
+        service = new StargateService(
+            address(manager),
+            address(oracle),
+            address(swapper),
+            stargateRouter,
+            stargateLPStaking
+        );
         vm.stopPrank();
+
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);

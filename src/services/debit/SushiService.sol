@@ -2,6 +2,8 @@
 pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Router.sol";
 import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Factory.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
@@ -35,10 +37,14 @@ contract SushiService is DebitService {
     IUniswapV2Router public immutable router;
     IMiniChef public immutable minichef;
     address public immutable rewardToken;
+    IOracle public immutable oracle;
+    ISwapper public immutable swapper;
 
-    constructor(address _manager, address _router, address _minichef)
+    constructor(address _manager, address _oracle, address _swapper, address _router, address _minichef)
         Service("SushiService", "SUSHI-SERVICE", _manager)
     {
+        oracle = IOracle(_oracle);
+        swapper = ISwapper(_swapper);
         router = IUniswapV2Router(_router);
         minichef = IMiniChef(_minichef);
         rewardToken = minichef.SUSHI();
