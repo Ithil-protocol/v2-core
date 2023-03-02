@@ -27,5 +27,5 @@ interface IZeroExRouter {
         uint256 inputTokenAmount,
         uint256 minOutputTokenAmount,
         Transformation[] calldata transformations
-    ) external payable;
+    ) external;
 }

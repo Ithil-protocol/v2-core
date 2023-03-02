@@ -2,7 +2,7 @@
 pragma solidity =0.8.17;
 
 /// @dev Taken from https://ethereum.stackexchange.com/questions/39989/solidity-convert-hex-string-to-bytes
-library StringUtils {
+library StringEncoder {
     // Convert an hexadecimal character to their value
     function fromHexChar(uint8 c) public pure returns (uint8) {
         if (bytes1(c) >= bytes1("0") && bytes1(c) <= bytes1("9")) {

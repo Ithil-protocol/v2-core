@@ -6,8 +6,8 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { Test } from "forge-std/Test.sol";
 import { IVault, Vault } from "../src/Vault.sol";
 import { GeneralMath } from "../src/libraries/GeneralMath.sol";
-import { SignUtils } from "./utils/SignUtils.sol";
-import { PermitToken } from "./utils/PermitToken.sol";
+import { SignUtils } from "./helpers/SignUtils.sol";
+import { PermitToken } from "./helpers/PermitToken.sol";
 
 /// @dev Vault native state:
 /// - Native:

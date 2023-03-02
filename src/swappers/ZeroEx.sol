@@ -4,9 +4,9 @@ pragma solidity =0.8.17;
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IZeroExRouter } from "../interfaces/external/0x/IZeroExRouter.sol";
-import { BaseSwapper } from "./BaseSwapper.sol";
+import { Swapper } from "./Swapper.sol";
 
-contract ZeroEx is BaseSwapper {
+contract ZeroEx is Swapper {
     using SafeERC20 for IERC20;
 
     IZeroExRouter public immutable router;
@@ -16,9 +16,8 @@ contract ZeroEx is BaseSwapper {
     }
 
     function swap(address from, address to, uint256 amount, uint256 minOut, bytes calldata data) external override {
-        IERC20 inToken = IERC20(from);
-        inToken.safeTransferFrom(msg.sender, address(this), amount);
-        inToken.approve(address(router), amount);
+        if (IERC20(from).allowance(address(this), address(router)) == 0)
+            IERC20(from).safeApprove(address(router), type(uint256).max);
 
         IZeroExRouter.Transformation[] memory transformations = abi.decode(data, (IZeroExRouter.Transformation[]));
         router.transformERC20(from, to, amount, minOut, transformations);
