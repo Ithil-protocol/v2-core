@@ -91,7 +91,7 @@ abstract contract DebitService is Service {
             if (obtained[index] > duePayment) {
                 // Good repay: the difference is transferred to the user
                 manager.repay(agreement.loans[index].token, duePayment, agreement.loans[index].amount, address(this));
-                IERC20(agreement.loans[index].token).transfer(msg.sender, obtained[index] - duePayment);
+                IERC20(agreement.loans[index].token).safeTransfer(msg.sender, obtained[index] - duePayment);
             } else {
                 // Bad repay: all the obtained amount is given to the vault
                 manager.repay(
