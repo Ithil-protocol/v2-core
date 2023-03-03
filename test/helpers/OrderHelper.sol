@@ -3,7 +3,7 @@ pragma solidity =0.8.17;
 
 import { IService } from "../../src/interfaces/IService.sol";
 
-library Helper {
+library OrderHelper {
     function createSimpleERC20Order(
         address token,
         uint256 amount,

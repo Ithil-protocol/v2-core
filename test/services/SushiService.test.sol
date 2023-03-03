@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
@@ -10,12 +11,16 @@ import { SushiService } from "../../src/services/debit/SushiService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     SushiService internal immutable service;
+    Oracle internal immutable oracle;
+    MockSwapper internal immutable swapper;
+
     address internal constant sushiRouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     address internal constant minichef = 0xF4d73326C13a4Fc5FD7A064217e12780e9Bd62c3;
     uint256 internal constant poolID = 0;
@@ -25,8 +30,11 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        service = new SushiService(address(manager), sushiRouter, minichef);
+        oracle = new Oracle();
+        swapper = new MockSwapper();
+        service = new SushiService(address(manager), address(oracle), address(swapper), sushiRouter, minichef);
         vm.stopPrank();
+
         loanLength = 2;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);

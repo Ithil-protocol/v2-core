@@ -11,7 +11,7 @@ import { WhitelistedService } from "../../src/services/WhitelistedService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract TestService is WhitelistedService {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager) {}
@@ -53,7 +53,7 @@ contract WhitelistedServiceTest is Test, IERC721Receiver {
     }
 
     function testWhitelist() public {
-        IService.Order memory order = Helper.createSimpleERC20Order(
+        IService.Order memory order = OrderHelper.createSimpleERC20Order(
             address(token),
             loan,
             margin,
