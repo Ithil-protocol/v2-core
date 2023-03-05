@@ -120,13 +120,13 @@ cast send $WETH_CONTRACT "approve(address,uint256)" $WETH_VAULT 1000000000000000
 cast send $WBTC_CONTRACT "approve(address,uint256)" $WBTC_VAULT 331272300 \
   --rpc-url $LOCALHOST_RPC --from $WALLET1
 
-cast send $USDT_VAULT "deposit(uint256,address)" 2000000000 $WALLET0 \
+cast send $USDT_VAULT "deposit(uint256,address)" 2000000000 $WALLET1 \
   --rpc-url $LOCALHOST_RPC --from $WALLET1
-cast send $DAI_VAULT "deposit(uint256,address)" 10000000000000000000000 $WALLET0 \
+cast send $DAI_VAULT "deposit(uint256,address)" 10000000000000000000000 $WALLET1 \
   --rpc-url $LOCALHOST_RPC --from $WALLET1
-cast send $WETH_VAULT "deposit(uint256,address)" 2530000000000000000 $WALLET0 \
+cast send $WETH_VAULT "deposit(uint256,address)" 2530000000000000000 $WALLET1 \
   --rpc-url $LOCALHOST_RPC --from $WALLET1
-cast send $WBTC_VAULT "deposit(uint256,address)" 331272300 $WALLET0 \
+cast send $WBTC_VAULT "deposit(uint256,address)" 331272300 $WALLET1 \
   --rpc-url $LOCALHOST_RPC --from $WALLET1
 
 # report what has been done
