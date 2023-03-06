@@ -66,7 +66,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
         if (collaterals[0].amount < minAmountsOutDai) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
@@ -78,9 +78,13 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
                 collaterals[0].amount,
                 initialAllowance
             );
-            service.close(0, data);
+            uint256[] memory amountsOut = service.close(0, data);
             assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
-            assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + toRedeem);
+            assertEq(amountsOut[0], toRedeem);
+            assertEq(
+                IERC20(loanTokens[0]).balanceOf(address(this)),
+                (initialBalance + toRedeem).positiveSub(actualLoans[0].amount)
+            );
             assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
         }
     }
