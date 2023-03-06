@@ -22,3 +22,7 @@ yarn-error.log*
 !/broadcast
 /broadcast/*
 /broadcast/*/31337/
+
+# anvil states
+script/development/*.state
+script/development/*.report
