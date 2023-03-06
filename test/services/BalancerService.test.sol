@@ -293,15 +293,21 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                 collaterals[0].amount - firstStep,
                 bptTotalSupply - firstStep
             );
-            service.close(0, data);
+            uint256[] memory amountsOut = service.close(0, data);
             // total supply as expected
             assertEq(IERC20(collateralTokens[0]).totalSupply(), bptTotalSupply - collaterals[0].amount);
             // min amounts out are respected
             for (uint256 i = 0; i < loanLength; i++) {
+                // Service is emptied
+                assertEq(IERC20(loanTokens[i]).balanceOf(address(service)), 0);
                 // If firstStep = 0, minAmountsOut are also zero
+                // Following line is to avoid stackTooDeep
+                finalAmounts[i] += initialBalances[i] + minAmountsOut[i];
+                assertEq(amountsOut[i], finalAmounts[i]);
+                // Payoff is paid to address(this) which is the user
                 assertEq(
-                    IERC20(loanTokens[i]).balanceOf(address(service)),
-                    initialBalances[i] + minAmountsOut[i] + finalAmounts[i]
+                    IERC20(loanTokens[i]).balanceOf(address(this)),
+                    finalAmounts[i].positiveSub(actualLoans[i].amount)
                 );
             }
         }
