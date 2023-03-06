@@ -13,12 +13,13 @@ import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 import { DebitService } from "../DebitService.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { Service } from "../Service.sol";
 
 /// @title    BalancerService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
-contract BalancerService is DebitService {
+contract BalancerService is AuctionRateModel {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
