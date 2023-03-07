@@ -9,7 +9,15 @@ abstract contract DebitService is Service {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
+    error MarginTooLow();
+
     uint256 internal constant ONE_YEAR = 31536000;
+
+    mapping(address => uint256) public minMargin;
+
+    function setMinMargin(address token, uint256 margin) external onlyOwner {
+        minMargin[token] = margin;
+    }
 
     /// @dev Defaults to amount + margin * riskSpread / (ir + riskSpread)
     function liquidationThreshold(uint256 amount, uint256 margin, uint256 interestAndSpread)
@@ -46,6 +54,7 @@ abstract contract DebitService is Service {
         // Transfers margins and borrows loans to this address
         Agreement memory agreement = order.agreement;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
+            if (agreement.loans[index].margin < minMargin[agreement.loans[index].token]) revert MarginTooLow();
             exposures[agreement.loans[index].token] += agreement.loans[index].amount;
             IERC20(agreement.loans[index].token).safeTransferFrom(
                 msg.sender,
