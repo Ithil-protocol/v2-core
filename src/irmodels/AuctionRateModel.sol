@@ -18,17 +18,17 @@ abstract contract AuctionRateModel is DebitService {
     /**
      * @dev gas saving trick
      * latest is a timestamp and base < GeneralMath.RESOLUTION, they all fit in uint256
-     * baseAndLatest = timestamp * 2^128 + base
+     * latestAndBase = timestamp * 2^128 + base
      */
     mapping(address => uint256) public halvingTime;
     mapping(address => uint256) public riskSpreads;
-    mapping(address => uint256) public baseAndLatest;
+    mapping(address => uint256) public latestAndBase;
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
         if (baseRate > GeneralMath.RESOLUTION || riskSpread > GeneralMath.RESOLUTION || halfTime == 0)
             revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
-        baseAndLatest[token] = GeneralMath.packInUint(block.timestamp, baseRate);
+        latestAndBase[token] = GeneralMath.packInUint(block.timestamp, baseRate);
         halvingTime[token] = halfTime;
     }
 
@@ -43,27 +43,34 @@ abstract contract AuctionRateModel is DebitService {
      * throws if amount >= freeLiquidity
      * throws if spread > type(uint256).max - newBase
      */
-    function computeInterestRateAndUpdateBase(address token, uint256 amount, uint256 freeLiquidity)
-        internal
-        returns (uint256)
+
+    function computeBaseRateAndSpread(IService.Loan memory loan, uint256 freeLiquidity)
+        public
+        view
+        returns (uint256, uint256)
     {
-        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(baseAndLatest[token]);
+        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(latestAndBase[loan.token]);
         // Increase base due to new borrow and then
         // apply time based discount: after halvingTime it is divided by 2
-        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - amount).safeMulDiv(
-            halvingTime[token],
-            block.timestamp - latestBorrow + halvingTime[token]
+        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - loan.amount).safeMulDiv(
+            halvingTime[loan.token],
+            block.timestamp - latestBorrow + halvingTime[loan.token]
         );
+        uint256 spread = riskSpreadFromMargin(loan.token, loan.amount, loan.margin);
+        return (newBase, spread);
+    }
+
+    function _updateBase(IService.Loan memory loan, uint256 freeLiquidity) internal returns (uint256, uint256) {
+        (uint256 newBase, uint256 spread) = computeBaseRateAndSpread(loan, freeLiquidity);
         // Reset new base and latest borrow, force IR stays below resolution
         if (newBase >= GeneralMath.RESOLUTION) revert InterestRateOverflow();
-        baseAndLatest[token] = GeneralMath.packInUint(block.timestamp, newBase);
+        latestAndBase[loan.token] = GeneralMath.packInUint(block.timestamp, newBase);
 
-        return newBase;
+        return (newBase, spread);
     }
 
     function _checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) internal override {
-        uint256 baseRate = computeInterestRateAndUpdateBase(loan.token, loan.amount, freeLiquidity);
-        uint256 spread = riskSpreadFromMargin(loan.token, loan.amount, loan.margin);
+        (uint256 baseRate, uint256 spread) = _updateBase(loan, freeLiquidity);
         (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
         if (requestedIr < baseRate || requestedSpread < spread) revert AboveRiskThreshold();
     }
