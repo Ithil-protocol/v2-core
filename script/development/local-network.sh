@@ -9,11 +9,11 @@ if [[ " $@ " =~ " --help " ]]; then
 fi
 
 if [[ " $@ " =~ " --clean " ]]; then
-  rm devnetwork.state
+  rm devnetwork.state || true
 fi
 
 anvil \
   -f https://arb-mainnet.g.alchemy.com/v2/it4Um4ecMPP87zNShCGV2GhoFJvxulF8 \
-  --fork-block-number 69410517
+  --fork-block-number 69410517 \
   --chain-id 1337 \
   --state devnetwork.state
