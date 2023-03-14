@@ -18,7 +18,7 @@ if [[ " $@ " =~ " --setup " ]]; then
   NETWORK_PID=$!
   sleep 5
   source lending-page.sh
-  kill $NETWORK_PID
+  kill -SIGINT $NETWORK_PID
 fi
 
 if [[ " $@ " =~ " --clean " ]]; then
