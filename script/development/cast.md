@@ -78,4 +78,14 @@ signature of redeem `redeem(uint256 shares, address receiver, address owner)`
 cast send $USDC_VAULT "redeem(uint256,address,address)" 1999999999 $WALLET0 $WALLET0 --rpc-url localhost:8545 --from $WALLET0
 ```
 
-**Check maxWithdraw() before redeem!**
+**Check maxWithdraw(address) or maxRedeem(address) before withdraw/redeem!**
+
+how to increment value of a Vault
+
+```
+cast call $DAI_VAULT "convertToAssets(uint256)" 100000000000000000000 --rpc-url localhost:8545
+> 100
+cast send $DAI_CONTRACT "transfer(address,uint256)" $DAI_VAULT 1000000000000000000000 --rpc-url localhost:8545 --from
+cast call $DAI_VAULT "convertToAssets(uint256)" 100000000000000000000 --rpc-url localhost:8545
+> 110
+```
