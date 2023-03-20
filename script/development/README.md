@@ -1,7 +1,7 @@
 # launch anvil synthetic network
 
 ```bash
-anvil -f https://arb-mainnet.g.alchemy.com/v2/it4Um4ecMPP87zNShCGV2GhoFJvxulF8 --state devnetwork.state
+./local-network.sh
 ```
 
 # bootstrap Anvil network
