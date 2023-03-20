@@ -28,8 +28,8 @@ contract CurveConvexService is ConstantRateModel {
         address[] rewardTokens; // Incentive tokens given by Curve
     }
 
-    event PoolWasAdded(address indexed curvePool, uint256 indexed ConvexPid);
-    event PoolWasRemoved(address indexed curvePool, uint256 indexed ConvexPid);
+    event PoolWasAdded(address indexed curvePool, uint256 indexed convexPid);
+    event PoolWasRemoved(address indexed curvePool, uint256 indexed convexPid);
 
     error InexistentPool();
     error TokenIndexMismatch();
@@ -37,8 +37,8 @@ contract CurveConvexService is ConstantRateModel {
 
     mapping(address => PoolData) public pools;
     IConvexBooster internal immutable booster;
-    IERC20 internal immutable crv;
-    IERC20 internal immutable cvx;
+    address internal immutable crv;
+    address internal immutable cvx;
     IOracle public immutable oracle;
     ISwapper public immutable swapper;
 
@@ -48,8 +48,8 @@ contract CurveConvexService is ConstantRateModel {
         oracle = IOracle(_oracle);
         swapper = ISwapper(_swapper);
         booster = IConvexBooster(_booster);
-        cvx = IERC20(_cvx);
-        crv = IERC20(_crv);
+        cvx = _cvx;
+        crv = _crv;
     }
 
     function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
@@ -66,18 +66,14 @@ contract CurveConvexService is ConstantRateModel {
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
-        _harvest(pool, agreement.collaterals[0].amount);
-
         pool.baseRewardPool.withdraw(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
 
-        // TODO swap CRV and CVX for collateral tokens
+        _harvest(pool, agreement.collaterals[0].amount);
     }
 
     function _harvest(PoolData memory pool, uint256 ownership) internal {
-        // TODO check
-
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(pool.convex);
         // Total base rewards token
         // If they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
@@ -89,6 +85,13 @@ contract CurveConvexService is ConstantRateModel {
 
             token.safeTransfer(msg.sender, token.balanceOf(address(this)).safeMulDiv(ownership, totalOwnership));
         }
+
+        // TODO get price from oracle and add order on the orderbook
+        /// uint256 price = oracle.getPrice(crv, token);
+        /// swapper.createOrder(crv, token, IERC20(crv).balanceOf(address(this)), price - discount);
+
+        /// price = oracle.getPrice(cvx, token);
+        /// swapper.createOrder(cvx, token, IERC20(cvx).balanceOf(address(this)), price - discount);
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
@@ -103,8 +106,6 @@ contract CurveConvexService is ConstantRateModel {
                 (balances[index] * agreement.collaterals[0].amount) /
                 IERC20(agreement.collaterals[0].token).totalSupply();
         }
-
-        // TODO consider CRV and CVX when quoting
 
         return (quoted, fees);
     }
