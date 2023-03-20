@@ -9,19 +9,14 @@ abstract contract DebitService is Service {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
-    error AboveRiskThreshold();
+    error MarginTooLow();
 
     uint256 internal constant ONE_YEAR = 31536000;
 
-    /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
-    /// Throws if margin = 0
-    function riskSpreadFromMargin(uint256 amount, uint256 margin, uint256 baseSpread)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
-        return baseSpread.safeMulDiv(amount, margin);
+    mapping(address => uint256) public minMargin;
+
+    function setMinMargin(address token, uint256 margin) external onlyOwner {
+        minMargin[token] = margin;
     }
 
     /// @dev Defaults to amount + margin * riskSpread / (ir + riskSpread)
@@ -59,6 +54,7 @@ abstract contract DebitService is Service {
         // Transfers margins and borrows loans to this address
         Agreement memory agreement = order.agreement;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
+            if (agreement.loans[index].margin < minMargin[agreement.loans[index].token]) revert MarginTooLow();
             exposures[agreement.loans[index].token] += agreement.loans[index].amount;
             IERC20(agreement.loans[index].token).safeTransferFrom(
                 msg.sender,
@@ -74,7 +70,7 @@ abstract contract DebitService is Service {
                 address(this)
             );
 
-            _checkRiskiness(agreement.loans[index].amount, freeLiquidity);
+            _checkRiskiness(agreement.loans[index], freeLiquidity);
         }
         super.open(order);
     }
@@ -144,5 +140,5 @@ abstract contract DebitService is Service {
     }
 
     // Checks the riskiness of the agreement and eventually reverts with AboveRiskThreshold()
-    function _checkRiskiness(uint256 loanAmount, uint256 freeLiquidity) internal virtual {}
+    function _checkRiskiness(Loan memory loan, uint256 freeLiquidity) internal virtual {}
 }

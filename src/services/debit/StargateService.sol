@@ -7,12 +7,13 @@ import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
 import { DebitService } from "../DebitService.sol";
+import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
 import { Service } from "../Service.sol";
 
 /// @title    StargateService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Stargate pool
-contract StargateService is DebitService {
+contract StargateService is ConstantRateModel {
     using SafeERC20 for IERC20;
     using SafeERC20 for IStargatePool;
 
