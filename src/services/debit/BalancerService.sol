@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IVault } from "../../interfaces/IVault.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
@@ -136,7 +137,7 @@ contract BalancerService is AuctionRateModel {
         });
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
 
-        // TODO swap BAL for collateral tokens
+        _harvest(pool);
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
@@ -171,8 +172,6 @@ contract BalancerService is AuctionRateModel {
                 profits[index] += amountsOut[index];
             }
         }
-
-        // TODO consider accrued BAL rewards when quoting
 
         return (profits, fees);
     }
@@ -222,6 +221,26 @@ contract BalancerService is AuctionRateModel {
         delete pools[poolAddress];
 
         emit PoolWasRemoved(poolAddress);
+    }
+
+    function _harvest(PoolData memory pool) internal {
+        // Get vault with highest free liquidity
+        uint256 freeLiquidity = 0;
+        address token = pool.tokens[0];
+        for (uint8 i = 0; i < pool.tokens.length; i++) {
+            IVault vault = IVault(manager.vaults(pool.tokens[i]));
+            if (vault.freeLiquidity() > freeLiquidity) {
+                freeLiquidity = vault.freeLiquidity();
+                token = pool.tokens[i];
+            }
+        }
+
+        // Claim reward
+        IGauge(pool.gauge).claim_rewards(address(this));
+
+        // TODO get price from oracle and add order on the orderbook
+        /// uint256 price = oracle.getPrice(bal, token);
+        /// swapper.createOrder(bal, token, IERC20(bal).balanceOf(address(this)), price - discount);
     }
 
     function _modifyBalancesWithFees(address poolAddress, uint256[] memory balances, uint256[] memory normalizedWeights)
