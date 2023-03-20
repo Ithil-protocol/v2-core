@@ -12,6 +12,7 @@ contract DeployAaveService is Base {
 
     function _run() internal override {
         service = new AaveService(manager, aave);
+        assert(address(manager) != address(0));
         assert(address(service) != address(0));
         assert(keccak256(abi.encodePacked(service.name())) == keccak256(abi.encodePacked("AaveService")));
     }
