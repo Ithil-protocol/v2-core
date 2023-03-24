@@ -3,12 +3,13 @@ pragma solidity =0.8.17;
 
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { DebitService } from "../services/DebitService.sol";
+import { Hooks } from "../services/Hooks.sol";
 import { IService } from "../interfaces/IService.sol";
 
 /// @dev IR = baseIR + spread
 /// Rate model in which baseIR is based on a Dutch auction
 /// GeneralMath.RESOLUTION corresponds to 1, i.e. an interest rate of 100%
-abstract contract AuctionRateModel is DebitService {
+abstract contract AuctionRateModel is Hooks {
     using GeneralMath for uint256;
 
     error InvalidInitParams();

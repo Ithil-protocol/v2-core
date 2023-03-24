@@ -2,11 +2,11 @@
 pragma solidity =0.8.17;
 
 import { GeneralMath } from "../libraries/GeneralMath.sol";
-import { DebitService } from "../services/DebitService.sol";
+import { Hooks } from "../services/Hooks.sol";
 import { IService } from "../interfaces/IService.sol";
 
 /// @dev constant value IR model, used for testing
-abstract contract ConstantRateModel is DebitService {
+abstract contract ConstantRateModel is Hooks {
     using GeneralMath for uint256;
     error AboveRiskThreshold();
 

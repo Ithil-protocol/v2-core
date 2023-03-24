@@ -8,13 +8,28 @@ import { Test } from "forge-std/Test.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { Service, IService } from "../../src/services/Service.sol";
 import { WhitelistedService } from "../../src/services/WhitelistedService.sol";
+import { AuctionRateModel } from "../../src/irmodels/AuctionRateModel.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-contract TestService is WhitelistedService {
+contract TestService is WhitelistedService, AuctionRateModel, Service {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager) {}
+
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
+        internal
+        virtual
+        override
+    {}
+
+    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
+
+    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
+
+    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
+
+    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
 }
 
 contract WhitelistedServiceTest is Test, IERC721Receiver {

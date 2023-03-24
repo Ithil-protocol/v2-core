@@ -6,10 +6,11 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
+import { Hooks } from "./Hooks.sol";
 import { Vault } from "../Vault.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
-abstract contract Service is IService, ERC721Enumerable, Ownable {
+abstract contract Service is IService, ERC721Enumerable, Hooks {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -89,12 +90,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _saveAgreement(agreement);
     }
 
-    function _open(Agreement memory agreement, bytes calldata data) internal virtual {}
-
-    function _beforeOpening(Agreement memory agreement, bytes calldata data) internal virtual {}
-
-    function _afterOpening(Agreement memory agreement, bytes calldata data) internal virtual {}
-
     /// @notice closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param data extra custom data required by the specific service
@@ -118,12 +113,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _afterClosing(tokenID, agreement, data);
         return amountsOut;
     }
-
-    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual {}
-
-    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual {}
-
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal virtual {}
 
     /// @notice modifies an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner

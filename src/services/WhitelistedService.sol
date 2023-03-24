@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { Service } from "./Service.sol";
+import { Hooks } from "./Hooks.sol";
+import { IService } from "../interfaces/IService.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract WhitelistedService is Service {
+abstract contract WhitelistedService is Hooks {
     mapping(address => bool) public whitelisted;
     bool public enabled;
 
@@ -40,7 +41,7 @@ abstract contract WhitelistedService is Service {
         }
     }
 
-    function _beforeOpening(Agreement memory /*agreement*/, bytes calldata /*data*/) internal override {
+    function _beforeOpening(IService.Agreement memory /*agreement*/, bytes memory /*data*/) internal override {
         if (enabled && !whitelisted[msg.sender]) revert UserIsNotWhitelisted();
     }
 }

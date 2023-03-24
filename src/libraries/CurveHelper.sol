@@ -46,7 +46,7 @@ library CurveHelper {
         }
     }
 
-    function withdraw(address pool, IService.Agreement memory agreement, bytes calldata data) internal {
+    function withdraw(address pool, IService.Agreement memory agreement, bytes memory data) internal {
         if (agreement.loans.length == 2) {
             uint256[2] memory minAmountsOut = abi.decode(data, (uint256[2]));
             ICurvePool(pool).remove_liquidity(agreement.collaterals[0].amount, minAmountsOut);

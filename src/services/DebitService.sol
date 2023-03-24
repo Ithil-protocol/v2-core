@@ -138,7 +138,4 @@ abstract contract DebitService is Service {
         }
         return duePayments;
     }
-
-    // Checks the riskiness of the agreement and eventually reverts with AboveRiskThreshold()
-    function _checkRiskiness(Loan memory loan, uint256 freeLiquidity) internal virtual {}
 }

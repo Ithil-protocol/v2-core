@@ -5,6 +5,7 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
+import { WhitelistedService } from "../WhitelistedService.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
@@ -16,7 +17,7 @@ import { Service } from "../Service.sol";
 /// @title    CurveConvexService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Curve pool plus staking on Convex
-contract CurveConvexService is ConstantRateModel {
+contract CurveConvexService is WhitelistedService, ConstantRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -52,7 +53,7 @@ contract CurveConvexService is ConstantRateModel {
         crv = IERC20(_crv);
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
@@ -63,7 +64,7 @@ contract CurveConvexService is ConstantRateModel {
         if (!booster.deposit(pool.convex, agreement.collaterals[0].amount)) revert ConvexStakingFailed();
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         _harvest(pool, agreement.collaterals[0].amount);
@@ -155,4 +156,10 @@ contract CurveConvexService is ConstantRateModel {
 
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
+
+    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
+
+    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
+
+    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
 }
