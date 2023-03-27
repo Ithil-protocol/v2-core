@@ -96,6 +96,7 @@ cast call $DAI_VAULT "convertToAssets(uint256)" 100000000000000000000 --rpc-url 
 ```
 
 Remove shares from wallet1 from vault
+
 ```
 cast call $WETH_VAULT "balanceOf(address)" $WALLET1 --rpc-url localhost:8545
 > 2.53
