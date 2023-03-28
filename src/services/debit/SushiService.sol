@@ -141,10 +141,4 @@ contract SushiService is WhitelistedService, AuctionRateModel, DebitService {
 
         delete pools[lpToken];
     }
-
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
 }

@@ -2,11 +2,11 @@
 pragma solidity =0.8.17;
 
 import { GeneralMath } from "../libraries/GeneralMath.sol";
-import { Hooks } from "../services/Hooks.sol";
+import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 import { IService } from "../interfaces/IService.sol";
 
 /// @dev constant value IR model, used for testing
-abstract contract ConstantRateModel is Hooks {
+abstract contract ConstantRateModel is BaseRiskModel {
     using GeneralMath for uint256;
     error AboveRiskThreshold();
 
@@ -24,7 +24,7 @@ abstract contract ConstantRateModel is Hooks {
     }
 
     // todo: with this it's constant, do we want to increase based on Vault's usage?
-    function _checkRiskiness(IService.Loan memory loan, uint256 /*freeLiquidity*/) internal override {
+    function _checkRiskiness(IService.Loan memory loan, uint256 /*freeLiquidity*/) internal override(BaseRiskModel) {
         uint256 spread = riskSpreadFromMargin(loan.token, loan.amount, loan.margin);
         (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
         if (requestedIr < baseRisks[loan.token] || requestedSpread < spread) revert AboveRiskThreshold();

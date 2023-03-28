@@ -23,13 +23,7 @@ contract TestService is WhitelistedService, AuctionRateModel, Service {
         override
     {}
 
-    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
+    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override onlyWhitelisted {}
 }
 
 contract WhitelistedServiceTest is Test, IERC721Receiver {

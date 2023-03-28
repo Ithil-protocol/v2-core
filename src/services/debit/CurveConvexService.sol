@@ -156,10 +156,4 @@ contract CurveConvexService is WhitelistedService, ConstantRateModel, DebitServi
 
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
-
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
 }

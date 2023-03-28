@@ -134,10 +134,4 @@ contract StargateService is WhitelistedService, ConstantRateModel, DebitService 
         uint256 amountSD = (amount * pool.totalLiquidity()) / pool.totalSupply();
         expected = amountSD * pool.convertRate();
     }
-
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
 }

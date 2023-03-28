@@ -28,7 +28,7 @@ contract AaveService is WhitelistedService, AuctionRateModel, DebitService {
         aave = IPool(_aave);
     }
 
-    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
         IAToken aToken = IAToken(agreement.collaterals[0].token);
         if (aToken.UNDERLYING_ASSET_ADDRESS() != agreement.loans[0].token) revert IncorrectObtainedToken();
         if (agreement.collaterals[0].amount != agreement.loans[0].amount + agreement.loans[0].margin)
@@ -59,10 +59,4 @@ contract AaveService is WhitelistedService, AuctionRateModel, DebitService {
         );
         return (toRedeem, fees);
     }
-
-    function _afterClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _afterOpening(Agreement memory agreement, bytes memory data) internal virtual override {}
-
-    function _beforeClosing(uint256 tokenID, Agreement memory agreement, bytes memory data) internal virtual override {}
 }

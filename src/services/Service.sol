@@ -6,11 +6,10 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
-import { Hooks } from "./Hooks.sol";
 import { Vault } from "../Vault.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
-abstract contract Service is IService, ERC721Enumerable, Hooks {
+abstract contract Service is IService, ERC721Enumerable, Ownable {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -77,15 +76,9 @@ abstract contract Service is IService, ERC721Enumerable, Hooks {
         // Save agreement in memory to allow editing
         Agreement memory agreement = order.agreement;
 
-        // Hook
-        _beforeOpening(agreement, order.data);
-
         // Body
         _open(agreement, order.data);
         _safeMint(msg.sender, id++);
-
-        // Hook
-        _afterOpening(agreement, order.data);
 
         _saveAgreement(agreement);
     }
@@ -99,8 +92,6 @@ abstract contract Service is IService, ERC721Enumerable, Hooks {
         uint256[] memory amountsOut = new uint256[](agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++)
             amountsOut[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
-        // Hook
-        _beforeClosing(tokenID, agreement, data);
 
         // Body
         agreements[tokenID].status = Status.CLOSED;
@@ -109,8 +100,6 @@ abstract contract Service is IService, ERC721Enumerable, Hooks {
         for (uint256 index = 0; index < agreement.loans.length; index++)
             amountsOut[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - amountsOut[index];
 
-        // Hook
-        _afterClosing(tokenID, agreement, data);
         return amountsOut;
     }
 
@@ -133,4 +122,8 @@ abstract contract Service is IService, ERC721Enumerable, Hooks {
         Agreement memory agreement = agreements[tokenID - 1];
         return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
     }
+
+    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual;
+
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual;
 }
