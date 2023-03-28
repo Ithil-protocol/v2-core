@@ -7,7 +7,7 @@ import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Rec
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
@@ -26,9 +26,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         vm.selectFork(forkId);
         vm.deal(admin, 1 ether);
 
-        vm.startPrank(admin);
+        vm.prank(admin);
         manager = IManager(new Manager());
-        vm.stopPrank();
     }
 
     function setUp() public virtual {
@@ -43,9 +42,10 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
-
             vm.stopPrank();
         }
+        vm.prank(admin);
+        serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
     function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
@@ -81,9 +81,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         margin = margin % (IERC20(token).balanceOf(whales[token])); // 0 <= margin <= dai.balanceOf(whale) - 1
         if (needsBumping && margin == 0) margin++;
 
-        vm.startPrank(whales[token]);
+        vm.prank(whales[token]);
         IERC20(token).transfer(address(this), margin);
-        vm.stopPrank();
 
         // margin is modified, so we return new value
         return margin;
@@ -109,7 +108,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = collateralAmount;
         return
-            Helper.createAdvancedOrder(
+            OrderHelper.createAdvancedOrder(
                 loanTokens,
                 loans,
                 margins,

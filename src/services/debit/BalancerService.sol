@@ -3,20 +3,24 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
+import { WhitelistedService } from "../WhitelistedService.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 import { DebitService } from "../DebitService.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { Service } from "../Service.sol";
 
 /// @title    BalancerService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
-contract BalancerService is DebitService {
+contract BalancerService is WhitelistedService, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
@@ -43,16 +47,20 @@ contract BalancerService is DebitService {
     mapping(address => PoolData) public pools;
     IBalancerVault internal immutable balancerVault;
     uint256 public rewardRate;
-    address public immutable rewardToken;
+    address public immutable bal;
+    IOracle public immutable oracle;
+    ISwapper public immutable swapper;
 
-    constructor(address _manager, address _balancerVault, address _rewardToken)
+    constructor(address _manager, address _oracle, address _swapper, address _balancerVault, address _bal)
         Service("BalancerService", "BALANCER-SERVICE", _manager)
     {
+        oracle = IOracle(_oracle);
+        swapper = ISwapper(_swapper);
         balancerVault = IBalancerVault(_balancerVault);
-        rewardToken = _rewardToken;
+        bal = _bal;
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
@@ -83,13 +91,13 @@ contract BalancerService is DebitService {
         if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little
         if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
         address[] memory tokens = new address[](agreement.loans.length);
-        uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
+        (uint256[] memory minAmountsOut, bytes memory swapData) = abi.decode(data, (uint256[], bytes));
         bool slippageEnforced = true;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             tokens[index] = agreement.loans[index].token;
@@ -222,6 +230,7 @@ contract BalancerService is DebitService {
         view
     {
         PoolData memory pool = pools[poolAddress];
+
         for (uint256 i = 0; i < pool.length; i++) balances[i] *= pool.scalingFactors[i];
 
         uint256[] memory dueProtocolFeeAmounts = new uint256[](pool.length);
@@ -245,7 +254,9 @@ contract BalancerService is DebitService {
         PoolData memory pool = pools[poolAddress];
         uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
         _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);
+
         for (uint256 i = 0; i < pool.length; i++) amountsOut[i] *= pool.scalingFactors[i];
+
         uint256 expectedBpt = WeightedMath._calcBptInGivenExactTokensOut(
             balances,
             normalizedWeights,
@@ -271,10 +282,12 @@ contract BalancerService is DebitService {
         uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
         _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);
         uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);
+
         for (uint256 i = 0; i < pool.length; i++) {
             expectedTokens[i] /= pool.scalingFactors[i];
             balances[i] /= pool.scalingFactors[i];
         }
+
         return expectedTokens;
     }
 }

@@ -2,18 +2,22 @@
 pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
+import { WhitelistedService } from "../WhitelistedService.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
+import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Curve pool plus staking on Convex
-contract CurveConvexService is DebitService {
+contract CurveConvexService is WhitelistedService, ConstantRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -36,16 +40,20 @@ contract CurveConvexService is DebitService {
     IConvexBooster internal immutable booster;
     IERC20 internal immutable crv;
     IERC20 internal immutable cvx;
+    IOracle public immutable oracle;
+    ISwapper public immutable swapper;
 
-    constructor(address _manager, address _booster, address _crv, address _cvx)
+    constructor(address _manager, address _oracle, address _swapper, address _booster, address _crv, address _cvx)
         Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
     {
+        oracle = IOracle(_oracle);
+        swapper = ISwapper(_swapper);
         booster = IConvexBooster(_booster);
         cvx = IERC20(_cvx);
         crv = IERC20(_crv);
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
@@ -56,7 +64,7 @@ contract CurveConvexService is DebitService {
         if (!booster.deposit(pool.convex, agreement.collaterals[0].amount)) revert ConvexStakingFailed();
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         _harvest(pool, agreement.collaterals[0].amount);

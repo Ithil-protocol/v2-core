@@ -10,7 +10,7 @@ import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract AaveServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
@@ -22,9 +22,9 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
     uint256 internal constant blockNumber = 55895589;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
+        vm.prank(admin);
         service = new AaveService(address(manager), aavePool);
-        vm.stopPrank();
+
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -66,7 +66,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
         if (collaterals[0].amount < minAmountsOutDai) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
@@ -78,8 +78,13 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
                 collaterals[0].amount,
                 initialAllowance
             );
-            service.close(0, data);
-            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), initialBalance + toRedeem);
+            uint256[] memory amountsOut = service.close(0, data);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
+            assertEq(amountsOut[0], toRedeem);
+            assertEq(
+                IERC20(loanTokens[0]).balanceOf(address(this)),
+                (initialBalance + toRedeem).positiveSub(actualLoans[0].amount)
+            );
             assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
         }
     }

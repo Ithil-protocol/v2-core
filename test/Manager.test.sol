@@ -63,8 +63,6 @@ contract ManagerTest is Test {
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.create(address(spuriousToken));
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
-        manager.setSpread(debitServiceOne, address(firstToken), spread);
-        vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.setCap(debitServiceOne, address(firstToken), cap);
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
@@ -77,10 +75,7 @@ contract ManagerTest is Test {
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
-    function _setupArbitraryState(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap)
-        private
-        returns (uint256)
-    {
+    function _setupArbitraryState(uint256 previousDeposit, uint256 cap) private returns (uint256) {
         address vaultAddress = manager.vaults(address(firstToken));
         vm.startPrank(tokenSink);
         firstToken.approve(vaultAddress, previousDeposit);
@@ -88,37 +83,23 @@ contract ManagerTest is Test {
         vm.stopPrank();
 
         // Take only meaningful caps
-        debitCap = (debitCap % GeneralMath.RESOLUTION) + 1;
+        cap = (cap % GeneralMath.RESOLUTION) + 1;
 
-        manager.setSpread(debitServiceOne, address(firstToken), debitSpread);
-        manager.setCap(debitServiceOne, address(firstToken), debitCap);
-        (uint256 storedDebitSpread, uint256 storedDebitCap) = manager.riskParams(debitServiceOne, address(firstToken));
-        assertTrue(storedDebitSpread == debitSpread);
-        assertTrue(storedDebitCap == debitCap);
-        return debitCap;
-    }
-
-    function testSetSpread(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap, uint256 spread) public {
-        uint256 initialCap = _setupArbitraryState(previousDeposit, debitSpread, debitCap);
-        manager.setSpread(debitServiceOne, address(firstToken), spread);
-
-        (uint256 storedSpread, uint256 storedCap) = manager.riskParams(debitServiceOne, address(firstToken));
-        assertTrue(storedSpread == spread);
-        assertTrue(storedCap == initialCap);
-    }
-
-    function testSetCap(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap, uint256 cap) public {
-        _setupArbitraryState(previousDeposit, debitSpread, debitCap);
         manager.setCap(debitServiceOne, address(firstToken), cap);
-        (uint256 storedSpread, uint256 storedCap) = manager.riskParams(debitServiceOne, address(firstToken));
-        assertTrue(storedSpread == debitSpread);
+        uint256 storedCap = manager.caps(debitServiceOne, address(firstToken));
+        assertTrue(storedCap == cap);
+        return cap;
+    }
+
+    function testSetCap(uint256 previousDeposit, uint256 debitCap, uint256 cap) public {
+        _setupArbitraryState(previousDeposit, debitCap);
+        manager.setCap(debitServiceOne, address(firstToken), cap);
+        uint256 storedCap = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
     }
 
-    function testFeeUnlockTime(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap, uint256 feeUnlockTime)
-        public
-    {
-        _setupArbitraryState(previousDeposit, debitSpread, debitCap);
+    function testFeeUnlockTime(uint256 previousDeposit, uint256 debitCap, uint256 feeUnlockTime) public {
+        _setupArbitraryState(previousDeposit, debitCap);
         feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
         assertTrue(IVault(manager.vaults(address(firstToken))).feeUnlockTime() == feeUnlockTime);
@@ -136,15 +117,9 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(
-        uint256 previousDeposit,
-        uint256 debitSpread,
-        uint256 debitCap,
-        uint256 currentExposure,
-        uint256 borrowed
-    ) public {
+    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 currentExposure, uint256 borrowed) public {
         address vaultAddress = manager.vaults(address(firstToken));
-        debitCap = _setupArbitraryState(previousDeposit, debitSpread, debitCap);
+        debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
 
         uint256 investedPortion = freeLiquidity == 0
@@ -164,10 +139,8 @@ contract ManagerTest is Test {
         }
     }
 
-    function testRepay(uint256 previousDeposit, uint256 debitSpread, uint256 debitCap, uint256 repaid, uint256 debt)
-        public
-    {
-        debitCap = _setupArbitraryState(previousDeposit, debitSpread, debitCap);
+    function testRepay(uint256 previousDeposit, uint256 debitCap, uint256 repaid, uint256 debt) public {
+        debitCap = _setupArbitraryState(previousDeposit, debitCap);
         vm.assume(repaid <= firstToken.balanceOf(tokenSink));
         vm.startPrank(tokenSink);
         firstToken.approve(manager.vaults(address(firstToken)), repaid);
@@ -179,7 +152,6 @@ contract ManagerTest is Test {
 
     function testDirectMint(
         uint256 previousDeposit,
-        uint256 debitSpread,
         uint256 debitCap,
         uint256 currentExposure,
         uint256 minted,
@@ -187,7 +159,7 @@ contract ManagerTest is Test {
     ) public {
         // The real use-case is for a credit service, but we use debit to avoid stack too deep
         IVault vault = IVault(manager.vaults(address(firstToken)));
-        debitCap = _setupArbitraryState(previousDeposit, debitSpread, debitCap);
+        debitCap = _setupArbitraryState(previousDeposit, debitCap);
 
         // Necessary to avoid overflow
         minted = minted.safeAdd(vault.totalSupply()) - vault.totalSupply();
@@ -210,15 +182,9 @@ contract ManagerTest is Test {
         }
     }
 
-    function testDirectBurn(
-        uint256 previousDeposit,
-        uint256 debitSpread,
-        uint256 debitCap,
-        uint256 burned,
-        uint256 maxAmountIn
-    ) public {
+    function testDirectBurn(uint256 previousDeposit, uint256 debitCap, uint256 burned, uint256 maxAmountIn) public {
         IVault vault = IVault(manager.vaults(address(firstToken)));
-        debitCap = _setupArbitraryState(previousDeposit, debitSpread, debitCap);
+        debitCap = _setupArbitraryState(previousDeposit, debitCap);
 
         uint256 initialShares = vault.balanceOf(anyAddress);
         if (burned > initialShares) burned = initialShares;

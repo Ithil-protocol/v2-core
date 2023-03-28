@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { ICurvePool } from "../../src/interfaces/external/curve/ICurvePool.sol";
 import { IConvexBooster } from "../../src/interfaces/external/convex/IConvexBooster.sol";
@@ -11,10 +12,15 @@ import { IManager, Manager } from "../../src/Manager.sol";
 import { CurveConvexService } from "../../src/services/debit/CurveConvexService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 contract CurveConvexServiceTest is BaseIntegrationServiceTest {
+    using GeneralMath for uint256;
+
     CurveConvexService internal immutable service;
+    Oracle internal immutable oracle;
+    MockSwapper internal immutable swapper;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address internal constant crv = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
@@ -28,8 +34,11 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        service = new CurveConvexService(address(manager), convexBooster, crv, cvx);
+        oracle = new Oracle();
+        swapper = new MockSwapper();
+        service = new CurveConvexService(address(manager), address(oracle), address(swapper), convexBooster, crv, cvx);
         vm.stopPrank();
+
         loanLength = 2;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -195,9 +204,19 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             vm.expectRevert("Withdrawal resulted in fewer coins than expected");
             service.close(0, data);
         } else {
-            service.close(0, data);
-            assertTrue(IERC20(loanTokens[0]).balanceOf(address(service)) == initialBalance0 + quoted[0]);
-            assertTrue(IERC20(loanTokens[1]).balanceOf(address(service)) == initialBalance1 + quoted[1]);
+            uint256[] memory amountsOut = service.close(0, data);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
+            assertEq(IERC20(loanTokens[1]).balanceOf(address(service)), 0);
+            assertEq(amountsOut[0], quoted[0]);
+            assertEq(amountsOut[1], quoted[1]);
+            assertEq(
+                IERC20(loanTokens[0]).balanceOf(address(this)),
+                (initialBalance0 + quoted[0]).positiveSub(loan[0].amount)
+            );
+            assertEq(
+                IERC20(loanTokens[1]).balanceOf(address(this)),
+                (initialBalance1 + quoted[1]).positiveSub(loan[1].amount)
+            );
         }
     }
 

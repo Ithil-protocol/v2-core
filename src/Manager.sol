@@ -27,7 +27,7 @@ contract Manager is IManager, Ownable {
     }
 
     modifier supported(address token) {
-        if (riskParams[msg.sender][token].cap == 0) revert RestrictedToWhitelistedServices();
+        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelistedServices();
         _;
     }
 
@@ -62,7 +62,7 @@ contract Manager is IManager, Ownable {
     }
 
     function setCap(address service, address token, uint256 cap) external override onlyOwner {
-        riskParams[service][token].cap = cap;
+        caps[service][token] = cap;
 
         emit CapWasUpdated(service, token, cap);
     }
@@ -83,7 +83,7 @@ contract Manager is IManager, Ownable {
         vaultExists(token)
         returns (uint256, uint256)
     {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 investmentCap = caps[msg.sender][token];
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
             currentExposure,
@@ -111,7 +111,7 @@ contract Manager is IManager, Ownable {
         vaultExists(token)
         returns (uint256)
     {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 investmentCap = caps[msg.sender][token];
         uint256 totalSupply = IVault(vaults[token]).totalSupply();
         uint256 investedPortion = totalSupply == 0
             ? GeneralMath.RESOLUTION

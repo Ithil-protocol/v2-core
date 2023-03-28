@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
@@ -13,7 +14,9 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { StringEncoder } from "../helpers/StringEncoder.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 /// @dev State study
 /// BalancerService native state:
@@ -59,7 +62,10 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     BalancerService internal immutable service;
+    Oracle internal immutable oracle;
+    MockSwapper internal immutable swapper;
 
+    address internal constant router = 0xDef1C0ded9bec7F1a1670819833240f027b25EfF;
     address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
     bytes32 internal constant balancerPoolID = 0x64541216bafffeec8ea535bb71fbc927831d0595000100000000000000000002;
     address internal constant gauge = 0x104f1459a2fFEa528121759B238BB609034C2f01;
@@ -73,8 +79,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        service = new BalancerService(address(manager), balancerVault, bal);
+        oracle = new Oracle();
+        swapper = new MockSwapper();
+        service = new BalancerService(address(manager), address(oracle), address(swapper), balancerVault, bal);
         vm.stopPrank();
+
         loanLength = 3;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -248,12 +257,13 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
         (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
 
+        bytes memory swapData;
         uint256[] memory minAmountsOut = new uint256[](3);
         // Fees make the initial investment always at a loss
         minAmountsOut[0] = minAmountsOut0;
         minAmountsOut[1] = minAmountsOut1;
         minAmountsOut[2] = minAmountsOut2;
-        bytes memory data = abi.encode(minAmountsOut);
+        bytes memory data = abi.encode(minAmountsOut, swapData);
         (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         if (
             minAmountsOut0 > actualLoans[0].amount &&
@@ -283,15 +293,21 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                 collaterals[0].amount - firstStep,
                 bptTotalSupply - firstStep
             );
-            service.close(0, data);
+            uint256[] memory amountsOut = service.close(0, data);
             // total supply as expected
             assertEq(IERC20(collateralTokens[0]).totalSupply(), bptTotalSupply - collaterals[0].amount);
             // min amounts out are respected
             for (uint256 i = 0; i < loanLength; i++) {
+                // Service is emptied
+                assertEq(IERC20(loanTokens[i]).balanceOf(address(service)), 0);
                 // If firstStep = 0, minAmountsOut are also zero
+                // Following line is to avoid stackTooDeep
+                finalAmounts[i] += initialBalances[i] + minAmountsOut[i];
+                assertEq(amountsOut[i], finalAmounts[i]);
+                // Payoff is paid to address(this) which is the user
                 assertEq(
-                    IERC20(loanTokens[i]).balanceOf(address(service)),
-                    initialBalances[i] + minAmountsOut[i] + finalAmounts[i]
+                    IERC20(loanTokens[i]).balanceOf(address(this)),
+                    finalAmounts[i].positiveSub(actualLoans[i].amount)
                 );
             }
         }
