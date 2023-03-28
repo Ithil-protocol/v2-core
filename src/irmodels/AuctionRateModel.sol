@@ -3,12 +3,14 @@ pragma solidity =0.8.17;
 
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { DebitService } from "../services/DebitService.sol";
+import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 import { IService } from "../interfaces/IService.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @dev IR = baseIR + spread
 /// Rate model in which baseIR is based on a Dutch auction
 /// GeneralMath.RESOLUTION corresponds to 1, i.e. an interest rate of 100%
-abstract contract AuctionRateModel is DebitService {
+abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     using GeneralMath for uint256;
 
     error InvalidInitParams();
@@ -23,6 +25,13 @@ abstract contract AuctionRateModel is DebitService {
     mapping(address => uint256) public halvingTime;
     mapping(address => uint256) public riskSpreads;
     mapping(address => uint256) public latestAndBase;
+
+    modifier checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) {
+        _;
+        (uint256 baseRate, uint256 spread) = _updateBase(loan, freeLiquidity);
+        (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
+        if (requestedIr < baseRate || requestedSpread < spread) revert AboveRiskThreshold();
+    }
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
         if (baseRate > GeneralMath.RESOLUTION || riskSpread > GeneralMath.RESOLUTION || halfTime == 0)
@@ -69,7 +78,7 @@ abstract contract AuctionRateModel is DebitService {
         return (newBase, spread);
     }
 
-    function _checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) internal override {
+    function _checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) internal override(BaseRiskModel) {
         (uint256 baseRate, uint256 spread) = _updateBase(loan, freeLiquidity);
         (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
         if (requestedIr < baseRate || requestedSpread < spread) revert AboveRiskThreshold();

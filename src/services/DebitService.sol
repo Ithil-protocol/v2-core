@@ -2,10 +2,11 @@
 pragma solidity =0.8.17;
 
 import { Service } from "./Service.sol";
+import { BaseRiskModel } from "./BaseRiskModel.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
-abstract contract DebitService is Service {
+abstract contract DebitService is Service, BaseRiskModel {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -138,7 +139,4 @@ abstract contract DebitService is Service {
         }
         return duePayments;
     }
-
-    // Checks the riskiness of the agreement and eventually reverts with AboveRiskThreshold()
-    function _checkRiskiness(Loan memory loan, uint256 freeLiquidity) internal virtual {}
 }

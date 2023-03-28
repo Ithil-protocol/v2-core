@@ -8,6 +8,7 @@ import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Rout
 import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Factory.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { WhitelistedService } from "../WhitelistedService.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { DebitService } from "../DebitService.sol";
@@ -16,7 +17,7 @@ import { Service } from "../Service.sol";
 /// @title    SushiService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Sushi pool
-contract SushiService is AuctionRateModel {
+contract SushiService is WhitelistedService, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -51,7 +52,7 @@ contract SushiService is AuctionRateModel {
         rewardToken = minichef.SUSHI();
     }
 
-    function _open(Agreement memory agreement, bytes calldata data) internal override {
+    function _open(Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.tokens.length != 2) revert InexistentPool();
         if (agreement.loans.length != 2) revert InvalidInput();
@@ -78,7 +79,7 @@ contract SushiService is AuctionRateModel {
         minichef.deposit(pool.poolID, liquidity, address(this));
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         minichef.withdraw(pool.poolID, agreement.collaterals[0].amount, address(this));
 

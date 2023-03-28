@@ -9,6 +9,7 @@ import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVaul
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
+import { WhitelistedService } from "../WhitelistedService.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
@@ -19,7 +20,7 @@ import { Service } from "../Service.sol";
 /// @title    BalancerService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
-contract BalancerService is AuctionRateModel {
+contract BalancerService is WhitelistedService, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
@@ -59,7 +60,7 @@ contract BalancerService is AuctionRateModel {
         bal = _bal;
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
@@ -90,7 +91,7 @@ contract BalancerService is AuctionRateModel {
         if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little

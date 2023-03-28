@@ -6,13 +6,14 @@ import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
+import { WhitelistedService } from "../WhitelistedService.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
-contract AaveService is AuctionRateModel {
+contract AaveService is WhitelistedService, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -27,7 +28,7 @@ contract AaveService is AuctionRateModel {
         aave = IPool(_aave);
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
         IAToken aToken = IAToken(agreement.collaterals[0].token);
         if (aToken.UNDERLYING_ASSET_ADDRESS() != agreement.loans[0].token) revert IncorrectObtainedToken();
         if (agreement.collaterals[0].amount != agreement.loans[0].amount + agreement.loans[0].margin)
@@ -38,7 +39,7 @@ contract AaveService is AuctionRateModel {
         aave.deposit(agreement.loans[0].token, agreement.loans[0].amount + agreement.loans[0].margin, address(this), 0);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
         uint256 toRedeem = IERC20(agreement.collaterals[0].token).balanceOf(address(this)).safeMulDiv(
             agreement.collaterals[0].amount,
