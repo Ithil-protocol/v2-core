@@ -5,11 +5,12 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { DebitService } from "../services/DebitService.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 import { IService } from "../interfaces/IService.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @dev IR = baseIR + spread
 /// Rate model in which baseIR is based on a Dutch auction
 /// GeneralMath.RESOLUTION corresponds to 1, i.e. an interest rate of 100%
-abstract contract AuctionRateModel is BaseRiskModel {
+abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     using GeneralMath for uint256;
 
     error InvalidInitParams();
