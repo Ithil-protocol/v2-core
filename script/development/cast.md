@@ -83,9 +83,22 @@ cast send $USDC_VAULT "redeem(uint256,address,address)" 1999999999 $WALLET0 $WAL
 how to increment value of a Vault
 
 ```
+cast send $WETH_CONTRACT "transfer(address,uint256)" $WETH_VAULT 1000000000000000000 --rpc-url localhost:8545 --from $WALLET1
+cast call $WETH_VAULT "convertToAssets(uint256)" 1000000000000000000 --rpc-url localhost:8545
+```
+
+```
 cast call $DAI_VAULT "convertToAssets(uint256)" 100000000000000000000 --rpc-url localhost:8545
 > 100
-cast send $DAI_CONTRACT "transfer(address,uint256)" $DAI_VAULT 1000000000000000000000 --rpc-url localhost:8545 --from
+cast send $DAI_CONTRACT "transfer(address,uint256)" $DAI_VAULT 1000000000000000000000 --rpc-url localhost:8545 --from $DAI_WHALE
 cast call $DAI_VAULT "convertToAssets(uint256)" 100000000000000000000 --rpc-url localhost:8545
 > 110
+```
+
+Remove shares from wallet1 from vault
+
+```
+cast call $WETH_VAULT "balanceOf(address)" $WALLET1 --rpc-url localhost:8545
+> 2.53
+cast send $WETH_VAULT "redeem(uint256,address,address)" 2530000000000000000 $WALLET1 $WALLET1 --rpc-url localhost:8545 --from $WALLET1
 ```
