@@ -14,8 +14,8 @@ contract Manager is IManager, Ownable {
 
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    // service => token => RiskParams
-    mapping(address => mapping(address => RiskParams)) public override riskParams;
+    // service => token => caps
+    mapping(address => mapping(address => uint256)) public override caps;
     address public feeCollector;
 
     // solhint-disable-next-line no-empty-blocks
@@ -53,12 +53,6 @@ contract Manager is IManager, Ownable {
         feeCollector = collector;
 
         emit FeeCollectorWasChanged(collector);
-    }
-
-    function setSpread(address service, address token, uint256 spread) external override onlyOwner {
-        riskParams[service][token].spread = spread;
-
-        emit SpreadWasUpdated(service, token, spread);
     }
 
     function setCap(address service, address token, uint256 cap) external override onlyOwner {

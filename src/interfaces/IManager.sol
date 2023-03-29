@@ -15,8 +15,6 @@ interface IManager {
 
     function setFeeCollector(address collector) external;
 
-    function setSpread(address service, address token, uint256 spread) external;
-
     function setCap(address service, address token, uint256 cap) external;
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
