@@ -5,7 +5,7 @@ import { IService } from "../interfaces/IService.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract WhitelistedService is Ownable {
+abstract contract Whitelisted is Ownable {
     mapping(address => bool) public whitelisted;
     bool public enabled;
 

@@ -16,18 +16,12 @@ contract Manager is IManager, Ownable {
     mapping(address => address) public override vaults;
     // service => token => caps
     mapping(address => mapping(address => uint256)) public override caps;
-    address public feeCollector;
 
     // solhint-disable-next-line no-empty-blocks
     constructor() {}
 
-    modifier restricted() {
-        if (msg.sender != feeCollector && msg.sender != owner()) revert RestrictedToOwner();
-        _;
-    }
-
     modifier supported(address token) {
-        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelistedServices();
+        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelisteds();
         _;
     }
 
@@ -47,12 +41,6 @@ contract Manager is IManager, Ownable {
         vaults[token] = vault;
 
         return vault;
-    }
-
-    function setFeeCollector(address collector) external override onlyOwner {
-        feeCollector = collector;
-
-        emit FeeCollectorWasChanged(collector);
     }
 
     function setCap(address service, address token, uint256 cap) external override onlyOwner {
@@ -129,25 +117,5 @@ contract Manager is IManager, Ownable {
         if (amountIn > maxAmountIn) revert MaxAmountExceeded();
 
         return amountIn;
-    }
-
-    /// @inheritdoc IManager
-    function harvestFees(address token, uint256 feesPercentage, address to, uint256 latestHarvest)
-        external
-        override
-        restricted
-        vaultExists(token)
-        returns (uint256)
-    {
-        IVault vault = IVault(vaults[token]);
-        (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getStatus();
-        if (latestRepay < latestHarvest) revert Throttled();
-
-        uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feesPercentage, GeneralMath.RESOLUTION);
-        uint256 sharesToMint = vault.convertToShares(feesToHarvest);
-        vault.directMint(sharesToMint, address(this));
-        vault.redeem(sharesToMint, to, address(this));
-
-        return sharesToMint;
     }
 }

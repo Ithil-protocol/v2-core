@@ -59,7 +59,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     function getStatus() external view override returns (uint256, uint256, uint256) {
-        return (currentProfits, currentLosses, latestRepay);
+        return (_calculateLockedProfits(), _calculateLockedLosses(), latestRepay);
     }
 
     // Total assets are used to calculate shares to mint and redeem

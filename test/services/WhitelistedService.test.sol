@@ -7,14 +7,14 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { Test } from "forge-std/Test.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { Service, IService } from "../../src/services/Service.sol";
-import { WhitelistedService } from "../../src/services/WhitelistedService.sol";
+import { Whitelisted } from "../../src/services/Whitelisted.sol";
 import { AuctionRateModel } from "../../src/irmodels/AuctionRateModel.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-contract TestService is WhitelistedService, AuctionRateModel, Service {
+contract TestService is Whitelisted, AuctionRateModel, Service {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager) {}
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
@@ -26,7 +26,7 @@ contract TestService is WhitelistedService, AuctionRateModel, Service {
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override onlyWhitelisted {}
 }
 
-contract WhitelistedServiceTest is Test, IERC721Receiver {
+contract WhitelistedTest is Test, IERC721Receiver {
     using SafeERC20 for IERC20;
 
     Manager internal immutable manager;

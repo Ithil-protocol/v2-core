@@ -9,7 +9,7 @@ import { ERC20Votes } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20
 /// @author   Ithil
 contract Ithil is ERC20, ERC20Permit, ERC20Votes {
     constructor() ERC20("Ithil", "ITHIL") ERC20Permit("Ithil") {
-        _mint(msg.sender, 1e6 * 10**decimals());
+        _mint(msg.sender, 1e8 * 10**decimals());
     }
 
     function _afterTokenTransfer(address from, address to, uint256 amount) internal override(ERC20, ERC20Votes) {

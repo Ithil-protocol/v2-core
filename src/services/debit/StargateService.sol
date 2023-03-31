@@ -6,7 +6,7 @@ import { IOracle } from "../../interfaces/IOracle.sol";
 import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
-import { WhitelistedService } from "../WhitelistedService.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 import { DebitService } from "../DebitService.sol";
 import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
 import { Service } from "../Service.sol";
@@ -14,7 +14,7 @@ import { Service } from "../Service.sol";
 /// @title    StargateService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Stargate pool
-contract StargateService is WhitelistedService, ConstantRateModel, DebitService {
+contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IStargatePool;
 

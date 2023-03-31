@@ -5,7 +5,7 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
-import { WhitelistedService } from "../WhitelistedService.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
@@ -17,7 +17,7 @@ import { Service } from "../Service.sol";
 /// @title    CurveConvexService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Curve pool plus staking on Convex
-contract CurveConvexService is WhitelistedService, ConstantRateModel, DebitService {
+contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 

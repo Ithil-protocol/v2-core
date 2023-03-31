@@ -13,8 +13,6 @@ interface IManager {
 
     function create(address token) external returns (address);
 
-    function setFeeCollector(address collector) external;
-
     function setCap(address service, address token, uint256 cap) external;
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
@@ -31,19 +29,14 @@ interface IManager {
 
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
 
-    function harvestFees(address token, uint256 feesPercentage, address to, uint256 latestHarvest)
-        external
-        returns (uint256);
-
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
     event TokenWasRemovedFromService(address indexed service, address indexed token);
     event FeeCollectorWasChanged(address indexed newFeeCollector);
 
     error VaultMissing();
-    error RestrictedToWhitelistedServices();
+    error RestrictedToWhitelisteds();
     error RestrictedToOwner();
-    error Throttled();
     error InvestmentCapExceeded(uint256 investedPortion, uint256 investmentCap);
     error MaxAmountExceeded();
 }

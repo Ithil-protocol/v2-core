@@ -2,6 +2,7 @@
 pragma solidity =0.8.17;
 
 import { IService } from "../../src/interfaces/IService.sol";
+import { console2 } from "forge-std/console2.sol";
 
 library OrderHelper {
     function createSimpleERC20Order(
@@ -50,11 +51,10 @@ library OrderHelper {
         uint256[] memory collateralAmounts,
         uint256 time,
         bytes memory data
-    ) public pure returns (IService.Order memory) {
+    ) public view returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
-
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
-        IService.Collateral[] memory collateral = new IService.Collateral[](tokens.length);
+        IService.Collateral[] memory collateral = new IService.Collateral[](collateralTokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             loan[i].token = tokens[i];
             loan[i].amount = amounts[i];
