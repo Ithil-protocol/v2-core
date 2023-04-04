@@ -12,31 +12,22 @@ import { IStargatePool } from "../../src/interfaces/external/stargate/IStargateL
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 contract StargateServiceTest is BaseIntegrationServiceTest {
     StargateService internal immutable service;
     Oracle internal immutable oracle;
-    MockSwapper internal immutable swapper;
 
     address internal constant stargateRouter = 0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614;
     address internal constant stargateLPStaking = 0xeA8DfEE1898a7e0a59f7527F076106d7e44c2176;
     uint16 internal constant usdcPoolID = 1;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        swapper = new MockSwapper();
-        service = new StargateService(
-            address(manager),
-            address(oracle),
-            address(swapper),
-            stargateRouter,
-            stargateLPStaking
-        );
+        service = new StargateService(address(manager), address(oracle), stargateRouter, stargateLPStaking);
         vm.stopPrank();
 
         loanLength = 1;
