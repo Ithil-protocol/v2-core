@@ -2,6 +2,8 @@
 pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { Service } from "../Service.sol";
 import { IVault } from "../../interfaces/IVault.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
@@ -18,6 +20,9 @@ contract FeeCollector is Service {
     IERC20 public immutable weth;
     IERC20 public immutable ithil;
 
+    // todo: must be non-transferrable
+    IERC20 public immutable veToken;
+
     // Locking of the position in seconds
     uint256 public immutable duration;
 
@@ -27,19 +32,25 @@ contract FeeCollector is Service {
     // Necessary to avoid a double harvest: harvesting is allowed only once after each repay
     mapping(address => uint256) public latestHarvest;
 
-    // Necessary to prevent donation attacks which could lock weth inside the contract forever
-    // This also allows this contract to support fees in ITHIL
-    uint256 public totalDeposits;
+    // Necessary to properly distribute fees and prevent snatching
+    uint256 public totalCollateral;
 
     error Throttled();
     error BeforeExpiry();
     error ZeroAmount();
+    error WrongTokens();
 
     constructor(address _manager, address _weth, address _ithil, uint256 _duration, uint256 _feePercentage)
         Service("FeeCollector", "FEE-COLLECTOR", _manager)
     {
         weth = IERC20(_weth);
         ithil = IERC20(_ithil);
+        veToken = IERC20(
+            new ERC20(
+                string(abi.encodePacked("vested Ithil ", _duration / 604800, " weeks")),
+                string(abi.encodePacked("ve", IERC20Metadata(_ithil).symbol(), _duration / 604800))
+            )
+        );
         duration = _duration;
         feePercentage = _feePercentage;
     }
@@ -49,10 +60,23 @@ contract FeeCollector is Service {
         _;
     }
 
+    // The 1:1 weight is arbitrary, but we use it because it makes computations simpler
+    function totalAssets() public view returns (uint256) {
+        return ithil.balanceOf(address(this)) + weth.balanceOf(address(this));
+    }
+
     function _open(Agreement memory agreement, bytes memory data) internal override {
         if (agreement.loans[0].margin == 0) revert ZeroAmount();
-        totalDeposits += agreement.loans[0].margin;
+        if (agreement.loans[0].token != address(ithil)) revert WrongTokens();
+        // Update collateral using ERC4626 formula
+        agreement.collaterals[0].amount = totalCollateral == 0
+            ? agreement.loans[0].margin
+            : agreement.loans[0].margin.safeMulDiv(totalCollateral, totalAssets());
+        // Total collateral is updated
+        totalCollateral += agreement.collaterals[0].amount;
+        // Deposit Ithil
         ithil.transferFrom(msg.sender, address(this), agreement.loans[0].margin);
+        // todo: transfer/mint veToken
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory /*data*/)
@@ -60,19 +84,29 @@ contract FeeCollector is Service {
         override
         expired(agreement)
     {
-        console2.log("0");
-        totalDeposits -= agreement.loans[0].margin;
-        console2.log("1");
-        uint256 currentBalance = weth.balanceOf(address(this)); // gas savings
-        console2.log("2");
+        uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.collaterals[0].amount, totalCollateral);
+        totalCollateral -= agreement.collaterals[0].amount;
+        // give back Ithil tokens
         ithil.transfer(msg.sender, agreement.loans[0].margin);
-        console2.log("3");
-        if (currentBalance > 0)
-            weth.transfer(
-                msg.sender,
-                currentBalance.safeMulDiv(agreement.loans[0].margin, totalDeposits + agreement.loans[0].margin)
-            );
-        console2.log("4");
+        // Transfer weth
+        weth.transfer(msg.sender, totalWithdraw.positiveSub(agreement.loans[0].margin));
+        // todo: transfer/burn veToken
+    }
+
+    function withdrawFees(uint256 tokenId) external returns (uint256) {
+        if (ownerOf(tokenId) != msg.sender) revert RestrictedAccess();
+        Agreement memory agreement = agreements[tokenId];
+        // This is the total withdrawable, consisting of ithil + weth at 1:1 weight
+        // This thus has no physical meaning: it's an auxiliary variable
+        uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.collaterals[0].amount, totalCollateral);
+        // By subtracting the Ithil staked we get only the weth part: this is the weth the user is entitled to
+        uint256 toTransfer = totalWithdraw.positiveSub(agreement.loans[0].margin);
+        // Update collateral and totalCollateral
+        // With the new state, we will have totalAssets * collateral / totalCollateral = margin
+        // Thus, the user cannot withdraw again (unless other fees are generated)
+        agreement.collaterals[0].amount -= agreement.collaterals[0].amount.safeMulDiv(toTransfer, totalWithdraw);
+        totalCollateral -= agreement.collaterals[0].amount.safeMulDiv(toTransfer, totalWithdraw);
+        weth.transfer(msg.sender, toTransfer);
     }
 
     function _harvestFees(address token) internal {
@@ -85,7 +119,7 @@ contract FeeCollector is Service {
         uint256 sharesToMint = vault.convertToShares(feesToHarvest);
         // todo: what is that "maxAmountIn"? For now it's uint256(-1) to avoid reversals
         manager.directMint(token, address(this), sharesToMint, exposures[token], type(uint256).max);
-        vault.redeem(sharesToMint, address(this), address(this));
+        uint256 assets = vault.redeem(sharesToMint, address(this), address(this));
         // todo: reward harvester
     }
 
