@@ -21,7 +21,7 @@ contract Manager is IManager, Ownable {
     constructor() {}
 
     modifier supported(address token) {
-        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelisteds();
+        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelisted();
         _;
     }
 

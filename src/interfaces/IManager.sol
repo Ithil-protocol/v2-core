@@ -32,10 +32,9 @@ interface IManager {
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
     event TokenWasRemovedFromService(address indexed service, address indexed token);
-    event FeeCollectorWasChanged(address indexed newFeeCollector);
 
     error VaultMissing();
-    error RestrictedToWhitelisteds();
+    error RestrictedToWhitelisted();
     error RestrictedToOwner();
     error InvestmentCapExceeded(uint256 investedPortion, uint256 investmentCap);
     error MaxAmountExceeded();
