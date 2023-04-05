@@ -11,7 +11,6 @@ contract VeIthil is ERC20, ERC20Permit, ERC20Votes {
     error NotTransferrable();
 
     constructor() ERC20("veIthil", "veITHIL") ERC20Permit("veIthil") {
-        _mint(msg.sender, 1e8 * 10**decimals());
     }
 
     function _afterTokenTransfer(address from, address to, uint256 amount) internal override(ERC20, ERC20Votes) {
