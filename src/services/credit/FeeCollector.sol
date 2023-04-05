@@ -23,8 +23,11 @@ contract FeeCollector is Service {
     // todo: must be non-transferrable
     IERC20 public immutable veToken;
 
+    // 2^((n+1)/12) with 18 digit fixed point
+    uint64[] internal rewards;
+
     // Locking of the position in seconds
-    uint256 public immutable duration;
+    mapping(uint256 => uint256) public locktimes;
 
     // Percentage of fees which can be harvested. Only locked fees can be harvested
     uint256 public immutable feePercentage;
@@ -34,35 +37,46 @@ contract FeeCollector is Service {
 
     // Necessary to properly distribute fees and prevent snatching
     uint256 public totalCollateral;
+    // Necessary to implement convexity in locktimes
+    uint256 public virtualIthilBalance;
 
     error Throttled();
     error BeforeExpiry();
     error ZeroAmount();
     error WrongTokens();
+    error MaxLockExceeded();
 
-    constructor(address _manager, address _weth, address _ithil, uint256 _duration, uint256 _feePercentage)
+    constructor(address _manager, address _weth, address _ithil, address _veToken, uint256 _feePercentage)
         Service("FeeCollector", "FEE-COLLECTOR", _manager)
     {
         weth = IERC20(_weth);
         ithil = IERC20(_ithil);
-        veToken = IERC20(
-            new ERC20(
-                string(abi.encodePacked("vested Ithil ", _duration / 604800, " weeks")),
-                string(abi.encodePacked("ve", IERC20Metadata(_ithil).symbol(), _duration / 604800))
-            )
-        );
-        duration = _duration;
+        veToken = IERC20(_veToken);
         feePercentage = _feePercentage;
+        rewards = new uint64[](12);
+        rewards[0] = 1059463094359295265;
+        rewards[1] = 1122462048309372981;
+        rewards[2] = 1189207115002721067;
+        rewards[3] = 1259921049894873165;
+        rewards[4] = 1334839854170034365;
+        rewards[5] = 1414213562373095049;
+        rewards[6] = 1498307076876681499;
+        rewards[7] = 1587401051968199475;
+        rewards[8] = 1681792830507429086;
+        rewards[9] = 1781797436280678609;
+        rewards[10] = 1887748625363386993;
+        rewards[11] = 2000000000000000000;
     }
 
-    modifier expired(Agreement memory agreement) {
-        if (agreement.createdAt + duration > block.timestamp) revert BeforeExpiry();
+    modifier expired(uint256 tokenId) {
+        if (agreements[tokenId].createdAt + locktimes[tokenId] * 86400 * 30 > block.timestamp) revert BeforeExpiry();
         _;
     }
 
-    // The 1:1 weight is arbitrary, but we use it because it makes computations simpler
+    // Weth weight is the same as virtual balance rather than balance
+    // In this way, who locks for more time has right to more shares
     function totalAssets() public view returns (uint256) {
-        return ithil.balanceOf(address(this)) + weth.balanceOf(address(this));
+        return virtualIthilBalance + weth.balanceOf(address(this));
     }
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
@@ -72,35 +86,49 @@ contract FeeCollector is Service {
         agreement.collaterals[0].amount = totalCollateral == 0
             ? agreement.loans[0].margin
             : agreement.loans[0].margin.safeMulDiv(totalCollateral, totalAssets());
+        // Apply reward based on lock
+        uint256 monthsLocked = abi.decode(data, (uint256));
+        if (monthsLocked > 11) revert MaxLockExceeded();
+        agreement.collaterals[0].amount = agreement.collaterals[0].amount.safeMulDiv(rewards[monthsLocked], 1e18);
         // Total collateral is updated
         totalCollateral += agreement.collaterals[0].amount;
+        // Virtual balance is updated
+        virtualIthilBalance += agreement.loans[0].margin.safeMulDiv(rewards[monthsLocked], 1e18);
+        // register locktime
+        locktimes[id] = monthsLocked;
         // Deposit Ithil
         ithil.transferFrom(msg.sender, address(this), agreement.loans[0].margin);
         // todo: transfer/mint veToken
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory /*data*/)
+    function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/)
         internal
         override
-        expired(agreement)
+        expired(tokenID)
     {
         uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.collaterals[0].amount, totalCollateral);
         totalCollateral -= agreement.collaterals[0].amount;
+        virtualIthilBalance -= agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]], 1e18);
         // give back Ithil tokens
         ithil.transfer(msg.sender, agreement.loans[0].margin);
         // Transfer weth
-        weth.transfer(msg.sender, totalWithdraw.positiveSub(agreement.loans[0].margin));
+        weth.transfer(
+            msg.sender,
+            totalWithdraw.positiveSub(agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]], 1e18))
+        );
         // todo: transfer/burn veToken
     }
 
     function withdrawFees(uint256 tokenId) external returns (uint256) {
         if (ownerOf(tokenId) != msg.sender) revert RestrictedAccess();
         Agreement memory agreement = agreements[tokenId];
-        // This is the total withdrawable, consisting of ithil + weth at 1:1 weight
-        // This thus has no physical meaning: it's an auxiliary variable
+        // This is the total withdrawable, consisting of virtualIthil + weth
+        // Thus it has no physical meaning: it's an auxiliary variable
         uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.collaterals[0].amount, totalCollateral);
         // By subtracting the Ithil staked we get only the weth part: this is the weth the user is entitled to
-        uint256 toTransfer = totalWithdraw.positiveSub(agreement.loans[0].margin);
+        uint256 toTransfer = totalWithdraw.positiveSub(
+            agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenId]], 1e18)
+        );
         // Update collateral and totalCollateral
         // With the new state, we will have totalAssets * collateral / totalCollateral = margin
         // Thus, the user cannot withdraw again (unless other fees are generated)

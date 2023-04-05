@@ -62,7 +62,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     function _depositAmountInVault(address token, uint256 amount, bool needsBumping) internal returns (uint256) {
         if (IERC20(token).balanceOf(whales[address(token)]) > 0) {
             // 0 <= amount <= dai.balanceOf(whale) - 1
-            amount = amount % IERC20(token).balanceOf(whales[address(token)]); 
+            amount = amount % IERC20(token).balanceOf(whales[address(token)]);
             if (needsBumping && amount == 0) amount++;
 
             IVault vault = IVault(manager.vaults(token));

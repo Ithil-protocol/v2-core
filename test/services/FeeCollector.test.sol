@@ -2,7 +2,11 @@
 pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import {
+    ERC20,
+    ERC20PresetMinterPauser
+} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
@@ -40,11 +44,20 @@ contract FeeCollectorTest is BaseIntegrationServiceTest {
     uint256 internal constant blockNumber = 55895589;
     IERC20 internal immutable weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     address internal immutable wethWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+    IERC20 internal immutable veToken;
+
+    uint256[] internal rewards = new uint64[](12);
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         ithil = new Ithil();
-        service = new FeeCollector(address(manager), address(weth), address(ithil), 2592000, 1e17);
+        veToken = IERC20(
+            new ERC20(
+                string(abi.encodePacked("vested Ithil")),
+                string(abi.encodePacked("ve", IERC20Metadata(address(ithil)).symbol()))
+            )
+        );
+        service = new FeeCollector(address(manager), address(weth), address(ithil), address(veToken), 1e17);
         payer = new Payer(address(manager));
         manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION);
         vm.stopPrank();
@@ -56,14 +69,28 @@ contract FeeCollectorTest is BaseIntegrationServiceTest {
         collateralTokens = new address[](1);
         collateralTokens[0] = address(ithil);
         serviceAddress = address(service);
+
+        rewards[0] = 1059463094359295265;
+        rewards[1] = 1122462048309372981;
+        rewards[2] = 1189207115002721067;
+        rewards[3] = 1259921049894873165;
+        rewards[4] = 1334839854170034365;
+        rewards[5] = 1414213562373095049;
+        rewards[6] = 1498307076876681499;
+        rewards[7] = 1587401051968199475;
+        rewards[8] = 1681792830507429086;
+        rewards[9] = 1781797436280678609;
+        rewards[10] = 1887748625363386993;
+        rewards[11] = 2000000000000000000;
     }
 
     function testFeeCollectorOpenPosition(uint256 amount) public returns (uint256) {
-        IService.Order memory order = _openOrder1(0, 0, amount, 0, block.timestamp, "");
+        bytes memory monthsLocked = abi.encode(uint256(7));
+        IService.Order memory order = _openOrder1(0, 0, amount, 0, block.timestamp, monthsLocked);
         uint256 initialBalance = ithil.balanceOf(address(this));
         service.open(order);
         assertEq(ithil.balanceOf(address(this)), initialBalance - order.agreement.loans[0].margin);
-        assertEq(service.totalCollateral(), order.agreement.loans[0].margin);
+        assertEq(service.totalCollateral(), order.agreement.loans[0].margin.safeMulDiv(rewards[7], 1e18));
         return order.agreement.loans[0].margin;
     }
 
@@ -72,7 +99,7 @@ contract FeeCollectorTest is BaseIntegrationServiceTest {
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("BeforeExpiry()"))));
         service.close(0, "");
 
-        vm.warp(block.timestamp + service.duration());
+        vm.warp(block.timestamp + 86400 * 7 * 30);
         feeTransfered = feeTransfered % weth.balanceOf(wethWhale);
         vm.prank(wethWhale);
         weth.transfer(address(service), feeTransfered);
@@ -80,10 +107,7 @@ contract FeeCollectorTest is BaseIntegrationServiceTest {
         uint256 initialWethBalance = weth.balanceOf(address(this));
         uint256 initialIthilBalance = ithil.balanceOf(address(this));
         service.close(0, "");
-        console2.log("5");
         assertEq(weth.balanceOf(address(this)), initialWethBalance + feeTransfered);
-        console2.log("6");
         assertEq(ithil.balanceOf(address(this)), initialIthilBalance + margin);
-        console2.log("7");
     }
 }
