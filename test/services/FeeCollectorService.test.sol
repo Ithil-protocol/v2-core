@@ -49,7 +49,7 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         vm.startPrank(admin);
         ithil = new Ithil();
         service = new FeeCollectorService(address(manager), address(weth), 1e17);
-        service.setTokenWeight(address(ithil), 1);
+        service.setTokenWeight(address(ithil), 1e18);
         payer = new Payer(address(manager));
         manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION);
         vm.stopPrank();

@@ -21,7 +21,7 @@ contract FeeCollectorService is Service {
     // Percentage of fees which can be harvested. Only locked fees can be harvested
     uint256 public immutable feePercentage;
     IERC20 public immutable weth;
-    IERC20 public immutable veToken;
+    VeIthil public immutable veToken;
 
     // weights for different tokens, 0 => not supported
     mapping(address => uint256) public weights;
@@ -31,8 +31,6 @@ contract FeeCollectorService is Service {
     mapping(address => uint256) public latestHarvest;
     // Necessary to properly distribute fees and prevent snatching
     uint256 public totalCollateral;
-    // Necessary to implement convexity in locktimes
-    uint256 public virtualIthilBalance;
     // 2^((n+1)/12) with 18 digit fixed point
     uint64[] internal rewards;
 
@@ -80,7 +78,7 @@ contract FeeCollectorService is Service {
     // Weth weight is the same as virtual balance rather than balance
     // In this way, who locks for more time has right to more shares
     function totalAssets() public view returns (uint256) {
-        return virtualIthilBalance + weth.balanceOf(address(this));
+        return veToken.totalSupply() + weth.balanceOf(address(this));
     }
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
@@ -93,16 +91,21 @@ contract FeeCollectorService is Service {
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
         if (monthsLocked > 11) revert MaxLockExceeded();
-        agreement.collaterals[0].amount = agreement.collaterals[0].amount.safeMulDiv(rewards[monthsLocked], 1e18);
+        agreement.collaterals[0].amount = agreement.collaterals[0].amount.safeMulDiv(
+            rewards[monthsLocked] * weights[agreement.loans[0].token],
+            1e36
+        );
         // Total collateral is updated
         totalCollateral += agreement.collaterals[0].amount;
         // Virtual balance is updated
-        virtualIthilBalance += agreement.loans[0].margin.safeMulDiv(rewards[monthsLocked], 1e18);
+        veToken.mint(
+            msg.sender,
+            agreement.loans[0].margin.safeMulDiv(rewards[monthsLocked] * weights[agreement.loans[0].token], 1e36)
+        );
         // register locktime
         locktimes[id] = monthsLocked;
         // Deposit Ithil
         IERC20(agreement.loans[0].token).safeTransferFrom(msg.sender, address(this), agreement.loans[0].margin);
-        // todo: transfer/mint veToken
     }
 
     function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/)
@@ -112,15 +115,22 @@ contract FeeCollectorService is Service {
     {
         uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.collaterals[0].amount, totalCollateral);
         totalCollateral -= agreement.collaterals[0].amount;
-        virtualIthilBalance -= agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]], 1e18);
+        veToken.burn(
+            msg.sender,
+            agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]] * weights[agreement.loans[0].token], 1e36)
+        );
         // give back Ithil tokens
         IERC20(agreement.loans[0].token).safeTransfer(msg.sender, agreement.loans[0].margin);
         // Transfer weth
         weth.safeTransfer(
             msg.sender,
-            totalWithdraw.positiveSub(agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]], 1e18))
+            totalWithdraw.positiveSub(
+                agreement.loans[0].margin.safeMulDiv(
+                    rewards[locktimes[tokenID]] * weights[agreement.loans[0].token],
+                    1e36
+                )
+            )
         );
-        // todo: transfer/burn veToken
     }
 
     function withdrawFees(uint256 tokenId) external returns (uint256) {
@@ -131,7 +141,7 @@ contract FeeCollectorService is Service {
         uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.collaterals[0].amount, totalCollateral);
         // By subtracting the Ithil staked we get only the weth part: this is the weth the user is entitled to
         uint256 toTransfer = totalWithdraw.positiveSub(
-            agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenId]], 1e18)
+            agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenId]] * weights[agreement.loans[0].token], 1e36)
         );
         // Update collateral and totalCollateral
         // With the new state, we will have totalAssets * collateral / totalCollateral = margin

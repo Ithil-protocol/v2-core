@@ -94,7 +94,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 freeLiquidityCache = freeLiquidity();
         uint256 assets = convertToAssets(maxRedeemCache);
         if (assets == freeLiquidityCache && assets > 0) maxRedeemCache = convertToShares(assets - 1);
-        
+
         return maxRedeemCache;
     }
 
