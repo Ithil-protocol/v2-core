@@ -15,8 +15,6 @@ import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { Ithil } from "../../src/Ithil.sol";
 import { VeIthil } from "../../src/VeIthil.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract Payer is Service {
     // Dummy service to produce fees
     // TODO: test fee generation

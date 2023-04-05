@@ -10,8 +10,6 @@ import { Whitelisted } from "../Whitelisted.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 /// @title    AaveService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets

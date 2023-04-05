@@ -2,7 +2,6 @@
 pragma solidity =0.8.17;
 
 import { IService } from "../../src/interfaces/IService.sol";
-import { console2 } from "forge-std/console2.sol";
 
 library OrderHelper {
     function createSimpleERC20Order(

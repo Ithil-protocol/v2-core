@@ -6,8 +6,6 @@ import { BaseRiskModel } from "./BaseRiskModel.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 abstract contract DebitService is Service, BaseRiskModel {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
@@ -80,13 +78,11 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
         if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
-        console2.log("close");
         Agreement memory agreement = agreements[tokenID];
 
         uint256[] memory obtained = new uint256[](agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
-            console2.log("obtained", obtained[index]);
         }
         super.close(tokenID, data);
 
@@ -96,15 +92,11 @@ abstract contract DebitService is Service, BaseRiskModel {
                 agreement.loans[index].amount
             );
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - obtained[index];
-            console2.log("agreement.loans[index].amount", agreement.loans[index].amount);
-            console2.log("obtained[index]", obtained[index]);
             if (obtained[index] > duePayments[index]) {
-                console2.log(">");
                 IERC20(agreement.loans[index].token).approve(
                     manager.vaults(agreement.loans[index].token),
                     duePayments[index]
                 );
-                console2.log("duePayments[index]", duePayments[index]);
                 // Good repay: the difference is transferred to the user
                 manager.repay(
                     agreement.loans[index].token,
@@ -114,7 +106,6 @@ abstract contract DebitService is Service, BaseRiskModel {
                 );
                 IERC20(agreement.loans[index].token).safeTransfer(msg.sender, obtained[index] - duePayments[index]);
             } else {
-                console2.log("else");
                 // Bad repay: all the obtained amount is given to the vault
                 IERC20(agreement.loans[index].token).approve(
                     manager.vaults(agreement.loans[index].token),

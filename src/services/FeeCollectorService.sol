@@ -9,7 +9,6 @@ import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { Whitelisted } from "./Whitelisted.sol";
 import { Service } from "./Service.sol";
 import { VeIthil } from "../VeIthil.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    FeeCollectorService contract
 /// @author   Ithil
