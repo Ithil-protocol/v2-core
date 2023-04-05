@@ -19,7 +19,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
