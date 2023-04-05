@@ -7,7 +7,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { FeeCollectorService } from "../../src/services/credit/FeeCollectorService.sol";
+import { FeeCollectorService } from "../../src/services/FeeCollectorService.sol";
 import { Service } from "../../src/services/Service.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
@@ -76,22 +76,22 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         rewards[11] = 2000000000000000000;
     }
 
-    function testFeeCollectorOpenPosition(uint256 amount) public returns (uint256) {
-        bytes memory monthsLocked = abi.encode(uint256(7));
+    function testFeeCollectorOpenPosition(uint256 amount, uint256 months) public returns (uint256) {
+        bytes memory monthsLocked = abi.encode(uint256(months % 12));
         IService.Order memory order = _openOrder1(0, 0, amount, 0, block.timestamp, monthsLocked);
         uint256 initialBalance = ithil.balanceOf(address(this));
         service.open(order);
         assertEq(ithil.balanceOf(address(this)), initialBalance - order.agreement.loans[0].margin);
-        assertEq(service.totalCollateral(), order.agreement.loans[0].margin.safeMulDiv(rewards[7], 1e18));
+        assertEq(service.totalLoans(), order.agreement.loans[0].margin.safeMulDiv(rewards[months % 12], 1e18));
         return order.agreement.loans[0].margin;
     }
 
-    function testFeeCollectorClosePosition(uint256 amount, uint256 feeTransfered) public {
-        uint256 margin = testFeeCollectorOpenPosition(amount);
+    function testFeeCollectorClosePosition(uint256 amount, uint256 feeTransfered, uint256 months) public {
+        uint256 margin = testFeeCollectorOpenPosition(amount, months);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("BeforeExpiry()"))));
         service.close(0, "");
 
-        vm.warp(block.timestamp + 86400 * 7 * 30);
+        vm.warp(block.timestamp + 86400 * 30 * (1 + (months % 12)));
         feeTransfered = feeTransfered % weth.balanceOf(wethWhale);
         vm.prank(wethWhale);
         weth.transfer(address(service), feeTransfered);
