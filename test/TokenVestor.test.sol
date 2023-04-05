@@ -5,7 +5,6 @@ import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/exte
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { console2 } from "forge-std/console2.sol";
 import { Test } from "forge-std/Test.sol";
-import { FeeCollector } from "../src/services/credit/FeeCollector.sol";
 import { TokenVestor } from "../src/TokenVestor.sol";
 import { Ithil } from "../src/Ithil.sol";
 

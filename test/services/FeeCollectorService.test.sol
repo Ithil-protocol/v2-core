@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    ERC20,
-    ERC20PresetMinterPauser
-} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { IERC20, ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { FeeCollector } from "../../src/services/credit/FeeCollector.sol";
+import { FeeCollectorService } from "../../src/services/credit/FeeCollectorService.sol";
 import { Service } from "../../src/services/Service.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { Ithil } from "../../src/Ithil.sol";
+import { VeIthil } from "../../src/VeIthil.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
@@ -33,31 +31,25 @@ contract Payer is Service {
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
 }
 
-contract FeeCollectorTest is BaseIntegrationServiceTest {
+contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
-    FeeCollector internal immutable service;
+    FeeCollectorService internal immutable service;
     Ithil internal immutable ithil;
     Service internal immutable payer;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
     uint256 internal constant blockNumber = 55895589;
-    IERC20 internal immutable weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
-    address internal immutable wethWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
-    IERC20 internal immutable veToken;
+    IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
+    address internal constant wethWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
     uint256[] internal rewards = new uint64[](12);
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         ithil = new Ithil();
-        veToken = IERC20(
-            new ERC20(
-                string(abi.encodePacked("vested Ithil")),
-                string(abi.encodePacked("ve", IERC20Metadata(address(ithil)).symbol()))
-            )
-        );
-        service = new FeeCollector(address(manager), address(weth), address(ithil), address(veToken), 1e17);
+        service = new FeeCollectorService(address(manager), address(weth), 1e17);
+        service.setTokenWeight(address(ithil), 1);
         payer = new Payer(address(manager));
         manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION);
         vm.stopPrank();

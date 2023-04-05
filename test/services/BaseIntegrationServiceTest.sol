@@ -45,7 +45,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             vm.stopPrank();
         }
         vm.prank(admin);
-        serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
+        (bool success, ) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
     function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)

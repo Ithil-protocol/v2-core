@@ -51,7 +51,7 @@ library OrderHelper {
         uint256[] memory collateralAmounts,
         uint256 time,
         bytes memory data
-    ) public view returns (IService.Order memory) {
+    ) public pure returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
         IService.Collateral[] memory collateral = new IService.Collateral[](collateralTokens.length);

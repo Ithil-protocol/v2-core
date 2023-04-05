@@ -7,20 +7,8 @@ import { ERC20Votes } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20
 
 /// @title    ITHIL token contract
 /// @author   Ithil
-contract Ithil is ERC20, ERC20Permit, ERC20Votes {
+contract Ithil is ERC20, ERC20Permit {
     constructor() ERC20("Ithil", "ITHIL") ERC20Permit("Ithil") {
         _mint(msg.sender, 1e8 * 10**decimals());
-    }
-
-    function _afterTokenTransfer(address from, address to, uint256 amount) internal override(ERC20, ERC20Votes) {
-        ERC20Votes._afterTokenTransfer(from, to, amount);
-    }
-
-    function _mint(address to, uint256 amount) internal override(ERC20, ERC20Votes) {
-        ERC20Votes._mint(to, amount);
-    }
-
-    function _burn(address account, uint256 amount) internal override(ERC20, ERC20Votes) {
-        ERC20Votes._burn(account, amount);
     }
 }

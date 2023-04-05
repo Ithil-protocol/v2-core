@@ -4,54 +4,52 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { Service } from "../Service.sol";
 import { IVault } from "../../interfaces/IVault.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Whitelisted } from "../Whitelisted.sol";
-
+import { Service } from "../Service.sol";
+import { VeIthil } from "../../VeIthil.sol";
 import { console2 } from "forge-std/console2.sol";
 
-/// @title    FeeCollector contract
+/// @title    FeeCollectorService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
-contract FeeCollector is Service {
+contract FeeCollectorService is Service {
     using GeneralMath for uint256;
-
-    IERC20 public immutable weth;
-    IERC20 public immutable ithil;
-
-    // todo: must be non-transferrable
-    IERC20 public immutable veToken;
-
-    // 2^((n+1)/12) with 18 digit fixed point
-    uint64[] internal rewards;
-
-    // Locking of the position in seconds
-    mapping(uint256 => uint256) public locktimes;
+    using SafeERC20 for IERC20;
 
     // Percentage of fees which can be harvested. Only locked fees can be harvested
     uint256 public immutable feePercentage;
+    IERC20 public immutable weth;
+    IERC20 public immutable veToken;
 
+    // weights for different tokens, 0 => not supported
+    mapping(address => uint256) public weights;
+    // Locking of the position in seconds
+    mapping(uint256 => uint256) public locktimes;
     // Necessary to avoid a double harvest: harvesting is allowed only once after each repay
     mapping(address => uint256) public latestHarvest;
-
     // Necessary to properly distribute fees and prevent snatching
     uint256 public totalCollateral;
     // Necessary to implement convexity in locktimes
     uint256 public virtualIthilBalance;
+    // 2^((n+1)/12) with 18 digit fixed point
+    uint64[] internal rewards;
+
+    event TokenWeightWasChanged(address indexed token, uint256 weight);
 
     error Throttled();
     error BeforeExpiry();
     error ZeroAmount();
-    error WrongTokens();
+    error UnsupportedToken();
     error MaxLockExceeded();
 
-    constructor(address _manager, address _weth, address _ithil, address _veToken, uint256 _feePercentage)
+    constructor(address _manager, address _weth, uint256 _feePercentage)
         Service("FeeCollector", "FEE-COLLECTOR", _manager)
     {
         weth = IERC20(_weth);
-        ithil = IERC20(_ithil);
-        veToken = IERC20(_veToken);
+        veToken = new VeIthil();
+
         feePercentage = _feePercentage;
         rewards = new uint64[](12);
         rewards[0] = 1059463094359295265;
@@ -73,6 +71,12 @@ contract FeeCollector is Service {
         _;
     }
 
+    function setTokenWeight(address token, uint256 weight) external onlyOwner {
+        weights[token] = weight;
+
+        emit TokenWeightWasChanged(token, weight);
+    }
+
     // Weth weight is the same as virtual balance rather than balance
     // In this way, who locks for more time has right to more shares
     function totalAssets() public view returns (uint256) {
@@ -81,7 +85,7 @@ contract FeeCollector is Service {
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
         if (agreement.loans[0].margin == 0) revert ZeroAmount();
-        if (agreement.loans[0].token != address(ithil)) revert WrongTokens();
+        if (weights[agreement.loans[0].token] == 0) revert UnsupportedToken();
         // Update collateral using ERC4626 formula
         agreement.collaterals[0].amount = totalCollateral == 0
             ? agreement.loans[0].margin
@@ -97,7 +101,7 @@ contract FeeCollector is Service {
         // register locktime
         locktimes[id] = monthsLocked;
         // Deposit Ithil
-        ithil.transferFrom(msg.sender, address(this), agreement.loans[0].margin);
+        IERC20(agreement.loans[0].token).safeTransferFrom(msg.sender, address(this), agreement.loans[0].margin);
         // todo: transfer/mint veToken
     }
 
@@ -110,9 +114,9 @@ contract FeeCollector is Service {
         totalCollateral -= agreement.collaterals[0].amount;
         virtualIthilBalance -= agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]], 1e18);
         // give back Ithil tokens
-        ithil.transfer(msg.sender, agreement.loans[0].margin);
+        IERC20(agreement.loans[0].token).safeTransfer(msg.sender, agreement.loans[0].margin);
         // Transfer weth
-        weth.transfer(
+        weth.safeTransfer(
             msg.sender,
             totalWithdraw.positiveSub(agreement.loans[0].margin.safeMulDiv(rewards[locktimes[tokenID]], 1e18))
         );
@@ -134,7 +138,9 @@ contract FeeCollector is Service {
         // Thus, the user cannot withdraw again (unless other fees are generated)
         agreement.collaterals[0].amount -= agreement.collaterals[0].amount.safeMulDiv(toTransfer, totalWithdraw);
         totalCollateral -= agreement.collaterals[0].amount.safeMulDiv(toTransfer, totalWithdraw);
-        weth.transfer(msg.sender, toTransfer);
+        weth.safeTransfer(msg.sender, toTransfer);
+
+        return toTransfer;
     }
 
     function _harvestFees(address token) internal {
@@ -147,7 +153,7 @@ contract FeeCollector is Service {
         uint256 sharesToMint = vault.convertToShares(feesToHarvest);
         // todo: what is that "maxAmountIn"? For now it's uint256(-1) to avoid reversals
         manager.directMint(token, address(this), sharesToMint, exposures[token], type(uint256).max);
-        uint256 assets = vault.redeem(sharesToMint, address(this), address(this));
+        vault.redeem(sharesToMint, address(this), address(this));
         // todo: reward harvester
     }
 
