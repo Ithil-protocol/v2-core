@@ -12,27 +12,24 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     SushiService internal immutable service;
     Oracle internal immutable oracle;
-    MockSwapper internal immutable swapper;
 
     address internal constant sushiRouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     address internal constant minichef = 0xF4d73326C13a4Fc5FD7A064217e12780e9Bd62c3;
     uint256 internal constant poolID = 0;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        swapper = new MockSwapper();
-        service = new SushiService(address(manager), address(oracle), address(swapper), sushiRouter, minichef);
+        service = new SushiService(address(manager), address(oracle), sushiRouter, minichef);
         vm.stopPrank();
 
         loanLength = 2;
