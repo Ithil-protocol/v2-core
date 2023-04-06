@@ -3,7 +3,6 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
@@ -41,13 +40,11 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
     IERC20 internal immutable crv;
     IERC20 internal immutable cvx;
     IOracle public immutable oracle;
-    ISwapper public immutable swapper;
 
-    constructor(address _manager, address _oracle, address _swapper, address _booster, address _crv, address _cvx)
+    constructor(address _manager, address _oracle, address _booster, address _crv, address _cvx)
         Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
     {
         oracle = IOracle(_oracle);
-        swapper = ISwapper(_swapper);
         booster = IConvexBooster(_booster);
         cvx = IERC20(_cvx);
         crv = IERC20(_crv);

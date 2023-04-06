@@ -4,7 +4,6 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
@@ -49,13 +48,11 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     uint256 public rewardRate;
     address public immutable bal;
     IOracle public immutable oracle;
-    ISwapper public immutable swapper;
 
-    constructor(address _manager, address _oracle, address _swapper, address _balancerVault, address _bal)
+    constructor(address _manager, address _oracle, address _balancerVault, address _bal)
         Service("BalancerService", "BALANCER-SERVICE", _manager)
     {
         oracle = IOracle(_oracle);
-        swapper = ISwapper(_swapper);
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
     }

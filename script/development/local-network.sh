@@ -20,6 +20,7 @@ if [[ " $@ " =~ " --setup " ]]; then
   echo "Waiting 5 seconds..."
   sleep 5
   bash lending-page.sh
+  bash strategy-page.sh
   echo "Waiting 1 second..."
   sleep 1
   kill -SIGINT $NETWORK_PID

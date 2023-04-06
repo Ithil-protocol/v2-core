@@ -3,7 +3,6 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
 import { Whitelisted } from "../Whitelisted.sol";
@@ -29,22 +28,16 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     mapping(address => PoolData) public pools;
     mapping(address => uint256) public totalDeposits;
     IOracle public immutable oracle;
-    ISwapper public immutable swapper;
 
     event PoolWasAdded(address indexed token);
     error InexistentPool();
     error AmountTooLow();
     error InsufficientAmountOut();
 
-    constructor(
-        address _manager,
-        address _oracle,
-        address _swapper,
-        address _stargateRouter,
-        address _stargateLPStaking
-    ) Service("StargateService", "STARGATE-SERVICE", _manager) {
+    constructor(address _manager, address _oracle, address _stargateRouter, address _stargateLPStaking)
+        Service("StargateService", "STARGATE-SERVICE", _manager)
+    {
         oracle = IOracle(_oracle);
-        swapper = ISwapper(_swapper);
         stargateRouter = IStargateRouter(_stargateRouter);
         stargateLPStaking = IStargateLPStaking(_stargateLPStaking);
         stargate = IERC20(stargateLPStaking.stargate());
