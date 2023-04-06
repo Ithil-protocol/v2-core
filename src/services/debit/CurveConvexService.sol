@@ -41,8 +41,8 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
     IERC20 internal immutable cvx;
     IOracle public immutable oracle;
 
-    constructor(address _manager, address _oracle, address _booster, address _crv, address _cvx)
-        Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager)
+    constructor(address _manager, address _oracle, address _booster, address _crv, address _cvx, uint256 _deadline)
+        Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager, _deadline)
     {
         oracle = IOracle(_oracle);
         booster = IConvexBooster(_booster);

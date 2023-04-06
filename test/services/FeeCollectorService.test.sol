@@ -18,7 +18,7 @@ import { VeIthil } from "../../src/VeIthil.sol";
 contract Payer is Service {
     // Dummy service to produce fees
     // TODO: test fee generation
-    constructor(address _manager) Service("Payer", "PAYER", _manager) {}
+    constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
         internal

@@ -34,9 +34,13 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     error AmountTooLow();
     error InsufficientAmountOut();
 
-    constructor(address _manager, address _oracle, address _stargateRouter, address _stargateLPStaking)
-        Service("StargateService", "STARGATE-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _oracle,
+        address _stargateRouter,
+        address _stargateLPStaking,
+        uint256 _deadline
+    ) Service("StargateService", "STARGATE-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
         stargateRouter = IStargateRouter(_stargateRouter);
         stargateLPStaking = IStargateLPStaking(_stargateLPStaking);

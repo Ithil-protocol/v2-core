@@ -33,7 +33,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        service = new CurveConvexService(address(manager), address(oracle), convexBooster, crv, cvx);
+        service = new CurveConvexService(address(manager), address(oracle), convexBooster, crv, cvx, 30 * 86400);
         vm.stopPrank();
 
         loanLength = 2;

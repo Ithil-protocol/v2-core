@@ -15,7 +15,7 @@ import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract TestService is Whitelisted, AuctionRateModel, Service {
-    constructor(address manager) Service("TestService", "TEST-SERVICE", manager) {}
+    constructor(address manager) Service("TestService", "TEST-SERVICE", manager, 30 * 86400) {}
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
         internal

@@ -27,7 +27,7 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        service = new StargateService(address(manager), address(oracle), stargateRouter, stargateLPStaking);
+        service = new StargateService(address(manager), address(oracle), stargateRouter, stargateLPStaking, 30 * 86400);
         vm.stopPrank();
 
         loanLength = 1;

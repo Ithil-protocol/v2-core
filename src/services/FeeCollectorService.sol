@@ -42,7 +42,7 @@ contract FeeCollectorService is Service {
     error MaxLockExceeded();
 
     constructor(address _manager, address _weth, uint256 _feePercentage)
-        Service("FeeCollector", "FEE-COLLECTOR", _manager)
+        Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max)
     {
         weth = IERC20(_weth);
         veToken = new VeIthil();
