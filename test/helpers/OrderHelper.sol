@@ -52,9 +52,8 @@ library OrderHelper {
         bytes memory data
     ) public pure returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
-
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
-        IService.Collateral[] memory collateral = new IService.Collateral[](tokens.length);
+        IService.Collateral[] memory collateral = new IService.Collateral[](collateralTokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             loan[i].token = tokens[i];
             loan[i].amount = amounts[i];

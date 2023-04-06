@@ -76,17 +76,22 @@ abstract contract DebitService is Service, BaseRiskModel {
         super.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory) {
+    function close(uint256 tokenID, bytes calldata data) public virtual override {
         if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
-
-        uint256[] memory obtained = super.close(tokenID, data);
-
         Agreement memory agreement = agreements[tokenID];
+
+        uint256[] memory obtained = new uint256[](agreement.loans.length);
+        for (uint256 index = 0; index < agreement.loans.length; index++) {
+            obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
+        }
+        super.close(tokenID, data);
+
         uint256[] memory duePayments = _computeDuePayments(agreement, data);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.loans[index].amount
             );
+            obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - obtained[index];
             if (obtained[index] > duePayments[index]) {
                 IERC20(agreement.loans[index].token).approve(
                     manager.vaults(agreement.loans[index].token),
@@ -114,7 +119,6 @@ abstract contract DebitService is Service, BaseRiskModel {
                 );
             }
         }
-        return obtained;
     }
 
     /// @dev When quoting we need to return values for all owed items

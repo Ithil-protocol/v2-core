@@ -6,14 +6,14 @@ import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
-import { WhitelistedService } from "../WhitelistedService.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
-contract AaveService is WhitelistedService, AuctionRateModel, DebitService {
+contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
