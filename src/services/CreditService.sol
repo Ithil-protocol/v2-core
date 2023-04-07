@@ -13,7 +13,6 @@ abstract contract CreditService is Service {
     error InvalidInput();
 
     function open(Order calldata order) public virtual override unlocked {
-        super.open(order);
         Agreement memory agreement = order.agreement;
         // Transfers deposit the loan to the relevant vault
         for (uint256 index = 0; index < agreement.loans.length; index++) {
@@ -36,6 +35,7 @@ abstract contract CreditService is Service {
             agreement.collaterals[index].amount = shares;
             exposures[agreement.loans[index].token] += shares;
         }
+        super.open(order);
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
