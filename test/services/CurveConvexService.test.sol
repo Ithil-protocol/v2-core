@@ -18,7 +18,6 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     CurveConvexService internal immutable service;
-    Oracle internal immutable oracle;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address internal constant crv = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
@@ -31,10 +30,8 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        oracle = new Oracle();
-        service = new CurveConvexService(address(manager), address(oracle), convexBooster, crv, cvx);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new CurveConvexService(address(manager), address(oracle), address(dex), convexBooster, crv, cvx);
 
         loanLength = 2;
         loanTokens = new address[](loanLength);

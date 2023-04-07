@@ -3,19 +3,21 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { IVault } from "../../interfaces/IVault.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
+import { IPool } from "../../interfaces/external/dex/IPool.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
+import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
-import { DebitService } from "../DebitService.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { Service } from "../Service.sol";
+import { DebitService } from "../DebitService.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    BalancerService contract
 /// @author   Ithil
@@ -49,11 +51,13 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     uint256 public rewardRate;
     address public immutable bal;
     IOracle public immutable oracle;
+    IFactory public immutable factory;
 
-    constructor(address _manager, address _oracle, address _balancerVault, address _bal)
+    constructor(address _manager, address _oracle, address _factory, address _balancerVault, address _bal)
         Service("BalancerService", "BALANCER-SERVICE", _manager)
     {
         oracle = IOracle(_oracle);
+        factory = IFactory(_factory);
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
     }
@@ -134,8 +138,6 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
             toInternalBalance: false
         });
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
-
-        _harvest(pool);
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
@@ -221,24 +223,21 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         emit PoolWasRemoved(poolAddress);
     }
 
-    function _harvest(PoolData memory pool) internal {
-        // Get vault with highest free liquidity
-        uint256 freeLiquidity = 0;
-        address token = pool.tokens[0];
-        for (uint8 i = 0; i < pool.tokens.length; i++) {
-            IVault vault = IVault(manager.vaults(pool.tokens[i]));
-            if (vault.freeLiquidity() > freeLiquidity) {
-                freeLiquidity = vault.freeLiquidity();
-                token = pool.tokens[i];
-            }
-        }
+    function harvest(address poolAddress) external {
+        PoolData memory pool = pools[poolAddress];
+        if (pool.length == 0) revert InexistentPool();
 
         // Claim reward
         IGauge(pool.gauge).claim_rewards(address(this));
 
-        // TODO get price from oracle and add order on the orderbook
-        /// uint256 price = oracle.getPrice(bal, token);
-        /// swapper.createOrder(bal, token, IERC20(bal).balanceOf(address(this)), price - discount);
+        (address token, address vault) = VaultHelper.getBestVault(pool.tokens, manager);
+        // TODO check oracle
+        uint256 price = oracle.getPrice(bal, token, 1);
+        address dexPool = factory.pools(bal, token);
+        // TODO add discount
+        IPool(dexPool).createOrder(IERC20(bal).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+
+        // TODO add premium to the caller
     }
 
     function _modifyBalancesWithFees(address poolAddress, uint256[] memory balances, uint256[] memory normalizedWeights)

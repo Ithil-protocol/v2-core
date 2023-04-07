@@ -17,7 +17,6 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     SushiService internal immutable service;
-    Oracle internal immutable oracle;
 
     address internal constant sushiRouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     address internal constant minichef = 0xF4d73326C13a4Fc5FD7A064217e12780e9Bd62c3;
@@ -27,10 +26,8 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
     uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        oracle = new Oracle();
-        service = new SushiService(address(manager), address(oracle), sushiRouter, minichef);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new SushiService(address(manager), address(oracle), address(dex), sushiRouter, minichef);
 
         loanLength = 2;
         loanTokens = new address[](loanLength);
@@ -181,9 +178,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
 
             IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
-            (uint256[] memory profits, ) = service.quote(agreement);
+            (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
         }
     }
-
-    // TODO test quoter
 }
