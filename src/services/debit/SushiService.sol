@@ -78,8 +78,6 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
-        if (pool.tokens.length != 2) revert InexistentPool();
-
         minichef.withdraw(pool.poolID, agreement.collaterals[0].amount, address(this));
 
         uint256[] memory minAmountsOut = abi.decode(data, (uint256[]));
