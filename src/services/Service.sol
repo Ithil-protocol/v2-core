@@ -6,8 +6,8 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
-import { Vault } from "../Vault.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
+import { Vault } from "../Vault.sol";
 
 abstract contract Service is IService, ERC721Enumerable, Ownable {
     using GeneralMath for uint256;

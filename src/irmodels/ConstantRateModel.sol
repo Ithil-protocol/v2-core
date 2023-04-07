@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IService } from "../interfaces/IService.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
-import { IService } from "../interfaces/IService.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @dev constant value IR model, used for testing
 abstract contract ConstantRateModel is Ownable, BaseRiskModel {

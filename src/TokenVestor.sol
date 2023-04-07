@@ -26,7 +26,7 @@ contract TokenVestor is ERC20 {
         _;
     }
 
-    constructor(address _token) ERC20("veIthil", "VESTED ITHIL") {
+    constructor(address _token) ERC20("magic coin", "MAGIC COIN") {
         ithil = IERC20(_token);
     }
 
