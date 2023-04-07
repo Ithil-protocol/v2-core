@@ -227,7 +227,6 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         PoolData memory pool = pools[poolAddress];
         if (pool.length == 0) revert InexistentPool();
 
-        // Claim reward
         IGauge(pool.gauge).claim_rewards(address(this));
 
         (address token, address vault) = VaultHelper.getBestVault(pool.tokens, manager);
