@@ -73,7 +73,7 @@ abstract contract DebitService is Service, BaseRiskModel {
 
             _checkRiskiness(agreement.loans[index], freeLiquidity);
         }
-        super.open(order);
+        Service.open(order);
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
@@ -88,7 +88,7 @@ abstract contract DebitService is Service, BaseRiskModel {
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
         }
-        super.close(tokenID, data);
+        Service.close(tokenID, data);
 
         uint256[] memory duePayments = _computeDuePayments(agreement, data);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
