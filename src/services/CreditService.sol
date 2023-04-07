@@ -2,13 +2,13 @@
 pragma solidity =0.8.17;
 
 import { Service } from "./Service.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IVault } from "../interfaces/IVault.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
 abstract contract CreditService is Service {
     using GeneralMath for uint256;
+    using SafeERC20 for IERC20;
 
     error InvalidInput();
 
@@ -22,7 +22,11 @@ abstract contract CreditService is Service {
                 agreement.collaterals[index].token != vaultAddress
             ) revert InvalidInput();
             // Transfer tokens to this
-            IERC20(agreement.loans[index].token).transferFrom(msg.sender, address(this), agreement.loans[index].amount);
+            IERC20(agreement.loans[index].token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                agreement.loans[index].amount
+            );
 
             // Deposit toekns to the relevant vault
             if (
@@ -35,13 +39,13 @@ abstract contract CreditService is Service {
             agreement.collaterals[index].amount = shares;
             exposures[agreement.loans[index].token] += shares;
         }
-        super.open(order);
+        Service.open(order);
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
         if (ownerOf(tokenID) != msg.sender) revert RestrictedToOwner();
 
-        super.close(tokenID, data);
+        Service.close(tokenID, data);
 
         Agreement memory agreement = agreements[tokenID];
         for (uint256 index = 0; index < agreement.loans.length; index++) {
