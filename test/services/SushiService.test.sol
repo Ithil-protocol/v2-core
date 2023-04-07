@@ -29,7 +29,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        service = new SushiService(address(manager), address(oracle), sushiRouter, minichef);
+        service = new SushiService(address(manager), address(oracle), sushiRouter, minichef, 30 * 86400);
         vm.stopPrank();
 
         loanLength = 2;

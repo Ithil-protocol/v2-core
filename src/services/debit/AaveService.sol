@@ -24,7 +24,9 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     error InsufficientAmountOut();
     error AgreementAmountsMismatch();
 
-    constructor(address _manager, address _aave) Service("AaveService", "AAVE-SERVICE", _manager) {
+    constructor(address _manager, address _aave, uint256 _deadline)
+        Service("AaveService", "AAVE-SERVICE", _manager, _deadline)
+    {
         aave = IPool(_aave);
     }
 

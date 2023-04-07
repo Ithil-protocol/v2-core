@@ -23,7 +23,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new AaveService(address(manager), aavePool);
+        service = new AaveService(address(manager), aavePool, 30 * 86400);
 
         loanLength = 1;
         loanTokens = new address[](loanLength);
