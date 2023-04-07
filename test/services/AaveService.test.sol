@@ -96,8 +96,6 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
-        (uint256[] memory profits, ) = service.quote(agreement);
-
-        // TODO check quoter
+        (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
     }
 }

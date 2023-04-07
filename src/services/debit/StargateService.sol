@@ -3,12 +3,15 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
+import { IPool } from "../../interfaces/external/dex/IPool.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
-import { Whitelisted } from "../Whitelisted.sol";
-import { DebitService } from "../DebitService.sol";
+import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    StargateService contract
 /// @author   Ithil
@@ -24,12 +27,14 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     }
     IStargateRouter public immutable stargateRouter;
     IStargateLPStaking public immutable stargateLPStaking;
-    IERC20 public immutable stargate;
+    address public immutable stargate;
     mapping(address => PoolData) public pools;
     mapping(address => uint256) public totalDeposits;
     IOracle public immutable oracle;
+    IFactory public immutable factory;
 
     event PoolWasAdded(address indexed token);
+    event PoolWasRemoved(address indexed token);
     error InexistentPool();
     error AmountTooLow();
     error InsufficientAmountOut();
@@ -37,14 +42,16 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     constructor(
         address _manager,
         address _oracle,
+        address _factory,
         address _stargateRouter,
         address _stargateLPStaking,
         uint256 _deadline
     ) Service("StargateService", "STARGATE-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
+        factory = IFactory(_factory);
         stargateRouter = IStargateRouter(_stargateRouter);
         stargateLPStaking = IStargateLPStaking(_stargateLPStaking);
-        stargate = IERC20(stargateLPStaking.stargate());
+        stargate = stargateLPStaking.stargate();
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
@@ -73,10 +80,9 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
             agreement.collaterals[0].amount,
             address(this)
         );
+
         if (IERC20(agreement.loans[0].token).balanceOf(address(this)) - initialBalance < minAmountsOut)
             revert InsufficientAmountOut();
-
-        // TODO swap STG to notional
     }
 
     function quote(Agreement memory agreement)
@@ -91,9 +97,8 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
         uint256[] memory fees = new uint256[](1);
         uint256[] memory quoted = new uint256[](1);
         quoted[0] = _expectedObtainedTokens(agreement.collaterals[0].amount, pool.lpToken);
-        return (quoted, fees);
 
-        // TODO: consider accrued STG when quoting
+        return (quoted, fees);
     }
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {
@@ -114,6 +119,34 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
             pool.safeApprove(address(stargateLPStaking), type(uint256).max);
 
         emit PoolWasAdded(token);
+    }
+
+    function removePool(address token) external onlyOwner {
+        PoolData memory pool = pools[token];
+        assert(pool.poolID != 0);
+
+        delete pools[token];
+
+        emit PoolWasRemoved(token);
+    }
+
+    function harvest(address poolToken) external {
+        PoolData memory pool = pools[poolToken];
+        if (pools[poolToken].poolID == 0) revert InexistentPool();
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = poolToken;
+        (address token, address vault) = VaultHelper.getBestVault(tokens, manager);
+
+        stargateLPStaking.withdraw(pool.stakingPoolID, 0);
+
+        // TODO check oracle
+        uint256 price = oracle.getPrice(stargate, token, 1);
+        address dexPool = factory.pools(stargate, token);
+        // TODO add discount
+        IPool(dexPool).createOrder(IERC20(stargate).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+
+        // TODO add premium to the caller
     }
 
     function _expectedMintedTokens(uint256 amount, address lpToken) internal view returns (uint256 expected) {

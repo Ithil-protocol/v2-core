@@ -6,9 +6,9 @@ import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil

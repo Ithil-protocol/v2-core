@@ -4,7 +4,6 @@ pragma solidity =0.8.17;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
@@ -61,7 +60,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     BalancerService internal immutable service;
-    Oracle internal immutable oracle;
 
     address internal constant router = 0xDef1C0ded9bec7F1a1670819833240f027b25EfF;
     address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
@@ -76,10 +74,8 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        oracle = new Oracle();
-        service = new BalancerService(address(manager), address(oracle), balancerVault, bal, 30 * 86400);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new BalancerService(address(manager), address(oracle), address(dex), balancerVault, bal, 86400 * 30);
 
         loanLength = 3;
         loanTokens = new address[](loanLength);
@@ -327,8 +323,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
-        (uint256[] memory profits, ) = service.quote(agreement);
+        (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
     }
-
-    // TODO test quoter
 }

@@ -3,15 +3,18 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
+import { IPool } from "../../interfaces/external/dex/IPool.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
+import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    CurveConvexService contract
 /// @author   Ithil
@@ -28,8 +31,8 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         address[] rewardTokens; // Incentive tokens given by Curve
     }
 
-    event PoolWasAdded(address indexed curvePool, uint256 indexed ConvexPid);
-    event PoolWasRemoved(address indexed curvePool, uint256 indexed ConvexPid);
+    event PoolWasAdded(address indexed curvePool, uint256 indexed convexPid);
+    event PoolWasRemoved(address indexed curvePool, uint256 indexed convexPid);
 
     error InexistentPool();
     error TokenIndexMismatch();
@@ -37,17 +40,25 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
 
     mapping(address => PoolData) public pools;
     IConvexBooster internal immutable booster;
-    IERC20 internal immutable crv;
-    IERC20 internal immutable cvx;
+    address internal immutable crv;
+    address internal immutable cvx;
     IOracle public immutable oracle;
+    IFactory public immutable factory;
 
-    constructor(address _manager, address _oracle, address _booster, address _crv, address _cvx, uint256 _deadline)
-        Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager, _deadline)
-    {
+    constructor(
+        address _manager,
+        address _oracle,
+        address _factory,
+        address _booster,
+        address _crv,
+        address _cvx,
+        uint256 _deadline
+    ) Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
+        factory = IFactory(_factory);
         booster = IConvexBooster(_booster);
-        cvx = IERC20(_cvx);
-        crv = IERC20(_crv);
+        cvx = _cvx;
+        crv = _crv;
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
@@ -64,28 +75,24 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
-        _harvest(pool, agreement.collaterals[0].amount);
-
         pool.baseRewardPool.withdraw(agreement.collaterals[0].amount, false);
 
         CurveHelper.withdraw(pool.curve, agreement, data);
 
-        // TODO swap CRV and CVX for collateral tokens
-    }
-
-    function _harvest(PoolData memory pool, uint256 ownership) internal {
-        // TODO check
-
+        // transfer spurious reward tokens to the user
         IConvexBooster.PoolInfo memory poolInfo = booster.poolInfo(pool.convex);
-        // Total base rewards token
-        // If they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
-        uint256 totalOwnership = IERC20(poolInfo.rewards).balanceOf(address(this));
         pool.baseRewardPool.getReward(address(this));
+        // Total base rewards token
+        // TODO check if they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
+        uint256 totalOwnership = IERC20(poolInfo.rewards).balanceOf(address(this));
 
         for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
             IERC20 token = IERC20(pool.rewardTokens[i]);
 
-            token.safeTransfer(msg.sender, token.balanceOf(address(this)).safeMulDiv(ownership, totalOwnership));
+            token.safeTransfer(
+                msg.sender,
+                token.balanceOf(address(this)).safeMulDiv(agreement.collaterals[0].amount, totalOwnership)
+            );
         }
     }
 
@@ -101,8 +108,6 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
                 (balances[index] * agreement.collaterals[0].amount) /
                 IERC20(agreement.collaterals[0].token).totalSupply();
         }
-
-        // TODO consider CRV and CVX when quoting
 
         return (quoted, fees);
     }
@@ -152,5 +157,28 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         delete pools[token];
 
         emit PoolWasRemoved(pool.curve, pool.convex);
+    }
+
+    function harvest(address token) external {
+        PoolData memory pool = pools[token];
+        if (pool.tokens.length == 0) revert InexistentPool();
+
+        pool.baseRewardPool.getReward(address(this));
+
+        (address token, address vault) = VaultHelper.getBestVault(pool.tokens, manager);
+
+        // TODO check oracle
+        uint256 price = oracle.getPrice(crv, token, 1);
+        address dexPool = factory.pools(crv, token);
+        // TODO add discount
+        IPool(dexPool).createOrder(IERC20(crv).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+
+        // TODO check oracle
+        price = oracle.getPrice(cvx, token, 1);
+        dexPool = factory.pools(cvx, token);
+        // TODO add discount
+        IPool(dexPool).createOrder(IERC20(cvx).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+
+        // TODO add premium to the caller
     }
 }
