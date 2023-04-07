@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
+import { IService } from "../interfaces/IService.sol";
 import { DebitService } from "../services/DebitService.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
-import { IService } from "../interfaces/IService.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @dev IR = baseIR + spread
 /// Rate model in which baseIR is based on a Dutch auction

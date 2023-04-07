@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { Service } from "./Service.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IVault } from "../interfaces/IVault.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
+import { Service } from "./Service.sol";
 
 abstract contract CreditService is Service {
     using GeneralMath for uint256;
