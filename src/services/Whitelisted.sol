@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { Service } from "./Service.sol";
+import { IService } from "../interfaces/IService.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract WhitelistedService is Service {
+abstract contract Whitelisted is Ownable {
     mapping(address => bool) public whitelisted;
     bool public enabled;
 
@@ -14,6 +15,12 @@ abstract contract WhitelistedService is Service {
 
     constructor() {
         enabled = true;
+    }
+
+    // This reverts if the msg.sender is not whitelisted and the enabled flag is true
+    modifier onlyWhitelisted() {
+        if (enabled && !whitelisted[msg.sender]) revert UserIsNotWhitelisted();
+        _;
     }
 
     function toggleWhitelistFlag() external onlyOwner {
@@ -38,9 +45,5 @@ abstract contract WhitelistedService is Service {
 
             emit WhitelistedStatusWasChanged(users[i], false);
         }
-    }
-
-    function _beforeOpening(Agreement memory /*agreement*/, bytes calldata /*data*/) internal override {
-        if (enabled && !whitelisted[msg.sender]) revert UserIsNotWhitelisted();
     }
 }

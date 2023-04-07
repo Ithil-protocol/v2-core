@@ -14,11 +14,14 @@ contract Manager is IManager, Ownable {
 
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    // service => token => cap
+    // service => token => caps
     mapping(address => mapping(address => uint256)) public override caps;
 
+    // solhint-disable-next-line no-empty-blocks
+    constructor() {}
+
     modifier supported(address token) {
-        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelistedServices();
+        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelisted();
         _;
     }
 
@@ -84,7 +87,7 @@ contract Manager is IManager, Ownable {
 
     /// @inheritdoc IManager
     function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        external
+        public
         override
         supported(token)
         vaultExists(token)
@@ -104,7 +107,7 @@ contract Manager is IManager, Ownable {
 
     /// @inheritdoc IManager
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
-        external
+        public
         override
         supported(token)
         vaultExists(token)

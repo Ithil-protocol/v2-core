@@ -44,6 +44,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
             vm.stopPrank();
         }
+        vm.prank(admin);
+        (bool success, ) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
     function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
@@ -58,17 +60,19 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     /// @param token the token
     /// @param needsBumping whether we need to have amount > 0 (some services could fail)
     function _depositAmountInVault(address token, uint256 amount, bool needsBumping) internal returns (uint256) {
-        amount = amount % IERC20(token).balanceOf(whales[address(token)]); // 0 <= amount <= dai.balanceOf(whale) - 1
-        if (needsBumping && amount == 0) amount++;
+        if (IERC20(token).balanceOf(whales[address(token)]) > 0) {
+            // 0 <= amount <= dai.balanceOf(whale) - 1
+            amount = amount % IERC20(token).balanceOf(whales[address(token)]);
+            if (needsBumping && amount == 0) amount++;
 
-        IVault vault = IVault(manager.vaults(token));
-        vm.startPrank(whales[token]);
-        IERC20(token).approve(address(vault), amount);
-        vault.deposit(amount, whales[token]);
-        vm.stopPrank();
-
-        // amount is modified, so we return new value
-        return amount;
+            IVault vault = IVault(manager.vaults(token));
+            vm.startPrank(whales[token]);
+            IERC20(token).approve(address(vault), amount);
+            vault.deposit(amount, whales[token]);
+            vm.stopPrank();
+            // amount is modified, so we return new value
+            return amount;
+        } else return 0;
     }
 
     /// Fills the user
@@ -116,6 +120,16 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
                 time,
                 data
             );
+    }
+
+    function _openOrder0(uint256 collateralAmount, uint256 time, bytes memory data)
+        internal
+        returns (IService.Order memory order)
+    {
+        uint256[] memory amounts = new uint256[](loanLength);
+        uint256[] memory loans = new uint256[](loanLength);
+        uint256[] memory margins = new uint256[](loanLength);
+        return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 
     function _openOrder1(

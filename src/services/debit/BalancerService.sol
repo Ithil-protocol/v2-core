@@ -5,11 +5,11 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "../../interfaces/IVault.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
@@ -20,7 +20,7 @@ import { Service } from "../Service.sol";
 /// @title    BalancerService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
-contract BalancerService is AuctionRateModel {
+contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
@@ -49,18 +49,16 @@ contract BalancerService is AuctionRateModel {
     uint256 public rewardRate;
     address public immutable bal;
     IOracle public immutable oracle;
-    ISwapper public immutable swapper;
 
-    constructor(address _manager, address _oracle, address _swapper, address _balancerVault, address _bal)
+    constructor(address _manager, address _oracle, address _balancerVault, address _bal)
         Service("BalancerService", "BALANCER-SERVICE", _manager)
     {
         oracle = IOracle(_oracle);
-        swapper = ISwapper(_swapper);
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
@@ -91,7 +89,7 @@ contract BalancerService is AuctionRateModel {
         if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little

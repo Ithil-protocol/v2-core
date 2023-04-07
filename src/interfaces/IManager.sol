@@ -29,11 +29,13 @@ interface IManager {
 
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
 
+    event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
     event TokenWasRemovedFromService(address indexed service, address indexed token);
 
     error VaultMissing();
-    error RestrictedToWhitelistedServices();
+    error RestrictedToWhitelisted();
+    error RestrictedToOwner();
     error InvestmentCapExceeded(uint256 investedPortion, uint256 investmentCap);
     error MaxAmountExceeded();
 }

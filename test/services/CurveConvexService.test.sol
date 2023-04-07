@@ -13,30 +13,27 @@ import { CurveConvexService } from "../../src/services/debit/CurveConvexService.
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     CurveConvexService internal immutable service;
     Oracle internal immutable oracle;
-    MockSwapper internal immutable swapper;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address internal constant crv = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
     address internal constant cvx = 0xb952A807345991BD529FDded05009F5e80Fe8F45;
 
     address internal constant curvePool = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
-    uint256 internal constant convexPid = 1;
+    uint256 internal constant convexPid = 7;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        swapper = new MockSwapper();
-        service = new CurveConvexService(address(manager), address(oracle), address(swapper), convexBooster, crv, cvx);
+        service = new CurveConvexService(address(manager), address(oracle), convexBooster, crv, cvx);
         vm.stopPrank();
 
         loanLength = 2;
@@ -204,11 +201,9 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             vm.expectRevert("Withdrawal resulted in fewer coins than expected");
             service.close(0, data);
         } else {
-            uint256[] memory amountsOut = service.close(0, data);
+            service.close(0, data);
             assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
             assertEq(IERC20(loanTokens[1]).balanceOf(address(service)), 0);
-            assertEq(amountsOut[0], quoted[0]);
-            assertEq(amountsOut[1], quoted[1]);
             assertEq(
                 IERC20(loanTokens[0]).balanceOf(address(this)),
                 (initialBalance0 + quoted[0]).positiveSub(loan[0].amount)

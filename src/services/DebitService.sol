@@ -2,10 +2,11 @@
 pragma solidity =0.8.17;
 
 import { Service } from "./Service.sol";
+import { BaseRiskModel } from "./BaseRiskModel.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
 
-abstract contract DebitService is Service {
+abstract contract DebitService is Service, BaseRiskModel {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -75,17 +76,22 @@ abstract contract DebitService is Service {
         super.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory) {
+    function close(uint256 tokenID, bytes calldata data) public virtual override {
         if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
-
-        uint256[] memory obtained = super.close(tokenID, data);
-
         Agreement memory agreement = agreements[tokenID];
+
+        uint256[] memory obtained = new uint256[](agreement.loans.length);
+        for (uint256 index = 0; index < agreement.loans.length; index++) {
+            obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
+        }
+        super.close(tokenID, data);
+
         uint256[] memory duePayments = _computeDuePayments(agreement, data);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.loans[index].amount
             );
+            obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - obtained[index];
             if (obtained[index] > duePayments[index]) {
                 IERC20(agreement.loans[index].token).approve(
                     manager.vaults(agreement.loans[index].token),
@@ -113,7 +119,6 @@ abstract contract DebitService is Service {
                 );
             }
         }
-        return obtained;
     }
 
     /// @dev When quoting we need to return values for all owed items
@@ -138,7 +143,4 @@ abstract contract DebitService is Service {
         }
         return duePayments;
     }
-
-    // Checks the riskiness of the agreement and eventually reverts with AboveRiskThreshold()
-    function _checkRiskiness(Loan memory loan, uint256 freeLiquidity) internal virtual {}
 }

@@ -39,7 +39,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     function decimals() public view override(IERC20Metadata, ERC4626, ERC20) returns (uint8) {
-        return super.decimals();
+        return ERC4626.decimals();
     }
 
     function setFeeUnlockTime(uint256 _feeUnlockTime) external override onlyOwner {
@@ -56,6 +56,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         IERC20 spuriousToken = IERC20(token);
         spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
+    }
+
+    function getStatus() external view override returns (uint256, uint256, uint256) {
+        return (_calculateLockedProfits(), _calculateLockedLosses(), latestRepay);
     }
 
     // Total assets are used to calculate shares to mint and redeem
@@ -79,18 +83,19 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
-        uint256 freeLiquidity = freeLiquidity();
-        return freeLiquidity == 0 ? 0 : (freeLiquidity - 1).min(super.maxWithdraw(owner));
+        uint256 freeLiquidityCache = freeLiquidity();
+        return freeLiquidityCache == 0 ? 0 : (freeLiquidityCache - 1).min(super.maxWithdraw(owner));
     }
 
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxRedeem(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
-        uint256 maxRedeem = balanceOf(owner);
-        uint256 freeLiquidity = freeLiquidity();
-        uint256 assets = convertToAssets(maxRedeem);
-        if (assets == freeLiquidity && assets > 0) maxRedeem = convertToShares(assets - 1);
-        return maxRedeem;
+        uint256 maxRedeemCache = balanceOf(owner);
+        uint256 freeLiquidityCache = freeLiquidity();
+        uint256 assets = convertToAssets(maxRedeemCache);
+        if (assets == freeLiquidityCache && assets > 0) maxRedeemCache = convertToShares(assets - 1);
+
+        return maxRedeemCache;
     }
 
     function depositWithPermit(uint256 assets, address receiver, uint256 deadline, uint8 v, bytes32 r, bytes32 s)

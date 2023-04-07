@@ -16,7 +16,6 @@ import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { StringEncoder } from "../helpers/StringEncoder.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { MockSwapper } from "../helpers/MockSwapper.sol";
 
 /// @dev State study
 /// BalancerService native state:
@@ -63,7 +62,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
     BalancerService internal immutable service;
     Oracle internal immutable oracle;
-    MockSwapper internal immutable swapper;
 
     address internal constant router = 0xDef1C0ded9bec7F1a1670819833240f027b25EfF;
     address internal constant balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
@@ -75,13 +73,12 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 58581858;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         oracle = new Oracle();
-        swapper = new MockSwapper();
-        service = new BalancerService(address(manager), address(oracle), address(swapper), balancerVault, bal);
+        service = new BalancerService(address(manager), address(oracle), balancerVault, bal);
         vm.stopPrank();
 
         loanLength = 3;
@@ -293,7 +290,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                 collaterals[0].amount - firstStep,
                 bptTotalSupply - firstStep
             );
-            uint256[] memory amountsOut = service.close(0, data);
+            service.close(0, data);
             // total supply as expected
             assertEq(IERC20(collateralTokens[0]).totalSupply(), bptTotalSupply - collaterals[0].amount);
             // min amounts out are respected
@@ -303,7 +300,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                 // If firstStep = 0, minAmountsOut are also zero
                 // Following line is to avoid stackTooDeep
                 finalAmounts[i] += initialBalances[i] + minAmountsOut[i];
-                assertEq(amountsOut[i], finalAmounts[i]);
                 // Payoff is paid to address(this) which is the user
                 assertEq(
                     IERC20(loanTokens[i]).balanceOf(address(this)),

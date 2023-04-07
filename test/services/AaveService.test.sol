@@ -19,7 +19,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
@@ -72,19 +72,14 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
             service.close(0, data);
         } else {
-            uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(service));
+            uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(this));
             uint256 initialAllowance = service.totalAllowance();
             uint256 toRedeem = IERC20(collateralTokens[0]).balanceOf(address(service)).safeMulDiv(
                 collaterals[0].amount,
                 initialAllowance
             );
-            uint256[] memory amountsOut = service.close(0, data);
-            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
-            assertEq(amountsOut[0], toRedeem);
-            assertEq(
-                IERC20(loanTokens[0]).balanceOf(address(this)),
-                (initialBalance + toRedeem).positiveSub(actualLoans[0].amount)
-            );
+            service.close(0, data);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
             assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
         }
     }

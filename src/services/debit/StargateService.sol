@@ -3,9 +3,9 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { ISwapper } from "../../interfaces/ISwapper.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 import { DebitService } from "../DebitService.sol";
 import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
 import { Service } from "../Service.sol";
@@ -13,7 +13,7 @@ import { Service } from "../Service.sol";
 /// @title    StargateService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Stargate pool
-contract StargateService is ConstantRateModel {
+contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IStargatePool;
 
@@ -28,28 +28,22 @@ contract StargateService is ConstantRateModel {
     mapping(address => PoolData) public pools;
     mapping(address => uint256) public totalDeposits;
     IOracle public immutable oracle;
-    ISwapper public immutable swapper;
 
     event PoolWasAdded(address indexed token);
     error InexistentPool();
     error AmountTooLow();
     error InsufficientAmountOut();
 
-    constructor(
-        address _manager,
-        address _oracle,
-        address _swapper,
-        address _stargateRouter,
-        address _stargateLPStaking
-    ) Service("StargateService", "STARGATE-SERVICE", _manager) {
+    constructor(address _manager, address _oracle, address _stargateRouter, address _stargateLPStaking)
+        Service("StargateService", "STARGATE-SERVICE", _manager)
+    {
         oracle = IOracle(_oracle);
-        swapper = ISwapper(_swapper);
         stargateRouter = IStargateRouter(_stargateRouter);
         stargateLPStaking = IStargateLPStaking(_stargateLPStaking);
         stargate = IERC20(stargateLPStaking.stargate());
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         if (pools[agreement.loans[0].token].poolID == 0) revert InexistentPool();
 
         PoolData memory pool = pools[agreement.loans[0].token];
@@ -62,7 +56,7 @@ contract StargateService is ConstantRateModel {
         // upon deposit you receive some STG tokens
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.loans[0].token];
 
         uint256 minAmountsOut = abi.decode(data, (uint256));
