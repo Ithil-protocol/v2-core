@@ -44,8 +44,9 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
         address _oracle,
         address _factory,
         address _stargateRouter,
-        address _stargateLPStaking
-    ) Service("StargateService", "STARGATE-SERVICE", _manager) {
+        address _stargateLPStaking,
+        uint256 _deadline
+    ) Service("StargateService", "STARGATE-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
         factory = IFactory(_factory);
         stargateRouter = IStargateRouter(_stargateRouter);

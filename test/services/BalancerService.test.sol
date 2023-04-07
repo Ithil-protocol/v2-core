@@ -75,7 +75,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new BalancerService(address(manager), address(oracle), address(dex), balancerVault, bal);
+        service = new BalancerService(address(manager), address(oracle), address(dex), balancerVault, bal, 86400 * 30);
 
         loanLength = 3;
         loanTokens = new address[](loanLength);

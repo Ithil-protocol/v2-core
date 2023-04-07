@@ -44,9 +44,14 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
     IOracle public immutable oracle;
     IFactory public immutable factory;
 
-    constructor(address _manager, address _oracle, address _factory, address _router, address _minichef)
-        Service("SushiService", "SUSHI-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _oracle,
+        address _factory,
+        address _router,
+        address _minichef,
+        uint256 _deadline
+    ) Service("SushiService", "SUSHI-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
         factory = IFactory(_factory);
         router = IUniswapV2Router(_router);

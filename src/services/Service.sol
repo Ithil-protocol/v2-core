@@ -19,11 +19,15 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     Agreement[] public agreements;
     bool public locked;
     uint256 public id;
+    uint256 public immutable deadline;
 
-    constructor(string memory _name, string memory _symbol, address _manager) ERC721(_name, _symbol) {
+    constructor(string memory _name, string memory _symbol, address _manager, uint256 _deadline)
+        ERC721(_name, _symbol)
+    {
         manager = IManager(_manager);
         locked = false;
         id = 0;
+        deadline = _deadline;
     }
 
     modifier onlyGuardian() {

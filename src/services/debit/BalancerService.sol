@@ -53,9 +53,14 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     IOracle public immutable oracle;
     IFactory public immutable factory;
 
-    constructor(address _manager, address _oracle, address _factory, address _balancerVault, address _bal)
-        Service("BalancerService", "BALANCER-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _oracle,
+        address _factory,
+        address _balancerVault,
+        address _bal,
+        uint256 _deadline
+    ) Service("BalancerService", "BALANCER-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
         factory = IFactory(_factory);
         balancerVault = IBalancerVault(_balancerVault);

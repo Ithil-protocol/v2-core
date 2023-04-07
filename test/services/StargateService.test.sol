@@ -30,7 +30,8 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
             address(oracle),
             address(dex),
             stargateRouter,
-            stargateLPStaking
+            stargateLPStaking,
+            30 * 86400
         );
 
         loanLength = 1;
