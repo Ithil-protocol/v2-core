@@ -98,6 +98,7 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
         PoolData memory pool = pools[agreement.collaterals[0].token];
+        if (pool.tokens.length == 0) revert InexistentPool();
 
         uint256[] memory quoted = new uint256[](agreement.loans.length);
         uint256[] memory fees = new uint256[](agreement.loans.length);

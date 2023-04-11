@@ -55,9 +55,9 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        if (pools[agreement.loans[0].token].poolID == 0) revert InexistentPool();
-
         PoolData memory pool = pools[agreement.loans[0].token];
+        if (pool.poolID == 0) revert InexistentPool();
+
         if (_expectedMintedTokens(agreement.loans[0].amount + agreement.loans[0].margin, pool.lpToken) == 0)
             revert AmountTooLow();
         stargateRouter.addLiquidity(pool.poolID, agreement.loans[0].amount + agreement.loans[0].margin, address(this));
@@ -92,7 +92,7 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
         returns (uint256[] memory results, uint256[] memory)
     {
         PoolData memory pool = pools[agreement.loans[0].token];
-        uint256 stg = stargateLPStaking.pendingStargate(pool.poolID, address(this));
+        if (pool.poolID == 0) revert InexistentPool();
 
         uint256[] memory fees = new uint256[](1);
         uint256[] memory quoted = new uint256[](1);
@@ -102,8 +102,6 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     }
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {
-        assert(token != address(0));
-
         (address lpToken, , , ) = stargateLPStaking.poolInfo(stakingPoolID);
         IStargatePool pool = IStargatePool(lpToken);
         // check that the token provided and staking pool ID are correct

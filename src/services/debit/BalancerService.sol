@@ -148,6 +148,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
+
         (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
         uint256[] memory amountsOut = new uint256[](agreement.loans.length);
         uint256[] memory fees = new uint256[](agreement.loans.length);
