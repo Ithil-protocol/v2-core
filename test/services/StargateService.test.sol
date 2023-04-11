@@ -15,7 +15,6 @@ import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract StargateServiceTest is BaseIntegrationServiceTest {
     StargateService internal immutable service;
-    Oracle internal immutable oracle;
 
     address internal constant stargateRouter = 0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614;
     address internal constant stargateLPStaking = 0xeA8DfEE1898a7e0a59f7527F076106d7e44c2176;
@@ -25,10 +24,15 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
     uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        oracle = new Oracle();
-        service = new StargateService(address(manager), address(oracle), stargateRouter, stargateLPStaking);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new StargateService(
+            address(manager),
+            address(oracle),
+            address(dex),
+            stargateRouter,
+            stargateLPStaking,
+            30 * 86400
+        );
 
         loanLength = 1;
         loanTokens = new address[](loanLength);
@@ -97,9 +101,7 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
 
             IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
-            (uint256[] memory profits, ) = service.quote(agreement);
+            (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
         }
     }
-
-    // TODO test quoter
 }

@@ -6,19 +6,19 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
-import { IManager, Manager } from "../../src/Manager.sol";
-import { FeeCollectorService } from "../../src/services/FeeCollectorService.sol";
+import { FeeCollectorService } from "../../src/services/neutral/FeeCollectorService.sol";
 import { Service } from "../../src/services/Service.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { Ithil } from "../../src/Ithil.sol";
 import { VeIthil } from "../../src/VeIthil.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 
 contract Payer is Service {
     // Dummy service to produce fees
     // TODO: test fee generation
-    constructor(address _manager) Service("Payer", "PAYER", _manager) {}
+    constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
         internal

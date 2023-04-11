@@ -6,9 +6,9 @@ import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
@@ -24,7 +24,9 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     error InsufficientAmountOut();
     error AgreementAmountsMismatch();
 
-    constructor(address _manager, address _aave) Service("AaveService", "AAVE-SERVICE", _manager) {
+    constructor(address _manager, address _aave, uint256 _deadline)
+        Service("AaveService", "AAVE-SERVICE", _manager, _deadline)
+    {
         aave = IPool(_aave);
     }
 

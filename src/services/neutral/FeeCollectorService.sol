@@ -4,11 +4,11 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IVault } from "../interfaces/IVault.sol";
-import { GeneralMath } from "../libraries/GeneralMath.sol";
-import { Whitelisted } from "./Whitelisted.sol";
-import { Service } from "./Service.sol";
-import { VeIthil } from "../VeIthil.sol";
+import { IVault } from "../../interfaces/IVault.sol";
+import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { Whitelisted } from "../Whitelisted.sol";
+import { Service } from "../Service.sol";
+import { VeIthil } from "../../VeIthil.sol";
 
 /// @title    FeeCollectorService contract
 /// @author   Ithil
@@ -42,7 +42,7 @@ contract FeeCollectorService is Service {
     error MaxLockExceeded();
 
     constructor(address _manager, address _weth, uint256 _feePercentage)
-        Service("FeeCollector", "FEE-COLLECTOR", _manager)
+        Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max)
     {
         weth = IERC20(_weth);
         veToken = new VeIthil();

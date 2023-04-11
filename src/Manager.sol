@@ -6,8 +6,8 @@ import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
-import { Vault } from "./Vault.sol";
 import { GeneralMath } from "./libraries/GeneralMath.sol";
+import { Vault } from "./Vault.sol";
 
 contract Manager is IManager, Ownable {
     using GeneralMath for uint256;

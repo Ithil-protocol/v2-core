@@ -23,7 +23,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new AaveService(address(manager), aavePool);
+        service = new AaveService(address(manager), aavePool, 30 * 86400);
 
         loanLength = 1;
         loanTokens = new address[](loanLength);
@@ -96,8 +96,6 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
-        (uint256[] memory profits, ) = service.quote(agreement);
-
-        // TODO check quoter
+        (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
     }
 }

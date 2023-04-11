@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { Service } from "./Service.sol";
-import { BaseRiskModel } from "./BaseRiskModel.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { GeneralMath } from "../libraries/GeneralMath.sol";
+import { Service } from "./Service.sol";
+import { BaseRiskModel } from "./BaseRiskModel.sol";
 
 abstract contract DebitService is Service, BaseRiskModel {
     using GeneralMath for uint256;
@@ -73,18 +73,22 @@ abstract contract DebitService is Service, BaseRiskModel {
 
             _checkRiskiness(agreement.loans[index], freeLiquidity);
         }
-        super.open(order);
+        Service.open(order);
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
-        if (ownerOf(tokenID) != msg.sender && liquidationScore(tokenID) == 0) revert RestrictedToOwner();
         Agreement memory agreement = agreements[tokenID];
+        if (
+            ownerOf(tokenID) != msg.sender &&
+            liquidationScore(tokenID) == 0 &&
+            agreement.createdAt + deadline > block.timestamp
+        ) revert RestrictedToOwner();
 
         uint256[] memory obtained = new uint256[](agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this));
         }
-        super.close(tokenID, data);
+        Service.close(tokenID, data);
 
         uint256[] memory duePayments = _computeDuePayments(agreement, data);
         for (uint256 index = 0; index < agreement.loans.length; index++) {

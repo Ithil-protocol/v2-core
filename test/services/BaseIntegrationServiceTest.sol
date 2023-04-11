@@ -9,10 +9,14 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { Oracle } from "../../src/Oracle.sol";
+import { MockDex } from "../helpers/MockDex.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
+    Oracle internal immutable oracle;
+    MockDex internal immutable dex;
 
     address[] internal loanTokens;
     mapping(address => address) internal whales;
@@ -26,8 +30,11 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         vm.selectFork(forkId);
         vm.deal(admin, 1 ether);
 
-        vm.prank(admin);
+        vm.startPrank(admin);
         manager = IManager(new Manager());
+        oracle = new Oracle();
+        dex = new MockDex();
+        vm.stopPrank();
     }
 
     function setUp() public virtual {
