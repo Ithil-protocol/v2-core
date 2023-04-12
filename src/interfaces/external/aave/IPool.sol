@@ -21,7 +21,8 @@ interface IPool {
     function withdraw(address asset, uint256 amount, address to) external returns (uint256);
 
     /**
-     * @notice DEPRECATED Supplies an `amount` of underlying asset into the reserve, receiving in return overlying aTokens.
+     * @notice DEPRECATED 
+     * Supplies an `amount` of underlying asset into the reserve, receiving in return overlying aTokens.
      * - E.g. User supplies 100 USDC and gets in return 100 aUSDC
      * @dev Deprecated: Use the `supply` function instead
      * @param asset The address of the underlying asset to supply
