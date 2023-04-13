@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
@@ -10,23 +11,24 @@ import { SushiService } from "../../src/services/debit/SushiService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract SushiServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
     SushiService internal immutable service;
-    address internal constant sushirouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
+
+    address internal constant sushiRouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     address internal constant minichef = 0xF4d73326C13a4Fc5FD7A064217e12780e9Bd62c3;
     uint256 internal constant poolID = 0;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        service = new SushiService(address(manager), sushirouter, minichef);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new SushiService(address(manager), address(oracle), address(dex), sushiRouter, minichef, 30 * 86400);
+
         loanLength = 2;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -49,7 +51,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         view
         returns (uint256, uint256, uint256)
     {
-        (, bytes memory wethQuotedData) = sushirouter.staticcall(
+        (, bytes memory wethQuotedData) = sushiRouter.staticcall(
             abi.encodeWithSignature(
                 "quote(uint256,uint256,uint256)",
                 wethMargin + wethLoan,
@@ -57,7 +59,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
                 IERC20(loanTokens[1]).balanceOf(collateralTokens[0])
             )
         );
-        (, bytes memory usdcQuotedData) = sushirouter.staticcall(
+        (, bytes memory usdcQuotedData) = sushiRouter.staticcall(
             abi.encodeWithSignature(
                 "quote(uint256,uint256,uint256)",
                 usdcMargin + usdcLoan,
@@ -85,10 +87,14 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         return (IERC20(collateralTokens[0]).totalSupply() * (rootK - rootKLast)) / (5 * rootK + rootKLast);
     }
 
-    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-        returns (bool)
-    {
+    function testSushiIntegrationOpenPosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public returns (bool) {
         IService.Order memory order = _openOrder2(
             amount0,
             loan0,
@@ -120,10 +126,15 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         return success;
     }
 
-    function testClose(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-    {
-        bool success = testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
+    function testSushiIntegrationClosePosition(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public {
+        bool success = testSushiIntegrationOpenPosition(amount0, loan0, margin0, amount1, loan1, margin1);
 
         uint256[] memory minAmountsOut = new uint256[](2);
         // Fees make the initial investment always at a loss
@@ -148,10 +159,15 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         }
     }
 
-    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0, uint256 amount1, uint256 loan1, uint256 margin1)
-        public
-    {
-        bool success = testOpen(amount0, loan0, margin0, amount1, loan1, margin1);
+    function testSushiIntegrationQuoter(
+        uint256 amount0,
+        uint256 loan0,
+        uint256 margin0,
+        uint256 amount1,
+        uint256 loan1,
+        uint256 margin1
+    ) public {
+        bool success = testSushiIntegrationOpenPosition(amount0, loan0, margin0, amount1, loan1, margin1);
         if (success) {
             (
                 IService.Loan[] memory loan,
@@ -162,7 +178,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
 
             IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
-            (uint256[] memory profits, ) = service.quote(agreement);
+            (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
         }
     }
 }

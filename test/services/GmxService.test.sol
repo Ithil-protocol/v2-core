@@ -9,25 +9,27 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { GmxService } from "../../src/services/debit/GmxService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
 
 contract GmxServiceTest is BaseIntegrationServiceTest {
     GmxService internal immutable service;
-    address internal constant gmxRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
+
+    address internal constant gmxRouter = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
+    address internal constant gmxRouterV2 = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     address internal constant whale = 0x8b8149Dd385955DC1cE77a4bE7700CCD6a212e65;
     uint256 internal constant amount = 100 * 1e18;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.deal(admin, 1 ether);
         vm.deal(whale, 1 ether);
 
         vm.prank(admin);
-        service = new GmxService(address(manager), gmxRouter);
+        service = new GmxService(address(manager), gmxRouter, gmxRouterV2, 30 * 86400);
     }
 
     function setUp() public override {
@@ -65,7 +67,9 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = 0;
 
-        IService.Order memory order = Helper.createAdvancedOrder(
+        uint256 initial = weth.balanceOf(address(this));
+
+        IService.Order memory order = OrderHelper.createAdvancedOrder(
             tokens,
             loans,
             margins,
@@ -77,7 +81,10 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         );
 
         service.open(order);
-        service.quote(order.agreement);
+        //vm.warp(block.timestamp + 30 days);
+        service.harvest();
         service.close(0, abi.encode(uint256(1)));
+
+        //assertTrue(weth.balanceOf(address(this)) > initial);
     }
 }

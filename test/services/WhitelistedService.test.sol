@@ -1,39 +1,43 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { Test } from "forge-std/Test.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { Service, IService } from "../../src/services/Service.sol";
-import { WhitelistedService } from "../../src/services/WhitelistedService.sol";
+import { Whitelisted } from "../../src/services/Whitelisted.sol";
+import { AuctionRateModel } from "../../src/irmodels/AuctionRateModel.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 
-contract TestService is WhitelistedService {
-    constructor(address manager) Service("TestService", "TEST-SERVICE", manager) {}
+contract TestService is Whitelisted, AuctionRateModel, Service {
+    constructor(address manager) Service("TestService", "TEST-SERVICE", manager, 30 * 86400) {}
 
-    function _open(Agreement memory agreement, bytes calldata data) internal override {}
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
+        internal
+        virtual
+        override
+    {}
 
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) public override {}
-
-    function _close(uint256 tokenID, Agreement memory agreement, bytes calldata data) internal override {}
+    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override onlyWhitelisted {}
 }
 
-contract WhitelistedServiceTest is Test, IERC721Receiver {
+contract WhitelistedTest is Test, IERC721Receiver {
     using SafeERC20 for IERC20;
 
     Manager internal immutable manager;
     TestService internal immutable service;
     ERC20PresetMinterPauser internal immutable token;
+    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     address internal constant whitelistedUser = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted")))));
     address internal constant whitelistedUser2 = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted2")))));
     uint256 internal constant collateral = 1e18;
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
-    address internal constant admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
 
     constructor() {
         token = new ERC20PresetMinterPauser("test", "TEST");
@@ -58,7 +62,7 @@ contract WhitelistedServiceTest is Test, IERC721Receiver {
     }
 
     function testWhitelist() public {
-        IService.Order memory order = Helper.createSimpleERC20Order(
+        IService.Order memory order = OrderHelper.createSimpleERC20Order(
             address(token),
             loan,
             margin,

@@ -3,7 +3,7 @@ pragma solidity =0.8.17;
 
 import { IService } from "../../src/interfaces/IService.sol";
 
-library Helper {
+library OrderHelper {
     function createSimpleERC20Order(
         address token,
         uint256 amount,
@@ -50,11 +50,10 @@ library Helper {
         uint256[] memory collateralAmounts,
         uint256 time,
         bytes memory data
-    ) public view returns (IService.Order memory) {
+    ) public pure returns (IService.Order memory) {
         assert(tokens.length == amounts.length && tokens.length == margins.length);
-
         IService.Loan[] memory loan = new IService.Loan[](tokens.length);
-        IService.Collateral[] memory collateral = new IService.Collateral[](tokens.length);
+        IService.Collateral[] memory collateral = new IService.Collateral[](collateralTokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             loan[i].token = tokens[i];
             loan[i].amount = amounts[i];
@@ -88,7 +87,7 @@ library Helper {
         uint256 collateralAmount,
         uint256 time,
         bytes memory data
-    ) internal returns (IService.Order memory) {
+    ) public pure returns (IService.Order memory) {
         IService.Loan[] memory loans = new IService.Loan[](2);
         loans[0].token = tokenA;
         loans[0].amount = loanA;

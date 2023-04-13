@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.17;
+pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
+import { IPool } from "../../interfaces/external/dex/IPool.sol";
 import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Router.sol";
 import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Factory.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    SushiService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Sushi pool
-contract SushiService is SecuritisableService {
+contract SushiService is Whitelisted, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -34,17 +40,26 @@ contract SushiService is SecuritisableService {
     mapping(address => PoolData) public pools;
     IUniswapV2Router public immutable router;
     IMiniChef public immutable minichef;
-    address public immutable rewardToken;
+    address public immutable sushi;
+    IOracle public immutable oracle;
+    IFactory public immutable factory;
 
-    constructor(address _manager, address _router, address _minichef)
-        Service("SushiService", "SUSHI-SERVICE", _manager)
-    {
+    constructor(
+        address _manager,
+        address _oracle,
+        address _factory,
+        address _router,
+        address _minichef,
+        uint256 _deadline
+    ) Service("SushiService", "SUSHI-SERVICE", _manager, _deadline) {
+        oracle = IOracle(_oracle);
+        factory = IFactory(_factory);
         router = IUniswapV2Router(_router);
         minichef = IMiniChef(_minichef);
-        rewardToken = minichef.SUSHI();
+        sushi = minichef.SUSHI();
     }
 
-    function _open(Agreement memory agreement, bytes calldata data) internal override {
+    function _open(Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.tokens.length != 2) revert InexistentPool();
         if (agreement.loans.length != 2) revert InvalidInput();
@@ -64,14 +79,14 @@ contract SushiService is SecuritisableService {
             minAmountsOut[0],
             minAmountsOut[1],
             address(this),
-            block.timestamp // @todo pass via bytes data ?
+            block.timestamp // TODO pass via bytes data ?
         );
 
         agreement.collaterals[0].amount = liquidity;
         minichef.deposit(pool.poolID, liquidity, address(this));
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         minichef.withdraw(pool.poolID, agreement.collaterals[0].amount, address(this));
 
@@ -84,8 +99,10 @@ contract SushiService is SecuritisableService {
             minAmountsOut[0],
             minAmountsOut[1],
             address(this),
-            block.timestamp // @todo pass via bytes data ?
+            block.timestamp // TODO pass via bytes data ?
         );
+
+        // TODO swap SUSHI for collateral tokens
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
@@ -95,12 +112,16 @@ contract SushiService is SecuritisableService {
         uint256 balanceB = IERC20(agreement.loans[1].token).balanceOf(agreement.collaterals[0].token);
         uint256 totalSupply = IERC20(agreement.collaterals[0].token).totalSupply();
         (, bytes memory klast) = agreement.collaterals[0].token.staticcall(abi.encodeWithSignature("kLast()"));
-        // Todo: add fees
+        // TODO: add fees
+
         uint256 rootK = Math.sqrt(balanceA + agreement.loans[0].amount) * (balanceB + agreement.loans[1].amount);
         uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
         totalSupply += (totalSupply * (rootK - rootKLast)) / (5 * rootK + rootKLast);
         quoted[0] = (agreement.collaterals[0].amount * balanceA) / totalSupply;
         quoted[1] = (agreement.collaterals[0].amount * balanceB) / totalSupply;
+
+        // TODO consider accrued SUSHI when quoting
+
         return (fees, quoted);
     }
 
@@ -121,10 +142,32 @@ contract SushiService is SecuritisableService {
     }
 
     function removePool(address lpToken) external onlyOwner {
+        PoolData memory pool = pools[lpToken];
+        if (pool.tokens.length != 2) revert InexistentPool();
+
         IERC20(lpToken).approve(address(minichef), 0);
 
-        emit PoolWasRemoved(pools[lpToken].poolID);
-
         delete pools[lpToken];
+
+        emit PoolWasRemoved(pools[lpToken].poolID);
+    }
+
+    function harvest(address poolAddress) external {
+        PoolData memory pool = pools[poolAddress];
+        if (pool.tokens.length != 2) revert InexistentPool();
+
+        minichef.harvest(pool.poolID, address(this));
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = sushi;
+        (address token, address vault) = VaultHelper.getBestVault(tokens, manager);
+
+        // TODO check oracle
+        uint256 price = oracle.getPrice(sushi, token, 1);
+        address dexPool = factory.pools(sushi, token);
+        // TODO add discount
+        IPool(dexPool).createOrder(IERC20(sushi).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+
+        // TODO add premium to the caller
     }
 }

@@ -5,20 +5,13 @@ pragma solidity =0.8.17;
 /// @author   Ithil
 /// @notice   Manages lending and borrowing from and to the ERC4626 vaults
 interface IManager {
-    struct RiskParams {
-        uint256 spread;
-        uint256 cap;
-    }
-
     function salt() external pure returns (bytes32);
 
     function vaults(address token) external view returns (address);
 
-    function riskParams(address service, address token) external view returns (uint256, uint256);
+    function caps(address service, address token) external view returns (uint256);
 
     function create(address token) external returns (address);
-
-    function setSpread(address service, address token, uint256 spread) external;
 
     function setCap(address service, address token, uint256 cap) external;
 
@@ -41,7 +34,8 @@ interface IManager {
     event TokenWasRemovedFromService(address indexed service, address indexed token);
 
     error VaultMissing();
-    error RestrictedToWhitelistedServices();
+    error RestrictedToWhitelisted();
+    error RestrictedToOwner();
     error InvestmentCapExceeded(uint256 investedPortion, uint256 investmentCap);
     error MaxAmountExceeded();
 }

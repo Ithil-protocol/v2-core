@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { ICurvePool } from "../../src/interfaces/external/curve/ICurvePool.sol";
 import { IConvexBooster } from "../../src/interfaces/external/convex/IConvexBooster.sol";
@@ -11,10 +12,11 @@ import { IManager, Manager } from "../../src/Manager.sol";
 import { CurveConvexService } from "../../src/services/debit/CurveConvexService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
-import { console2 } from "forge-std/console2.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract CurveConvexServiceTest is BaseIntegrationServiceTest {
+    using GeneralMath for uint256;
+
     CurveConvexService internal immutable service;
 
     address internal constant convexBooster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
@@ -22,15 +24,23 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     address internal constant cvx = 0xb952A807345991BD529FDded05009F5e80Fe8F45;
 
     address internal constant curvePool = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
-    uint256 internal constant convexPid = 1;
+    uint256 internal constant convexPid = 7;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        service = new CurveConvexService(address(manager), convexBooster, crv, cvx);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new CurveConvexService(
+            address(manager),
+            address(oracle),
+            address(dex),
+            convexBooster,
+            crv,
+            cvx,
+            30 * 86400
+        );
+
         loanLength = 2;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -197,8 +207,18 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             service.close(0, data);
         } else {
             service.close(0, data);
-            assertTrue(IERC20(loanTokens[0]).balanceOf(address(service)) == initialBalance0 + quoted[0]);
-            assertTrue(IERC20(loanTokens[1]).balanceOf(address(service)) == initialBalance1 + quoted[1]);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(service)), 0);
+            assertEq(IERC20(loanTokens[1]).balanceOf(address(service)), 0);
+            assertEq(
+                IERC20(loanTokens[0]).balanceOf(address(this)),
+                (initialBalance0 + quoted[0]).positiveSub(loan[0].amount)
+            );
+            assertEq(
+                IERC20(loanTokens[1]).balanceOf(address(this)),
+                (initialBalance1 + quoted[1]).positiveSub(loan[1].amount)
+            );
         }
     }
+
+    // TODO test quoter
 }

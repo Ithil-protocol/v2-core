@@ -7,13 +7,16 @@ import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Rec
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
-import { console2 } from "forge-std/console2.sol";
+import { Oracle } from "../../src/Oracle.sol";
+import { MockDex } from "../helpers/MockDex.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     address internal constant admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
+    Oracle internal immutable oracle;
+    MockDex internal immutable dex;
 
     address[] internal loanTokens;
     mapping(address => address) internal whales;
@@ -29,6 +32,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
 
         vm.startPrank(admin);
         manager = IManager(new Manager());
+        oracle = new Oracle();
+        dex = new MockDex();
         vm.stopPrank();
     }
 
@@ -44,9 +49,10 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
-
             vm.stopPrank();
         }
+        vm.prank(admin);
+        (bool success, ) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
     function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
@@ -61,17 +67,19 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     /// @param token the token
     /// @param needsBumping whether we need to have amount > 0 (some services could fail)
     function _depositAmountInVault(address token, uint256 amount, bool needsBumping) internal returns (uint256) {
-        amount = amount % IERC20(token).balanceOf(whales[address(token)]); // 0 <= amount <= dai.balanceOf(whale) - 1
-        if (needsBumping && amount == 0) amount++;
+        if (IERC20(token).balanceOf(whales[address(token)]) > 0) {
+            // 0 <= amount <= dai.balanceOf(whale) - 1
+            amount = amount % IERC20(token).balanceOf(whales[address(token)]);
+            if (needsBumping && amount == 0) amount++;
 
-        IVault vault = IVault(manager.vaults(token));
-        vm.startPrank(whales[token]);
-        IERC20(token).approve(address(vault), amount);
-        vault.deposit(amount, whales[token]);
-        vm.stopPrank();
-
-        // amount is modified, so we return new value
-        return amount;
+            IVault vault = IVault(manager.vaults(token));
+            vm.startPrank(whales[token]);
+            IERC20(token).approve(address(vault), amount);
+            vault.deposit(amount, whales[token]);
+            vm.stopPrank();
+            // amount is modified, so we return new value
+            return amount;
+        } else return 0;
     }
 
     /// Fills the user
@@ -82,9 +90,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         margin = margin % (IERC20(token).balanceOf(whales[token])); // 0 <= margin <= dai.balanceOf(whale) - 1
         if (needsBumping && margin == 0) margin++;
 
-        vm.startPrank(whales[token]);
+        vm.prank(whales[token]);
         IERC20(token).transfer(address(this), margin);
-        vm.stopPrank();
 
         // margin is modified, so we return new value
         return margin;
@@ -110,7 +117,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = collateralAmount;
         return
-            Helper.createAdvancedOrder(
+            OrderHelper.createAdvancedOrder(
                 loanTokens,
                 loans,
                 margins,
@@ -120,6 +127,16 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
                 time,
                 data
             );
+    }
+
+    function _openOrder0(uint256 collateralAmount, uint256 time, bytes memory data)
+        internal
+        returns (IService.Order memory order)
+    {
+        uint256[] memory amounts = new uint256[](loanLength);
+        uint256[] memory loans = new uint256[](loanLength);
+        uint256[] memory margins = new uint256[](loanLength);
+        return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 
     function _openOrder1(
@@ -190,8 +207,8 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         amounts[2] =
             IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]]) -
             (margin2 % (IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])));
-        loans[1] = loan2;
-        margins[1] = margin2;
+        loans[2] = loan2;
+        margins[2] = margin2;
         return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 }

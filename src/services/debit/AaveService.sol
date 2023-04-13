@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.17;
+pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
+import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
-import { SecuritisableService } from "../SecuritisableService.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
-contract AaveService is SecuritisableService {
+contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -22,11 +24,13 @@ contract AaveService is SecuritisableService {
     error InsufficientAmountOut();
     error AgreementAmountsMismatch();
 
-    constructor(address _manager, address _aave) Service("AaveService", "AAVE-SERVICE", _manager) {
+    constructor(address _manager, address _aave, uint256 _deadline)
+        Service("AaveService", "AAVE-SERVICE", _manager, _deadline)
+    {
         aave = IPool(_aave);
     }
 
-    function _open(Agreement memory agreement, bytes calldata /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
         IAToken aToken = IAToken(agreement.collaterals[0].token);
         if (aToken.UNDERLYING_ASSET_ADDRESS() != agreement.loans[0].token) revert IncorrectObtainedToken();
         if (agreement.collaterals[0].amount != agreement.loans[0].amount + agreement.loans[0].margin)
@@ -37,7 +41,7 @@ contract AaveService is SecuritisableService {
         aave.deposit(agreement.loans[0].token, agreement.loans[0].amount + agreement.loans[0].margin, address(this), 0);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes calldata data) internal override {
+    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
         uint256 toRedeem = IERC20(agreement.collaterals[0].token).balanceOf(address(this)).safeMulDiv(
             agreement.collaterals[0].amount,

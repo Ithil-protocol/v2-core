@@ -6,19 +6,22 @@ import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
-import { Vault } from "./Vault.sol";
 import { GeneralMath } from "./libraries/GeneralMath.sol";
+import { Vault } from "./Vault.sol";
 
 contract Manager is IManager, Ownable {
     using GeneralMath for uint256;
 
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
-    // service => token => RiskParams
-    mapping(address => mapping(address => RiskParams)) public override riskParams;
+    // service => token => caps
+    mapping(address => mapping(address => uint256)) public override caps;
+
+    // solhint-disable-next-line no-empty-blocks
+    constructor() {}
 
     modifier supported(address token) {
-        if (riskParams[msg.sender][token].cap == 0) revert RestrictedToWhitelistedServices();
+        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelisted();
         _;
     }
 
@@ -40,14 +43,8 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function setSpread(address service, address token, uint256 spread) external override onlyOwner {
-        riskParams[service][token].spread = spread;
-
-        emit SpreadWasUpdated(service, token, spread);
-    }
-
     function setCap(address service, address token, uint256 cap) external override onlyOwner {
-        riskParams[service][token].cap = cap;
+        caps[service][token] = cap;
 
         emit CapWasUpdated(service, token, cap);
     }
@@ -68,7 +65,7 @@ contract Manager is IManager, Ownable {
         vaultExists(token)
         returns (uint256, uint256)
     {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 investmentCap = caps[msg.sender][token];
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
             currentExposure,
@@ -90,13 +87,13 @@ contract Manager is IManager, Ownable {
 
     /// @inheritdoc IManager
     function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        external
+        public
         override
         supported(token)
         vaultExists(token)
         returns (uint256)
     {
-        uint256 investmentCap = riskParams[msg.sender][token].cap;
+        uint256 investmentCap = caps[msg.sender][token];
         uint256 totalSupply = IVault(vaults[token]).totalSupply();
         uint256 investedPortion = totalSupply == 0
             ? GeneralMath.RESOLUTION
@@ -110,7 +107,7 @@ contract Manager is IManager, Ownable {
 
     /// @inheritdoc IManager
     function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
-        external
+        public
         override
         supported(token)
         vaultExists(token)

@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Oracle } from "../../src/Oracle.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
@@ -10,21 +11,29 @@ import { StargateService } from "../../src/services/debit/StargateService.sol";
 import { IStargatePool } from "../../src/interfaces/external/stargate/IStargateLPStaking.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract StargateServiceTest is BaseIntegrationServiceTest {
     StargateService internal immutable service;
+
     address internal constant stargateRouter = 0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614;
     address internal constant stargateLPStaking = 0xeA8DfEE1898a7e0a59f7527F076106d7e44c2176;
     uint16 internal constant usdcPoolID = 1;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        service = new StargateService(address(manager), stargateRouter, stargateLPStaking);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new StargateService(
+            address(manager),
+            address(oracle),
+            address(dex),
+            stargateRouter,
+            stargateLPStaking,
+            30 * 86400
+        );
+
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -49,7 +58,10 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
         expected = (amountSD * pool.totalSupply()) / pool.totalLiquidity();
     }
 
-    function testOpen(uint256 amount0, uint256 loan0, uint256 margin0) public returns (bool) {
+    function testStargateIntegrationOpenPosition(uint256 amount0, uint256 loan0, uint256 margin0)
+        public
+        returns (bool)
+    {
         IService.Order memory order = _openOrder1(amount0, loan0, margin0, 0, block.timestamp, "");
         bool success = true;
         if (_expectedMintedTokens(order.agreement.loans[0].amount + order.agreement.loans[0].margin) == 0) {
@@ -60,15 +72,14 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
         return success;
     }
 
-    function testClose(uint256 amount0, uint256 loan0, uint256 margin0, uint256 minAmountsOutusdc) public {
-        bool success = testOpen(amount0, loan0, margin0);
+    function testStargateIntegrationClosePosition(uint256 amount0, uint256 loan0, uint256 margin0) public {
+        bool success = testStargateIntegrationOpenPosition(amount0, loan0, margin0);
 
-        // TODO: add slippage check
-        uint256 minAmountsOutusdc = 0;
-        bytes memory data = abi.encode(minAmountsOutusdc);
+        uint256 minAmountsOut = 0; // TODO make it fuzzy
+        bytes memory data = abi.encode(minAmountsOut);
         if (success) {
             (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
-            if (collaterals[0].amount < minAmountsOutusdc) {
+            if (collaterals[0].amount < minAmountsOut) {
                 // Slippage check
                 vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
                 service.close(0, data);
@@ -78,8 +89,8 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
         }
     }
 
-    function testQuote(uint256 amount0, uint256 loan0, uint256 margin0) public {
-        bool success = testOpen(amount0, loan0, margin0);
+    function testStargateIntegrationQuoter(uint256 amount0, uint256 loan0, uint256 margin0) public {
+        bool success = testStargateIntegrationOpenPosition(amount0, loan0, margin0);
         if (success) {
             (
                 IService.Loan[] memory loan,
@@ -89,7 +100,8 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
             ) = service.getAgreement(1);
 
             IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
-            (uint256[] memory profits, ) = service.quote(agreement);
+
+            (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
         }
     }
 }

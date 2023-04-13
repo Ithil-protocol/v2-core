@@ -10,7 +10,7 @@ import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
-import { Helper } from "./Helper.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract AaveServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
@@ -19,12 +19,12 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 76395332;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
-        vm.startPrank(admin);
-        service = new AaveService(address(manager), aavePool);
-        vm.stopPrank();
+        vm.prank(admin);
+        service = new AaveService(address(manager), aavePool, 30 * 86400);
+
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
@@ -34,7 +34,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         serviceAddress = address(service);
     }
 
-    function testOpen(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
+    function testAaveIntegrationOpenPosition(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = daiAmount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;
@@ -48,26 +48,44 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             block.timestamp,
             ""
         );
+        uint256 initialAllowance = service.totalAllowance();
         service.open(order);
+
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        assertEq(collaterals[0].amount, (daiLoan % transformedAmount) + transformedMargin);
+        assertEq(service.totalAllowance(), initialAllowance + collaterals[0].amount);
     }
 
-    function testClose(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin, uint256 minAmountsOutDai) public {
-        testOpen(daiAmount, daiLoan, daiMargin);
+    function testAaveIntegrationClosePosition(
+        uint256 daiAmount,
+        uint256 daiLoan,
+        uint256 daiMargin,
+        uint256 minAmountsOutDai
+    ) public {
+        testAaveIntegrationOpenPosition(daiAmount, daiLoan, daiMargin);
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
         if (collaterals[0].amount < minAmountsOutDai) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
             service.close(0, data);
         } else {
+            uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(this));
+            uint256 initialAllowance = service.totalAllowance();
+            uint256 toRedeem = IERC20(collateralTokens[0]).balanceOf(address(service)).safeMulDiv(
+                collaterals[0].amount,
+                initialAllowance
+            );
             service.close(0, data);
+            assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
+            assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
         }
     }
 
-    function testQuote(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
-        testOpen(daiAmount, daiLoan, daiMargin);
+    function testAaveIntegrationQuoter(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
+        testAaveIntegrationOpenPosition(daiAmount, daiLoan, daiMargin);
 
         (
             IService.Loan[] memory loan,
@@ -77,6 +95,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         ) = service.getAgreement(1);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
-        (uint256[] memory profits, ) = service.quote(agreement);
+
+        (uint256[] memory profits, ) = service.quote(agreement); // TODO test quoter
     }
 }
