@@ -201,7 +201,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
 
         uint256 initialBalance0 = IERC20(loanTokens[0]).balanceOf(address(service));
         uint256 initialBalance1 = IERC20(loanTokens[1]).balanceOf(address(service));
-        (uint256[] memory quoted, ) = service.quote(agreement);
+        uint256[] memory quoted = service.quote(agreement);
         if (quoted[0] < minAmount1 || quoted[1] < minAmount2) {
             vm.expectRevert("Withdrawal resulted in fewer coins than expected");
             service.close(0, data);

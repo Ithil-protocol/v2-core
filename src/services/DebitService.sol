@@ -36,7 +36,8 @@ abstract contract DebitService is Service, BaseRiskModel {
     /// @dev it MUST be such that a liquidable agreement has liquidationScore > 0
     function liquidationScore(uint256 id) public view virtual returns (uint256) {
         Agreement memory agreement = agreements[id];
-        (uint256[] memory quotes, uint256[] memory fees) = quote(agreement);
+        uint256[] memory quotes = quote(agreement);
+        uint256[] memory fees = computeDueFees(agreement);
 
         uint256 score = 0;
         for (uint256 index = 0; index < quotes.length; index++) {
@@ -90,25 +91,28 @@ abstract contract DebitService is Service, BaseRiskModel {
         }
         Service.close(tokenID, data);
 
-        uint256[] memory duePayments = _computeDuePayments(agreement, data);
+        uint256[] memory dueFees = computeDueFees(agreement);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.loans[index].amount
             );
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - obtained[index];
-            if (obtained[index] > duePayments[index]) {
+            if (obtained[index] > dueFees[index] + agreement.loans[index].amount) {
                 IERC20(agreement.loans[index].token).approve(
                     manager.vaults(agreement.loans[index].token),
-                    duePayments[index]
+                    dueFees[index] + agreement.loans[index].amount
                 );
                 // Good repay: the difference is transferred to the user
                 manager.repay(
                     agreement.loans[index].token,
-                    duePayments[index],
+                    dueFees[index] + agreement.loans[index].amount,
                     agreement.loans[index].amount,
                     address(this)
                 );
-                IERC20(agreement.loans[index].token).safeTransfer(msg.sender, obtained[index] - duePayments[index]);
+                IERC20(agreement.loans[index].token).safeTransfer(
+                    msg.sender,
+                    obtained[index] - (dueFees[index] + agreement.loans[index].amount)
+                );
             } else {
                 // Bad repay: all the obtained amount is given to the vault
                 IERC20(agreement.loans[index].token).approve(
@@ -127,24 +131,19 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     /// @dev When quoting we need to return values for all owed items
     /// how: for first to last index, calculate minimum obtained >= loan amount + fees
-    function quote(Agreement memory agreement) public view virtual returns (uint256[] memory, uint256[] memory) {}
+    function quote(Agreement memory agreement) public view virtual returns (uint256[] memory);
 
     // Computes the payment due to the vault or lender
     // Defaults with loan * (1 + IR * time)
-    function _computeDuePayments(Agreement memory agreement, bytes calldata /*data*/)
-        internal
-        virtual
-        returns (uint256[] memory)
-    {
-        uint256[] memory duePayments = new uint256[](agreement.loans.length);
+    function computeDueFees(Agreement memory agreement) public view virtual returns (uint256[] memory) {
+        uint256[] memory dueFees = new uint256[](agreement.loans.length);
         for (uint256 i = 0; i < agreement.loans.length; i++) {
             (uint256 base, uint256 spread) = GeneralMath.unpackUint(agreement.loans[i].interestAndSpread);
-            duePayments[i] = agreement.loans[i].amount.safeMulDiv(
+            dueFees[i] = agreement.loans[i].amount.safeMulDiv(
                 (base + spread) * (block.timestamp - agreement.createdAt),
                 GeneralMath.RESOLUTION * ONE_YEAR
             );
-            duePayments[i] += agreement.loans[i].amount;
         }
-        return duePayments;
+        return dueFees;
     }
 }

@@ -59,13 +59,12 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
         if (amountIn < minimumAmountOut) revert InsufficientAmountOut();
     }
 
-    function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
-        uint256[] memory fees = new uint256[](1);
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         uint256[] memory toRedeem = new uint256[](1);
         toRedeem[0] = IAToken(agreement.collaterals[0].token).balanceOf(address(this)).safeMulDiv(
             agreement.collaterals[0].amount,
             totalAllowance
         );
-        return (toRedeem, fees);
+        return toRedeem;
     }
 }
