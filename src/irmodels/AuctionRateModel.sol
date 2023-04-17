@@ -26,13 +26,6 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     mapping(address => uint256) public riskSpreads;
     mapping(address => uint256) public latestAndBase;
 
-    modifier checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) {
-        _;
-        (uint256 baseRate, uint256 spread) = _updateBase(loan, freeLiquidity);
-        (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
-        if (requestedIr < baseRate || requestedSpread < spread) revert AboveRiskThreshold();
-    }
-
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
         if (baseRate > GeneralMath.RESOLUTION || riskSpread > GeneralMath.RESOLUTION || halfTime == 0)
             revert InvalidInitParams();
