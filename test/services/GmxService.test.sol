@@ -2,7 +2,6 @@
 pragma solidity =0.8.17;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { PRBTest } from "@prb/test/PRBTest.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
@@ -82,7 +81,6 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
 
         service.open(order);
         //vm.warp(block.timestamp + 30 days);
-        service.harvest();
         service.close(0, abi.encode(uint256(1)));
 
         //assertTrue(weth.balanceOf(address(this)) > initial);
