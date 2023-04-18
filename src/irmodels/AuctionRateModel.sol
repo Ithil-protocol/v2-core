@@ -46,24 +46,29 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
      * throws if spread > type(uint256).max - newBase
      */
 
-    function computeBaseRateAndSpread(IService.Loan memory loan, uint256 freeLiquidity)
+    function computeBaseRateAndSpread(address token, uint256 loan, uint256 margin, uint256 freeLiquidity)
         public
         view
         returns (uint256, uint256)
     {
-        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(latestAndBase[loan.token]);
+        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(latestAndBase[token]);
         // Increase base due to new borrow and then
         // apply time based discount: after halvingTime it is divided by 2
-        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - loan.amount).safeMulDiv(
-            halvingTime[loan.token],
-            block.timestamp - latestBorrow + halvingTime[loan.token]
+        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - loan).safeMulDiv(
+            halvingTime[token],
+            block.timestamp - latestBorrow + halvingTime[token]
         );
-        uint256 spread = riskSpreadFromMargin(loan.token, loan.amount, loan.margin);
+        uint256 spread = riskSpreadFromMargin(token, loan, margin);
         return (newBase, spread);
     }
 
     function _updateBase(IService.Loan memory loan, uint256 freeLiquidity) internal returns (uint256, uint256) {
-        (uint256 newBase, uint256 spread) = computeBaseRateAndSpread(loan, freeLiquidity);
+        (uint256 newBase, uint256 spread) = computeBaseRateAndSpread(
+            loan.token,
+            loan.amount,
+            loan.margin,
+            freeLiquidity
+        );
         // Reset new base and latest borrow, force IR stays below resolution
         if (newBase >= GeneralMath.RESOLUTION) revert InterestRateOverflow();
         latestAndBase[loan.token] = GeneralMath.packInUint(block.timestamp, newBase);

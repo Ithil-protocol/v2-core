@@ -56,8 +56,8 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION);
-            // Set interest rate at 1% yearly, no base rate (no auction), halving time is then redundant
-            service.setRiskParams(loanTokens[0], 1e16, 0, 365 * 30);
+            // Set risk spread at 0.5%, 1% base rate, halving time one month
+            service.setRiskParams(loanTokens[0], 5e15, 1e16, 365 * 30);
             vm.stopPrank();
         }
         vm.prank(admin);
@@ -129,7 +129,18 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         {
             IService.Loan[] memory loans = new IService.Loan[](loanLength);
             IService.Collateral[] memory collaterals = new IService.Collateral[](loanLength);
-            loans[0] = IService.Loan(loanTokens[0], loan, margin, uint256(1e16).safeMulDiv(loan, margin));
+            uint256 freeLiquidity = IVault(manager.vaults(loanTokens[0])).freeLiquidity();
+            // Loan cannot be more than a certain amount or it causes an InterestRateOverflow()
+            (, uint256 currentBase) = service.latestAndBase(loanTokens[0]).unpackUint();
+            uint256 maxLoan = freeLiquidity.safeMulDiv(GeneralMath.RESOLUTION - currentBase, GeneralMath.RESOLUTION);
+            loan = maxLoan == 0 ? 0 : loan % maxLoan;
+            (uint256 baseRate, uint256 spread) = service.computeBaseRateAndSpread(
+                loanTokens[0],
+                loan,
+                margin,
+                freeLiquidity
+            );
+            loans[0] = IService.Loan(loanTokens[0], loan, margin, GeneralMath.packInUint(baseRate, spread));
             collaterals[0] = IService.Collateral(
                 IService.ItemType.ERC20,
                 collateralTokens[0],
