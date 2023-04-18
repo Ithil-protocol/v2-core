@@ -9,7 +9,6 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
-import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
@@ -57,6 +56,8 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION);
+            // Set interest rate at 1% yearly, no base rate (no auction), halving time is then redundant
+            service.setRiskParams(loanTokens[0], 1e16, 0, 365 * 30);
             vm.stopPrank();
         }
         vm.prank(admin);
@@ -124,24 +125,38 @@ contract AaveEconomicTest is Test, IERC721Receiver {
     function testAaveSupplyBorrow(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) public {
         (vaultAmount, loan, margin, warp) = _prepareVaultAndUser(vaultAmount, loan, margin, warp);
 
-        IService.Order memory order = OrderHelper.createSimpleERC20Order(
-            loanTokens[0],
-            loan,
-            margin,
-            collateralTokens[0],
-            loan + margin < 2 ? loan + margin : loan + margin - 1
-        );
+        IService.Order memory order;
+        {
+            IService.Loan[] memory loans = new IService.Loan[](loanLength);
+            IService.Collateral[] memory collaterals = new IService.Collateral[](loanLength);
+            loans[0] = IService.Loan(loanTokens[0], loan, margin, uint256(1e16).safeMulDiv(loan, margin));
+            collaterals[0] = IService.Collateral(
+                IService.ItemType.ERC20,
+                collateralTokens[0],
+                0,
+                loan + margin < 2 ? loan + margin : loan + margin - 1
+            );
+            order = IService.Order(
+                IService.Agreement(
+                    loans,
+                    collaterals,
+                    0, // useless: the code updates it at the moment of saving
+                    IService.Status.OPEN // also useless
+                ),
+                abi.encode("")
+            );
+        }
         uint256 initialUserAmount = IERC20(loanTokens[0]).balanceOf(address(this));
         uint256 initialVaultBalance = IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0]));
         service.open(order);
         (
-            IService.Loan[] memory loans,
-            IService.Collateral[] memory collaterals,
+            IService.Loan[] memory actualLoans,
+            IService.Collateral[] memory actualCollaterals,
             uint256 createdAt,
             IService.Status status
         ) = service.getAgreement(1);
 
-        IService.Agreement memory agreement = IService.Agreement(loans, collaterals, createdAt, status);
+        IService.Agreement memory agreement = IService.Agreement(actualLoans, actualCollaterals, createdAt, status);
 
         uint256 supplyAmount = (IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]) / 2) % 1e13; // Max 10m
         if (supplyAmount > 0) {
@@ -156,16 +171,20 @@ contract AaveEconomicTest is Test, IERC721Receiver {
 
         bytes memory data = abi.encode(0);
         uint256 finalCollateral = IERC20(collateralTokens[0]).balanceOf(address(service));
-        assertGe(finalCollateral, collaterals[0].amount);
+        assertGe(finalCollateral, actualCollaterals[0].amount);
         uint256[] memory dueFees = service.computeDueFees(agreement);
-        uint256 toGiveToVault = loans[0].amount + dueFees[0];
+        // Of course, it is impossible to give back to the vault more than the final collateral
+        uint256 toGiveToVault = (actualLoans[0].amount + dueFees[0]).min(finalCollateral);
         service.close(0, data);
-        assertEq(IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])), initialVaultBalance + dueFees[0]);
+        assertEq(
+            IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
+            initialVaultBalance + toGiveToVault - actualLoans[0].amount
+        );
         // Due to Aave Ray Math approximations, a tolerance of 1 is necessary
         // It would be exact if instead of finalCollateral we put the actual, loan token amount obtained by closing
         _equalityWithTolerance(
             IERC20(loanTokens[0]).balanceOf(address(this)),
-            initialUserAmount - loans[0].margin + finalCollateral.positiveSub(toGiveToVault),
+            initialUserAmount - actualLoans[0].margin + finalCollateral.positiveSub(toGiveToVault),
             1
         );
     }
