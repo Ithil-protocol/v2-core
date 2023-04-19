@@ -79,11 +79,9 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
         Agreement memory agreement = agreements[tokenID];
-        if (
-            ownerOf(tokenID) != msg.sender &&
-            liquidationScore(tokenID) == 0 &&
-            agreement.createdAt + deadline > block.timestamp
-        ) revert RestrictedToOwner();
+        address owner = ownerOf(tokenID); // needs to be registered because needed after closing
+        if (owner != msg.sender && liquidationScore(tokenID) == 0 && agreement.createdAt + deadline > block.timestamp)
+            revert RestrictedToOwner();
 
         uint256[] memory obtained = new uint256[](agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
@@ -110,7 +108,7 @@ abstract contract DebitService is Service, BaseRiskModel {
                     address(this)
                 );
                 IERC20(agreement.loans[index].token).safeTransfer(
-                    msg.sender,
+                    owner,
                     obtained[index] - (dueFees[index] + agreement.loans[index].amount)
                 );
             } else {
