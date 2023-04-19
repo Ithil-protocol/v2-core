@@ -15,6 +15,7 @@ import { console2 } from "forge-std/console2.sol";
 contract AaveEconomicTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
     address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
+    address internal immutable liquidator = address(uint160(uint(keccak256(abi.encodePacked("liquidator")))));
     IManager internal immutable manager;
 
     AaveService internal immutable service;
@@ -186,7 +187,16 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         uint256[] memory dueFees = service.computeDueFees(agreement);
         // Of course, it is impossible to give back to the vault more than the final collateral
         uint256 toGiveToVault = (actualLoans[0].amount + dueFees[0]).min(finalCollateral);
-        service.close(0, data);
+        if (service.liquidationScore(0) == 0 && createdAt + service.deadline() > block.timestamp) {
+            vm.startPrank(liquidator);
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
+            service.close(0, data);
+            vm.stopPrank();
+            service.close(0, data);
+        } else {
+            service.close(0, data);
+            vm.stopPrank();
+        }
         assertEq(
             IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
             initialVaultBalance + toGiveToVault - actualLoans[0].amount
