@@ -77,7 +77,7 @@ abstract contract DebitService is Service, BaseRiskModel {
         Service.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override {
+    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory amountsOut) {
         Agreement memory agreement = agreements[tokenID];
         address owner = ownerOf(tokenID); // needs to be registered because needed after closing
         if (owner != msg.sender && liquidationScore(tokenID) == 0 && agreement.createdAt + deadline > block.timestamp)
@@ -125,6 +125,7 @@ abstract contract DebitService is Service, BaseRiskModel {
                 );
             }
         }
+        return obtained;
     }
 
     /// @dev When quoting we need to return values for all owed items

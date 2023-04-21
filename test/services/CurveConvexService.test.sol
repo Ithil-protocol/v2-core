@@ -168,7 +168,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
         uint256 initialRewardsBalance = IERC20(poolInfo.rewards).balanceOf(address(service));
         service.open(order);
 
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         assertTrue(collaterals[0].amount == expectedCollateral);
         // No change: all the balance is deposited in Convex
         assertTrue(IERC20(collateralTokens[0]).balanceOf(address(service)) == initialBalance);
@@ -192,7 +192,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             IService.Collateral[] memory collateral,
             uint256 createdAt,
             IService.Status status
-        ) = service.getAgreement(1);
+        ) = service.getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 

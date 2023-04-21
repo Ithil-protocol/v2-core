@@ -218,7 +218,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         uint256 expectedTokens = _calculateExpectedBPTFromJoin(balances, amountsIn);
         service.open(order);
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
 
         assertEq(collaterals[0].amount, expectedTokens);
         // Gauge token is 1:1 both at deposit and withdraw
@@ -248,7 +248,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
 
         uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
-        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
 
         bytes memory swapData;
         uint256[] memory minAmountsOut = new uint256[](3);
@@ -319,7 +319,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             IService.Collateral[] memory collateral,
             uint256 createdAt,
             IService.Status status
-        ) = service.getAgreement(1);
+        ) = service.getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 

@@ -42,7 +42,7 @@ abstract contract CreditService is Service {
         Service.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override {
+    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory amountsOut) {
         if (ownerOf(tokenID) != msg.sender) revert RestrictedToOwner();
 
         Service.close(tokenID, data);

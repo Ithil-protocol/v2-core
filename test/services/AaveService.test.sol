@@ -46,7 +46,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         uint256 initialBalance = IAToken(collateralTokens[0]).balanceOf(address(service));
         service.open(order);
 
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         assertEq(service.totalAllowance(), initialAllowance + collaterals[0].amount);
         assertEq(IAToken(collateralTokens[0]).balanceOf(address(service)), initialBalance + collaterals[0].amount);
         // In AaveV3 it's not 1:1, but it has at most a single unit of error
@@ -110,7 +110,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
-        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         if (collaterals[0].amount < minAmountsOutDai) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
@@ -141,7 +141,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             IService.Collateral[] memory collaterals,
             uint256 createdAt,
             IService.Status status
-        ) = service.getAgreement(1);
+        ) = service.getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
