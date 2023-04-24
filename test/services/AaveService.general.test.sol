@@ -10,8 +10,6 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract AaveGeneralTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
     address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
@@ -96,7 +94,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         return (loan, margin);
     }
 
-    function _prepareOrder(uint256 loan, uint256 margin) internal returns (IService.Order memory) {
+    function _prepareOrder(uint256 loan, uint256 margin) internal view returns (IService.Order memory) {
         IService.Order memory order;
         {
             IService.Loan[] memory loans = new IService.Loan[](loanLength);
@@ -128,7 +126,6 @@ contract AaveGeneralTest is Test, IERC721Receiver {
     }
 
     function _openOrder(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) internal {
-        console2.log("_openOrder");
         warp = warp % (365 * 86400); // Warp 1y maximum
         (loan, margin) = _prepareVaultAndUser(vaultAmount, loan, margin);
         IService.Order memory order = _prepareOrder(loan, margin);
@@ -138,7 +135,6 @@ contract AaveGeneralTest is Test, IERC721Receiver {
     }
 
     function _closeAgreement(uint256 index, uint256 minimumAmountOut) internal {
-        console2.log("_closeAgreement");
         uint256 totalIds = service.id();
         index = totalIds == 0 ? 0 : index % totalIds;
         if (index == 0) return;
@@ -184,7 +180,6 @@ contract AaveGeneralTest is Test, IERC721Receiver {
     }
 
     function _modifyBalance(uint256 modify, uint256 giveOrTake) internal {
-        console2.log("_modifyBalance");
         if (giveOrTake % 2 == 0) {
             // Give aTokens to the service
             uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
