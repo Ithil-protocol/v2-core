@@ -96,12 +96,11 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         }
     }
 
-    function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
         uint256[] memory quoted = new uint256[](agreement.loans.length);
-        uint256[] memory fees = new uint256[](agreement.loans.length);
         uint256[] memory balances = CurveHelper.getBalances(pool.curve, agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             // This is literally Curve's code, therefore we do NOT use GeneralMath
@@ -110,7 +109,7 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
                 IERC20(agreement.collaterals[0].token).totalSupply();
         }
 
-        return (quoted, fees);
+        return quoted;
     }
 
     function addPool(address curvePool, uint256 convexPid, address[] calldata tokens) external onlyOwner {

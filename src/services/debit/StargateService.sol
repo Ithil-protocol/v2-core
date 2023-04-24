@@ -85,20 +85,14 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
             revert InsufficientAmountOut();
     }
 
-    function quote(Agreement memory agreement)
-        public
-        view
-        override
-        returns (uint256[] memory results, uint256[] memory)
-    {
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory results) {
         PoolData memory pool = pools[agreement.loans[0].token];
         if (pool.poolID == 0) revert InexistentPool();
 
-        uint256[] memory fees = new uint256[](1);
         uint256[] memory quoted = new uint256[](1);
         quoted[0] = _expectedObtainedTokens(agreement.collaterals[0].amount, pool.lpToken);
 
-        return (quoted, fees);
+        return quoted;
     }
 
     function addPool(address token, uint256 stakingPoolID) external onlyOwner {

@@ -145,16 +145,14 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
     }
 
-    function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
         (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
         uint256[] memory amountsOut = new uint256[](agreement.loans.length);
-        uint256[] memory fees = new uint256[](agreement.loans.length);
         uint256[] memory profits;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
-            // TODO: add fees
             amountsOut[index] = agreement.loans[index].amount;
         }
         // Calculate needed BPT to repay loan + fees
@@ -163,7 +161,6 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         // We need to update the balances since we virtually took tokens out of the pool
         // We also need to update the total supply since the bptOut were burned
         for (uint256 index = 0; index < agreement.loans.length; index++) {
-            // TODO: add fees
             totalBalances[index] -= amountsOut[index];
         }
         if (bptAmountOut < agreement.collaterals[0].amount) {
@@ -179,7 +176,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
             }
         }
 
-        return (profits, fees);
+        return profits;
     }
 
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {

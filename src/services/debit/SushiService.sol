@@ -105,14 +105,12 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
         // TODO swap SUSHI for collateral tokens
     }
 
-    function quote(Agreement memory agreement) public view override returns (uint256[] memory, uint256[] memory) {
-        uint256[] memory fees = new uint256[](agreement.loans.length);
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         uint256[] memory quoted = new uint256[](agreement.loans.length);
         uint256 balanceA = IERC20(agreement.loans[0].token).balanceOf(agreement.collaterals[0].token);
         uint256 balanceB = IERC20(agreement.loans[1].token).balanceOf(agreement.collaterals[0].token);
         uint256 totalSupply = IERC20(agreement.collaterals[0].token).totalSupply();
         (, bytes memory klast) = agreement.collaterals[0].token.staticcall(abi.encodeWithSignature("kLast()"));
-        // TODO: add fees
 
         uint256 rootK = Math.sqrt(balanceA + agreement.loans[0].amount) * (balanceB + agreement.loans[1].amount);
         uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
@@ -120,9 +118,7 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
         quoted[0] = (agreement.collaterals[0].amount * balanceA) / totalSupply;
         quoted[1] = (agreement.collaterals[0].amount * balanceB) / totalSupply;
 
-        // TODO consider accrued SUSHI when quoting
-
-        return (fees, quoted);
+        return quoted;
     }
 
     function addPool(uint256 poolID, address[2] calldata tokens) external onlyOwner {
