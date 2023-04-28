@@ -144,7 +144,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         bytes memory data = abi.encode(minAmountsOut);
 
         if (success) {
-            (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+            (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
 
             uint256 balanceWeth = IERC20(loanTokens[0]).balanceOf(collateralTokens[0]);
             uint256 balanceUsdc = IERC20(loanTokens[1]).balanceOf(collateralTokens[0]);
@@ -174,7 +174,7 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
                 IService.Collateral[] memory collaterals,
                 uint256 createdAt,
                 IService.Status status
-            ) = service.getAgreement(1);
+            ) = service.getAgreement(0);
 
             IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
