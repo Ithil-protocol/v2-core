@@ -173,7 +173,9 @@ contract ManagerTest is Test {
             manager.setCap(debitServiceOne, address(firstToken), investedPortion);
         }
         vm.startPrank(debitServiceOne);
-        uint256 increasedAssets = vault.convertToAssets(minted);
+        uint256 increasedAssets = vault.totalSupply().safeAdd(minted) == 0
+            ? 0
+            : minted.safeMulDiv(vault.totalAssets(), vault.totalSupply().safeAdd(minted));
         if (increasedAssets > maxAmountIn) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
             manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);

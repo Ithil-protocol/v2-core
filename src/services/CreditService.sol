@@ -43,8 +43,8 @@ abstract contract CreditService is Service {
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
-        if (ownerOf(tokenID) != msg.sender) revert RestrictedToOwner();
-
+        address owner = ownerOf(tokenID);
+        if (owner != msg.sender) revert RestrictedToOwner();
         Service.close(tokenID, data);
 
         Agreement memory agreement = agreements[tokenID];
@@ -52,6 +52,15 @@ abstract contract CreditService is Service {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.collaterals[index].amount
             );
+            IVault vault = IVault(manager.vaults(agreement.loans[index].token));
+            uint256 toTransfer = dueAmount(agreement);
+            uint256 redeemed = vault.redeem(agreement.collaterals[index].amount, address(this), address(this));
+            // transfer toTransfer and pay the vault if toTransfer < redeemed
+            // otherwise transfer redeemed and do nothing
+            if (toTransfer < redeemed) {
+                IERC20(agreement.loans[index].token).transfer(owner, toTransfer);
+                manager.repay(agreement.loans[index].token, redeemed - toTransfer, 0, address(this));
+            } else IERC20(agreement.loans[index].token).transfer(owner, redeemed);
         }
     }
 
@@ -75,6 +84,10 @@ abstract contract CreditService is Service {
         return sharesBurnt;
     }
 
+    // dueAmount must be implemented otherwise the credit service is worthless
+    function dueAmount(Agreement memory agreement) public virtual returns (uint256);
+
+    // not all credit services need minting and burning, therefore we place an empty implementation here
     function _canMint(address token) internal virtual returns (uint256) {}
 
     function _canBurn(address token) internal virtual returns (uint256) {}

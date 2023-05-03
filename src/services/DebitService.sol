@@ -79,7 +79,7 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     function close(uint256 tokenID, bytes calldata data) public virtual override {
         Agreement memory agreement = agreements[tokenID];
-        address owner = ownerOf(tokenID); // needs to be registered because needed after closing
+        address owner = ownerOf(tokenID);
         if (owner != msg.sender && liquidationScore(tokenID) == 0 && agreement.createdAt + deadline > block.timestamp)
             revert RestrictedToOwner();
 

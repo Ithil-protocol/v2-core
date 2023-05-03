@@ -149,10 +149,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Use case: treasury, backing contract...
     // Invariant: maximumWithdraw(account) for account != receiver
     function directMint(uint256 shares, address receiver) external override onlyOwner returns (uint256) {
-        // When minting, the receiver assets increase
+        _mint(receiver, shares);
+        // After minting, the receiver assets increase
         // Thus we produce negative profits and we need to lock them
         uint256 increasedAssets = convertToAssets(shares);
-        _mint(receiver, shares);
 
         currentProfits = _calculateLockedProfits();
         currentLosses = _calculateLockedLosses() + increasedAssets;
