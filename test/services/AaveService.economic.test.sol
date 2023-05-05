@@ -193,7 +193,6 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             service.close(0, data);
         } else {
             service.close(0, data);
-            vm.stopPrank();
         }
         assertEq(
             IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
