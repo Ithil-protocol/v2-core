@@ -14,7 +14,7 @@ import { Service } from "../Service.sol";
 /// @notice   Boosting is a particular case with yield = 0 (or in general lower than LPs' average)
 /// @notice   By putting a positive yield and a finite deadline, we obtain classical bonds
 /// @notice   In this implementation, fixed yield creditors are senior than vanilla LPs
-contract FixedYieldService is CreditService {
+contract SeniorFixedYieldService is CreditService {
     using GeneralMath for uint256;
     // The yield of this service, with 1e18 corresponding to 100% annually
     uint256 public immutable yield;
@@ -40,7 +40,7 @@ contract FixedYieldService is CreditService {
         uint256 toTransfer = dueAmount(agreement);
         if (toTransfer > redeemable) {
             // Since this service is senior, we need to pay the user even if redeemable is too low
-            // To do this, we borrow liquidity from the vault
+            // To do this, we take liquidity from the vault and register the loss
             uint256 freeLiquidity = vault.freeLiquidity();
             if (freeLiquidity > 0) {
                 manager.borrow(
@@ -57,6 +57,8 @@ contract FixedYieldService is CreditService {
                 );
             }
         }
+        // In the ideal case when the amount to transfer is less than the maximum redeemable
+        // We do nothing in this case, since behaviour is the one of a vanilla CreditService
     }
 
     function dueAmount(IService.Agreement memory agreement) public virtual override returns (uint256) {

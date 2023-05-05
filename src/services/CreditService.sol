@@ -43,18 +43,22 @@ abstract contract CreditService is Service {
     }
 
     function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory) {
+        Agreement memory agreement = agreements[tokenID];
         address owner = ownerOf(tokenID);
-        if (owner != msg.sender) revert RestrictedToOwner();
+        if (owner != msg.sender && agreement.createdAt + deadline > block.timestamp) revert RestrictedToOwner();
         Service.close(tokenID, data);
 
-        Agreement memory agreement = agreements[tokenID];
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.collaterals[index].amount
             );
             IVault vault = IVault(manager.vaults(agreement.loans[index].token));
             uint256 toTransfer = dueAmount(agreement);
-            uint256 redeemed = vault.redeem(agreement.collaterals[index].amount, address(this), address(this));
+            uint256 redeemed = vault.redeem(
+                agreement.collaterals[index].amount.min(vault.maxWithdraw(address(this))),
+                address(this),
+                address(this)
+            );
             // transfer toTransfer and pay the vault if toTransfer < redeemed
             // otherwise transfer redeemed and do nothing
             if (toTransfer < redeemed) {

@@ -129,6 +129,33 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             );
     }
 
+    function _vectorizedOpenOrderForCredit(
+        uint256[] memory loans,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory) {
+        for (uint i = 0; i < loanLength; i++) {
+            loans[i] = _giveMarginToUser(loanTokens[i], loans[i], true);
+        }
+        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
+        itemTypes[0] = IService.ItemType.ERC20;
+
+        uint256[] memory collateralAmounts = new uint256[](1);
+        collateralAmounts[0] = collateralAmount;
+        return
+            OrderHelper.createAdvancedOrder(
+                loanTokens,
+                loans,
+                new uint256[](1),
+                itemTypes,
+                collateralTokens,
+                collateralAmounts,
+                time,
+                data
+            );
+    }
+
     function _openOrder0(uint256 collateralAmount, uint256 time, bytes memory data)
         internal
         returns (IService.Order memory order)
@@ -154,6 +181,15 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         loans[0] = loan0;
         margins[0] = margin0;
         return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
+    }
+
+    function _openOrder1ForCredit(uint256 loan0, uint256 collateralAmount, uint256 time, bytes memory data)
+        internal
+        returns (IService.Order memory order)
+    {
+        uint256[] memory loans = new uint256[](loanLength);
+        loans[0] = loan0;
+        return _vectorizedOpenOrderForCredit(loans, collateralAmount, time, data);
     }
 
     function _openOrder2(
