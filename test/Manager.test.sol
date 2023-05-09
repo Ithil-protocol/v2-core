@@ -117,7 +117,13 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 currentExposure, uint256 borrowed) public {
+    function testBorrow(
+        uint256 previousDeposit,
+        uint256 debitCap,
+        uint256 currentExposure,
+        uint256 borrowed,
+        uint256 loan
+    ) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
@@ -135,7 +141,7 @@ contract ManagerTest is Test {
         borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
-            manager.borrow(address(firstToken), borrowed, currentExposure, anyAddress);
+            manager.borrow(address(firstToken), borrowed, loan, currentExposure, anyAddress);
         }
     }
 

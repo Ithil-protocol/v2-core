@@ -94,7 +94,7 @@ contract VaultTest is Test {
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.directBurn(shares, anyAddress);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
-        vault.borrow(assets, anyAddress);
+        vault.borrow(assets, assets, anyAddress);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.repay(assets, debt, anyAddress);
         vm.stopPrank();
@@ -153,12 +153,12 @@ contract VaultTest is Test {
 
         // Set currentLosses
         vm.assume(currentLosses < vault.freeLiquidity());
-        vault.borrow(currentLosses, borrower);
+        vault.borrow(currentLosses, currentLosses, borrower);
         vault.repay(0, currentLosses, repayer);
 
         // Set netLoans
         vm.assume(netLoans < vault.freeLiquidity());
-        vault.borrow(netLoans, borrower);
+        vault.borrow(netLoans, netLoans, borrower);
 
         // Set balanceOf by adjusting
         vm.assume(balanceOf > 0); // Otherwise it fails due to unhealthy vault
@@ -607,7 +607,8 @@ contract VaultTest is Test {
         uint256 latestRepay,
         uint256 currentProfits,
         uint256 currentLosses,
-        uint256 borrowed
+        uint256 borrowed,
+        uint256 loan
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
@@ -621,7 +622,7 @@ contract VaultTest is Test {
 
         vm.assume(borrowed < vault.freeLiquidity());
         uint256 initialBalance = token.balanceOf(receiver);
-        vault.borrow(borrowed, receiver);
+        vault.borrow(borrowed, loan, receiver);
 
         assertTrue(token.balanceOf(receiver) == initialBalance + borrowed);
 
@@ -629,10 +630,10 @@ contract VaultTest is Test {
             feeUnlockTime,
             totalSupply,
             balanceOf - borrowed,
-            netLoans + borrowed,
+            netLoans.safeAdd(loan),
             latestRepay,
-            currentProfits,
-            currentLosses
+            currentProfits.safeAdd(borrowed < loan ? loan - borrowed : 0),
+            currentLosses + (borrowed > loan ? borrowed - loan : 0)
         );
     }
 
@@ -712,6 +713,6 @@ contract VaultTest is Test {
 
         uint256 vaultBalance = token.balanceOf(address(vault));
         vm.expectRevert(IVault.InsufficientFreeLiquidity.selector);
-        vault.borrow(vaultBalance, address(this));
+        vault.borrow(vaultBalance, vaultBalance, address(this));
     }
 }

@@ -58,7 +58,7 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
+    function borrow(address token, uint256 amount, uint256 loan, uint256 currentExposure, address receiver)
         external
         override
         supported(token)
@@ -66,10 +66,10 @@ contract Manager is IManager, Ownable {
         returns (uint256, uint256)
     {
         uint256 investmentCap = caps[msg.sender][token];
-        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
+        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
             currentExposure,
-            freeLiquidity.safeAdd(netLoans - amount)
+            freeLiquidity.safeAdd(netLoans - loan)
         );
         if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);

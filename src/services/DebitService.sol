@@ -68,6 +68,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             (freeLiquidity, ) = manager.borrow(
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
+                agreement.loans[index].amount,
                 exposures[agreement.loans[index].token],
                 address(this)
             );
