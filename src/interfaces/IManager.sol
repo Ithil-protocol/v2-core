@@ -23,12 +23,6 @@ interface IManager {
 
     function repay(address token, uint256 amount, uint256 debt, address repayer) external;
 
-    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        external
-        returns (uint256);
-
-    function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn) external returns (uint256);
-
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
     event CapWasUpdated(address indexed service, address indexed token, uint256 cap);
     event TokenWasRemovedFromService(address indexed service, address indexed token);

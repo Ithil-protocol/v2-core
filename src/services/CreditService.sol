@@ -68,31 +68,6 @@ abstract contract CreditService is Service {
         }
     }
 
-    function mintShares(address token, uint256 maxAmountIn) external returns (uint256) {
-        uint256 sharesToMint = _canMint(token);
-        uint256 sharesMinted;
-        if (sharesToMint > 0) {
-            sharesMinted = manager.directMint(token, address(this), sharesToMint, exposures[token], maxAmountIn);
-            exposures[token] += sharesMinted;
-        }
-        return sharesMinted;
-    }
-
-    function burnShares(address token, uint256 maxAmountIn) external returns (uint256) {
-        uint256 sharesToBurn = _canBurn(token);
-        uint256 sharesBurnt;
-        if (sharesToBurn > 0) {
-            sharesBurnt = manager.directBurn(token, address(this), sharesToBurn, maxAmountIn);
-            exposures[token] = exposures[token].positiveSub(sharesBurnt);
-        }
-        return sharesBurnt;
-    }
-
     // dueAmount must be implemented otherwise the credit service is worthless
     function dueAmount(Agreement memory agreement) public virtual returns (uint256);
-
-    // not all credit services need minting and burning, therefore we place an empty implementation here
-    function _canMint(address token) internal virtual returns (uint256) {}
-
-    function _canBurn(address token) internal virtual returns (uint256) {}
 }

@@ -142,55 +142,6 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return assets;
     }
 
-    // mint and burn are used to manage boosting and seniority in loans
-
-    // Minting during a loss is equivalent to declaring the receiver senior
-    // Minting dilutes stakers (damping)
-    // Use case: treasury, backing contract...
-    // Invariant: maximumWithdraw(account) for account != receiver
-    function directMint(uint256 shares, address receiver) external override onlyOwner returns (uint256) {
-        _mint(receiver, shares);
-        // After minting, the receiver assets increase
-        // Thus we produce negative profits and we need to lock them
-        uint256 increasedAssets = convertToAssets(shares);
-
-        currentProfits = _calculateLockedProfits();
-        currentLosses = _calculateLockedLosses() + increasedAssets;
-        latestRepay = block.timestamp;
-
-        emit DirectMint(receiver, shares, increasedAssets);
-
-        return increasedAssets;
-    }
-
-    // Burning during a loss is equivalent to declaring the owner junior
-    // Burning undilutes stakers (boosting)
-    // Use case: insurance reserve...
-    // Invariants: maximumWithdraw(account) for account != receiver
-    function directBurn(uint256 shares, address owner) external override onlyOwner returns (uint256) {
-        // Burning the entire supply would trigger an _initialConvertToShares at next deposit
-        // Meaning that the first to deposit will get everything
-        // To avoid overriding _initialConvertToShares, we make the following check
-        if (shares >= totalSupply()) revert BurnThresholdExceeded();
-
-        // When burning, the owner assets are distributed to others
-        // Thus we need to lock them in order to avoid flashloan attacks
-        uint256 distributedAssets = convertToAssets(shares);
-
-        _spendAllowance(owner, msg.sender, shares);
-        _burn(owner, shares);
-
-        // Since this is onlyOwner we are not worried about reentrancy
-        // So we can modify the state here
-        currentProfits = _calculateLockedProfits() + distributedAssets;
-        currentLosses = _calculateLockedLosses();
-        latestRepay = block.timestamp;
-
-        emit DirectBurn(owner, shares, distributedAssets);
-
-        return distributedAssets;
-    }
-
     // Owner is the only trusted borrower
     // Invariant: totalAssets()
     function borrow(uint256 assets, uint256 loan, address receiver)

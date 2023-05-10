@@ -90,10 +90,6 @@ contract VaultTest is Test {
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.sweep(anyAddress, address(spuriousToken));
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
-        vault.directMint(shares, anyAddress);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
-        vault.directBurn(shares, anyAddress);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.borrow(assets, assets, anyAddress);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.repay(assets, debt, anyAddress);
@@ -495,107 +491,6 @@ contract VaultTest is Test {
             latestRepay,
             currentProfits,
             currentLosses
-        );
-    }
-
-    function testDirectMint(
-        uint256 feeUnlockTime,
-        uint256 totalSupply,
-        uint256 balanceOf,
-        uint256 netLoans,
-        uint256 latestRepay,
-        uint256 currentProfits,
-        uint256 currentLosses,
-        uint256 minted,
-        uint256 timePast
-    ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime,
-            totalSupply,
-            balanceOf,
-            netLoans,
-            latestRepay,
-            currentProfits,
-            currentLosses
-        );
-
-        uint256 newTimestamp = latestRepay.safeAdd(timePast);
-        vm.warp(newTimestamp);
-        uint256 lockedProfits = currentProfits.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
-        uint256 lockedLosses = currentLosses.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
-        // Necessary to avoid overflow
-        minted = minted.safeAdd(vault.totalSupply()) - vault.totalSupply();
-        if (vault.totalAssets() > 0 && vault.totalSupply() > 0)
-            vm.assume(minted / vault.totalSupply() < (type(uint256).max / vault.totalAssets()));
-        uint256 initialShares = vault.balanceOf(anyAddress);
-        uint256 increasedAssets = vault.directMint(minted, anyAddress);
-        assertTrue(vault.balanceOf(anyAddress) == initialShares + minted);
-
-        _originalStateCheck(
-            feeUnlockTime,
-            totalSupply + minted,
-            balanceOf,
-            netLoans,
-            newTimestamp,
-            lockedProfits,
-            lockedLosses + increasedAssets
-        );
-    }
-
-    function testDirectBurn(
-        uint256 feeUnlockTime,
-        uint256 totalSupply,
-        uint256 balanceOf,
-        uint256 netLoans,
-        uint256 latestRepay,
-        uint256 currentProfits,
-        uint256 currentLosses,
-        uint256 burned,
-        uint256 timePast
-    ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime,
-            totalSupply,
-            balanceOf,
-            netLoans,
-            latestRepay,
-            currentProfits,
-            currentLosses
-        );
-        uint256 initialShares = vault.balanceOf(anyAddress);
-        if (burned > initialShares) burned = initialShares;
-
-        uint256 newTimestamp = latestRepay.safeAdd(timePast);
-        vm.warp(newTimestamp);
-        uint256 lockedProfits = currentProfits.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
-        uint256 lockedLosses = currentLosses.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
-        // Necessary to avoid overflow
-        vm.startPrank(anyAddress);
-        vault.approve(address(this), burned);
-        vm.stopPrank();
-        uint256 increasedAssets = vault.directBurn(burned, anyAddress);
-        assertTrue(vault.balanceOf(anyAddress) == initialShares - burned);
-
-        _originalStateCheck(
-            feeUnlockTime,
-            totalSupply - burned,
-            balanceOf,
-            netLoans,
-            newTimestamp,
-            lockedProfits + increasedAssets,
-            lockedLosses
         );
     }
 
