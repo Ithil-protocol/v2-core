@@ -149,10 +149,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Use case: treasury, backing contract...
     // Invariant: maximumWithdraw(account) for account != receiver
     function directMint(uint256 shares, address receiver) external override onlyOwner returns (uint256) {
-        // When minting, the receiver assets increase
+        _mint(receiver, shares);
+        // After minting, the receiver assets increase
         // Thus we produce negative profits and we need to lock them
         uint256 increasedAssets = convertToAssets(shares);
-        _mint(receiver, shares);
 
         currentProfits = _calculateLockedProfits();
         currentLosses = _calculateLockedLosses() + increasedAssets;
@@ -193,14 +193,31 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     // Owner is the only trusted borrower
     // Invariant: totalAssets()
-    function borrow(uint256 assets, address receiver) external override onlyOwner returns (uint256, uint256) {
+    function borrow(uint256 assets, uint256 loan, address receiver)
+        external
+        override
+        onlyOwner
+        returns (uint256, uint256)
+    {
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
         if (assets >= freeLiq) revert InsufficientFreeLiquidity();
-        // Net loans are in any moment less than IERC20(asset()).totalSupply()
-        // Thus the next sum never overflows
-        netLoans += assets;
+        netLoans = netLoans.safeAdd(loan);
+
+        // In general, this function can cause a profit or a loss, therefore we need to register it
+        // Since assets are transferred, this is always less than totalSupply() so no overflow
+        if (assets > loan) {
+            currentProfits = _calculateLockedProfits();
+            currentLosses = _calculateLockedLosses() + (assets - loan);
+        }
+        // Since loan is arbitrary, this can potentially overflow, thus we use safe math
+        else {
+            currentProfits = _calculateLockedProfits().safeAdd(loan - assets);
+            currentLosses = _calculateLockedLosses();
+        }
+        latestRepay = block.timestamp;
+
         IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Borrowed(receiver, assets);

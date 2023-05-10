@@ -94,9 +94,15 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         Agreement memory agreement = agreements[tokenID];
 
         // Body
+        // The following, with the editable modifier, avoids reentrancy
         agreements[tokenID].status = Status.CLOSED;
-        _burn(tokenID);
         _close(tokenID, agreement, data);
+        // Burning after closing since owner may be needed during closure
+        _burn(tokenID);
+        // for (uint256 index = 0; index < agreement.loans.length; index++)
+        //     amountsOut[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - amountsOut[index];
+
+        // return amountsOut;
     }
 
     /// @notice modifies an existing service agreement

@@ -117,7 +117,13 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 currentExposure, uint256 borrowed) public {
+    function testBorrow(
+        uint256 previousDeposit,
+        uint256 debitCap,
+        uint256 currentExposure,
+        uint256 borrowed,
+        uint256 loan
+    ) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
@@ -135,7 +141,7 @@ contract ManagerTest is Test {
         borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
-            manager.borrow(address(firstToken), borrowed, currentExposure, anyAddress);
+            manager.borrow(address(firstToken), borrowed, loan, currentExposure, anyAddress);
         }
     }
 
@@ -173,7 +179,9 @@ contract ManagerTest is Test {
             manager.setCap(debitServiceOne, address(firstToken), investedPortion);
         }
         vm.startPrank(debitServiceOne);
-        uint256 increasedAssets = vault.convertToAssets(minted);
+        uint256 increasedAssets = vault.totalSupply().safeAdd(minted) == 0
+            ? 0
+            : minted.safeMulDiv(vault.totalAssets(), vault.totalSupply().safeAdd(minted));
         if (increasedAssets > maxAmountIn) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
             manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);

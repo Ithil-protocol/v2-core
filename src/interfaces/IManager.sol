@@ -17,7 +17,7 @@ interface IManager {
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
 
-    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
+    function borrow(address token, uint256 amount, uint256 loan, uint256 currentExposure, address receiver)
         external
         returns (uint256, uint256);
 
