@@ -148,10 +148,8 @@ contract FeeCollectorService is Service {
         latestHarvest[token] = block.timestamp;
 
         uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feePercentage, GeneralMath.RESOLUTION);
-        uint256 sharesToMint = vault.convertToShares(feesToHarvest);
         // todo: what is that "maxAmountIn"? For now it's uint256(-1) to avoid reversals
-        manager.directMint(token, address(this), sharesToMint, exposures[token], type(uint256).max);
-        vault.redeem(sharesToMint, address(this), address(this));
+        manager.borrow(token, feesToHarvest, 0, exposures[token], address(this));
         // todo: reward harvester
     }
 

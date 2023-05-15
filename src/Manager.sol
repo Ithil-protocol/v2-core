@@ -84,38 +84,4 @@ contract Manager is IManager, Ownable {
     {
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
-
-    /// @inheritdoc IManager
-    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        public
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256)
-    {
-        uint256 investmentCap = caps[msg.sender][token];
-        uint256 totalSupply = IVault(vaults[token]).totalSupply();
-        uint256 investedPortion = totalSupply == 0
-            ? GeneralMath.RESOLUTION
-            : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
-        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
-        uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
-        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
-
-        return amountIn;
-    }
-
-    /// @inheritdoc IManager
-    function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
-        public
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256)
-    {
-        uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);
-        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
-
-        return amountIn;
-    }
 }
