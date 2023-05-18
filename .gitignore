@@ -5,10 +5,13 @@
 !.yarn/plugins
 !.yarn/sdks
 !.yarn/versions
-**/cache
-**/node_modules
-**/out
-**/venv
+
+node_modules
+
+# foundry
+cache
+out
+venv
 
 # files
 *.env
@@ -26,3 +29,12 @@ yarn-error.log*
 # anvil states
 script/development/*.state
 script/development/*.report
+
+# Hardhat files
+cache
+cache_hardhat
+artifacts
+coverage
+coverage.json
+typechain
+typechain-types

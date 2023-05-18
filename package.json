@@ -17,17 +17,36 @@
   "devDependencies": {
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
+    "@nomicfoundation/hardhat-foundry": "^1.0.1",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.0.0",
+    "@tsconfig/node18": "^2.0.1",
+    "@typechain/ethers-v5": "^10.1.0",
+    "@typechain/hardhat": "^6.1.2",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": ">=9.1.0",
+    "@types/node": "^20.2.0",
+    "chai": "^4.2.0",
     "commitizen": "^4.2.5",
     "cz-conventional-changelog": "^3.3.0",
+    "hardhat": "^2.14.0",
+    "hardhat-gas-reporter": "^1.0.8",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.24",
     "rimraf": "^3.0.2",
     "solhint": "^3.3.7",
-    "solhint-plugin-prettier": "^0.0.5"
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.8.1",
+    "ts-node": "^10.9.1",
+    "typechain": "^8.1.0",
+    "typescript": "^5.0.4"
   },
-  "packageManager": "yarn@3.2.4",
+  "packageManager": "yarn@3.5.1",
   "resolutions": {
     "solhint/@solidity-parser/parser": "^0.14.5"
   },
@@ -37,6 +56,7 @@
     "lint:sol": "solhint \"{src,test}/**/*.sol\"",
     "postinstall": "husky install",
     "prettier": "prettier --config \"./.prettierrc.yml\" --write \"**/*.{json,md,sol,yml}\"",
-    "prettier:check": "prettier --config \"./.prettierrc.yml\" --check \"**/*.{json,md,sol,yml}\""
+    "prettier:check": "prettier --config \"./.prettierrc.yml\" --check \"**/*.{json,md,sol,yml}\"",
+    "hardhat": "hardhat"
   }
 }
