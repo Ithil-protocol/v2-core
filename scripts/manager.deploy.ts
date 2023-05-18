@@ -1,19 +1,17 @@
 import { ethers } from 'hardhat'
 
 const main = async () => {
-  const Manager = await ethers.getContractFactory("Manager");
-  const manager = await Manager.deploy();
+  const Manager = await ethers.getContractFactory('Manager')
+  const manager = await Manager.deploy()
 
-  await manager.deployed();
+  await manager.deployed()
 
-  console.log(
-    `Manager contract deployed to ${manager.address}`
-  );
+  console.log(`Manager contract deployed to ${manager.address}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.error(error)
+  process.exitCode = 1
+})

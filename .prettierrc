@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc.json",
+  "editorconfig": true,
+  "singleQuote": true,
+  "semi": false,
+  "trailingComma": "all",
+  "importOrder": ["^@/(.*)$", "^[./]"],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+
+  // previous rules
+  "bracketSpacing": true,
+  "endOfLine": "auto",
+  "printWidth": 120,
+  "proseWrap": "always",
+  "tabWidth": 2,
+  "useTabs": false,
+  "overrides": [
+    {
+      "files": ["*.sol"],
+      "options": {
+        "compiler": "0.8.17",
+        "singleQuote": false,
+        "tabWidth": 4
+      }
+    }
+  ]
+}
