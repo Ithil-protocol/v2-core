@@ -12,6 +12,11 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  networks: {
+    tenderly01: {
+      url: 'https://rpc.tenderly.co/fork/98501e92-150c-4704-9985-5cb5f0fbae0a',
+    }
+  }
 };
 
 export default config;
