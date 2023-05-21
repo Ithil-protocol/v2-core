@@ -38,3 +38,7 @@ coverage
 coverage.json
 typechain
 typechain-types
+
+# deploy files
+vaults.json
+manager-address.json
