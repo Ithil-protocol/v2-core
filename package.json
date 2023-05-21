@@ -19,7 +19,7 @@
     "@commitlint/config-conventional": "^17.1.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-foundry": "^1.0.1",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
@@ -66,6 +66,8 @@
     "postinstall": "husky install",
     "prettier": "prettier --config \"./.prettierrc.yml\" --write \"**/*.{json,md,sol,yml}\"",
     "prettier:check": "prettier --config \"./.prettierrc.yml\" --check \"**/*.{json,md,sol,yml}\"",
-    "hardhat": "hardhat"
+    "hardhat": "hardhat",
+    "hardhat:node": "hardhat node",
+    "hardhat:deploy:localhost": "hardhat --network localhost run scripts/all.deploy.ts"
   }
 }
