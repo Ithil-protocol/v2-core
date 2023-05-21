@@ -12,3 +12,7 @@ export const fund = async (address: Address, amount: BigNumber = ethers.utils.pa
     console.log(`Funded ${address} with ${ethers.utils.formatEther(amount)}`)
   }
 }
+
+export const simpleFund = async (address: Address, amount: BigNumber) => {
+  await setBalance(address, amount)
+}

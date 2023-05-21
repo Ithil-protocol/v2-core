@@ -1,9 +1,11 @@
 import { ethers } from 'hardhat'
 
-import { fund } from './helpers'
+import { fund, simpleFund } from './helpers'
 import { type Address } from './types'
 
 const ArbitrumGateway = '0x096760F208390250649E3e8763348E783AEF5562'
+const ArbitrumDaiGateway = '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65'
+const ArbitrumBTCGateway = '0x09e9222E96E7B4AE2a407B98d48e330053351EEe'
 
 const mintUSDC = async (destinationAddress: Address) => {
   const tokenAddress = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'
@@ -41,6 +43,61 @@ const mintUSDT = async (destinationAddress: Address) => {
   console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 6)}`)
 }
 
+const mintDAI = async (destinationAddress: Address) => {
+  const tokenAddress = '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'
+  const impersonatedSigner = await ethers.getImpersonatedSigner(ArbitrumDaiGateway)
+  const contract = new ethers.Contract(
+    tokenAddress,
+    ['function balanceOf(address account) view returns (uint256)', 'function mint(address account, uint256 amount)'],
+    impersonatedSigner,
+  )
+
+  await contract.mint(destinationAddress, 100000n * 10n ** 18n) // 100_000 DAI
+
+  const balanceOf = (await contract.balanceOf(destinationAddress)) as bigint
+  console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 18)}`)
+}
+
+const mintBTC = async (destinationAddress: Address) => {
+  const tokenAddress = '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f'
+  const impersonatedSigner = await ethers.getImpersonatedSigner(ArbitrumBTCGateway)
+  const contract = new ethers.Contract(
+    tokenAddress,
+    [
+      'function balanceOf(address account) view returns (uint256)',
+      'function bridgeMint(address account, uint256 amount)',
+    ],
+    impersonatedSigner,
+  )
+
+  await contract.bridgeMint(destinationAddress, 10n * 10n ** 8n) // 10 WBTC
+
+  const balanceOf = (await contract.balanceOf(destinationAddress)) as bigint
+  console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 8)}`)
+}
+
+const mintETH = async (destinationAddress: Address) => {
+  const tokenAddress = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
+  await simpleFund(destinationAddress, ethers.utils.parseEther('200'))
+  const impersonatedSigner = await ethers.getImpersonatedSigner(destinationAddress)
+
+  const contract = new ethers.Contract(
+    tokenAddress,
+    ['function balanceOf(address account) view returns (uint256)', 'function deposit() payable'],
+    impersonatedSigner,
+  )
+
+  await contract.deposit({ value: ethers.utils.parseEther('100') })
+  const balanceWETH = (await contract.balanceOf(destinationAddress)) as bigint
+  const balanceETH = await ethers.provider.getBalance(destinationAddress)
+
+  console.log(
+    `Balance of ${destinationAddress}: ${ethers.utils.formatEther(balanceWETH)} WETH, ${ethers.utils.formatEther(
+      balanceETH,
+    )} ETH`,
+  )
+}
+
 const addressList: Address[] = [
   // these addresses are from test seed phrase
   '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
@@ -58,15 +115,20 @@ const addressList: Address[] = [
 
 const main = async () => {
   await fund(ArbitrumGateway)
+  await fund(ArbitrumDaiGateway)
+  await fund(ArbitrumBTCGateway)
 
   await Promise.all(
     addressList.map(async (address) => {
       await mintUSDC(address)
       await mintUSDT(address)
+      await mintDAI(address)
+      await mintBTC(address)
+      await mintETH(address)
     }),
   )
 
-  console.log(`Funded ${addressList.length} addresses with 100k USDC, USDT`)
+  console.log(`Funded ${addressList.length} addresses with 100k USDC-USDT-DAI, 20 WBTC, 100 ETH-WETH`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
