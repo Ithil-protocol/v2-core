@@ -1,8 +1,9 @@
 export type Address = `0x${string}`
 
+export type AcceptedAsset = 'USDC' | 'USDT' | 'DAI' | 'WETH' | 'WBTC'
 // the minimal intersection of LendingToken and ServiceAsset
 export interface MinimalToken {
-  name: string
+  name: AcceptedAsset
   coingeckoId: string
   iconName: string
   decimals: number

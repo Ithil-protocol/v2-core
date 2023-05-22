@@ -1,4 +1,4 @@
-import { type MinimalToken } from './types'
+import { type AcceptedAsset, type MinimalToken } from './types'
 
 export const tokens: MinimalToken[] = [
   {
@@ -37,3 +37,8 @@ export const tokens: MinimalToken[] = [
     tokenAddress: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
   },
 ]
+
+export const tokenMap = Object.fromEntries(tokens.map((token) => [token.name, token])) as Record<
+  AcceptedAsset,
+  MinimalToken
+>

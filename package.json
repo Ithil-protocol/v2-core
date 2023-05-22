@@ -68,6 +68,7 @@
     "prettier:check": "prettier --config \"./.prettierrc.yml\" --check \"**/*.{json,md,sol,yml}\"",
     "hardhat": "hardhat",
     "hardhat:node": "hardhat node",
-    "hardhat:deploy:localhost": "hardhat --network localhost run scripts/all.deploy.ts"
+    "hardhat:deploy:localhost": "hardhat --network localhost run scripts/all.deploy.ts",
+    "hardhat:faucet:localhost": "hardhat --network localhost run scripts/faucet.ts"
   }
 }

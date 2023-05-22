@@ -1,6 +1,8 @@
+import { type BigNumber } from '@ethersproject/bignumber'
 import { ethers } from 'hardhat'
 
 import { fund, simpleFund } from './helpers'
+import { tokenMap } from './tokens'
 import { type Address } from './types'
 
 const ArbitrumGateway = '0x096760F208390250649E3e8763348E783AEF5562'
@@ -8,10 +10,10 @@ const ArbitrumDaiGateway = '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65'
 const ArbitrumBTCGateway = '0x09e9222E96E7B4AE2a407B98d48e330053351EEe'
 
 const mintUSDC = async (destinationAddress: Address) => {
-  const tokenAddress = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'
+  const asset = tokenMap.USDC
   const impersonatedSigner = await ethers.getImpersonatedSigner(ArbitrumGateway)
   const contract = new ethers.Contract(
-    tokenAddress,
+    asset.tokenAddress,
     [
       'function balanceOf(address account) view returns (uint256)',
       'function bridgeMint(address account, uint256 amount)',
@@ -19,17 +21,18 @@ const mintUSDC = async (destinationAddress: Address) => {
     impersonatedSigner,
   )
 
-  await contract.bridgeMint(destinationAddress, 100000n * 10n ** 6n) // 100_000 USDC
+  const oneUnit = 10n ** BigInt(asset.decimals)
+  await contract.bridgeMint(destinationAddress, 100000n * oneUnit) // 100_000 USDC
 
-  const balanceOf = (await contract.balanceOf(destinationAddress)) as bigint
-  console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 6)}`)
+  const balanceOf = (await contract.balanceOf(destinationAddress)) as BigNumber
+  console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, asset.decimals)}`)
 }
 
 const mintUSDT = async (destinationAddress: Address) => {
-  const tokenAddress = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
+  const asset = tokenMap.USDT
   const impersonatedSigner = await ethers.getImpersonatedSigner(ArbitrumGateway)
   const contract = new ethers.Contract(
-    tokenAddress,
+    asset.tokenAddress,
     [
       'function balanceOf(address account) view returns (uint256)',
       'function bridgeMint(address account, uint256 amount)',
@@ -37,32 +40,34 @@ const mintUSDT = async (destinationAddress: Address) => {
     impersonatedSigner,
   )
 
-  await contract.bridgeMint(destinationAddress, 100000n * 10n ** 6n) // 100_000 USDT
+  const oneUnit = 10n ** BigInt(asset.decimals)
+  await contract.bridgeMint(destinationAddress, 100000n * oneUnit) // 100_000 USDT
 
-  const balanceOf = (await contract.balanceOf(destinationAddress)) as bigint
-  console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 6)}`)
+  const balanceOf = (await contract.balanceOf(destinationAddress)) as BigNumber
+  console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, asset.decimals)}`)
 }
 
 const mintDAI = async (destinationAddress: Address) => {
-  const tokenAddress = '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'
+  const asset = tokenMap.DAI
   const impersonatedSigner = await ethers.getImpersonatedSigner(ArbitrumDaiGateway)
   const contract = new ethers.Contract(
-    tokenAddress,
+    asset.tokenAddress,
     ['function balanceOf(address account) view returns (uint256)', 'function mint(address account, uint256 amount)'],
     impersonatedSigner,
   )
 
-  await contract.mint(destinationAddress, 100000n * 10n ** 18n) // 100_000 DAI
+  const oneUnit = 10n ** BigInt(asset.decimals)
+  await contract.mint(destinationAddress, 100000n * oneUnit) // 100_000 DAI
 
-  const balanceOf = (await contract.balanceOf(destinationAddress)) as bigint
-  console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 18)}`)
+  const balanceOf = (await contract.balanceOf(destinationAddress)) as BigNumber
+  console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, asset.decimals)}`)
 }
 
 const mintBTC = async (destinationAddress: Address) => {
-  const tokenAddress = '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f'
+  const asset = tokenMap.WBTC
   const impersonatedSigner = await ethers.getImpersonatedSigner(ArbitrumBTCGateway)
   const contract = new ethers.Contract(
-    tokenAddress,
+    asset.tokenAddress,
     [
       'function balanceOf(address account) view returns (uint256)',
       'function bridgeMint(address account, uint256 amount)',
@@ -70,25 +75,26 @@ const mintBTC = async (destinationAddress: Address) => {
     impersonatedSigner,
   )
 
-  await contract.bridgeMint(destinationAddress, 10n * 10n ** 8n) // 10 WBTC
+  const oneUnit = 10n ** BigInt(asset.decimals)
+  await contract.bridgeMint(destinationAddress, 10n * oneUnit) // 10 WBTC
 
-  const balanceOf = (await contract.balanceOf(destinationAddress)) as bigint
-  console.log(`Balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, 8)}`)
+  const balanceOf = (await contract.balanceOf(destinationAddress)) as BigNumber
+  console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, asset.decimals)}`)
 }
 
 const mintETH = async (destinationAddress: Address) => {
-  const tokenAddress = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
+  const asset = tokenMap.WETH
   await simpleFund(destinationAddress, ethers.utils.parseEther('200'))
   const impersonatedSigner = await ethers.getImpersonatedSigner(destinationAddress)
 
   const contract = new ethers.Contract(
-    tokenAddress,
+    asset.tokenAddress,
     ['function balanceOf(address account) view returns (uint256)', 'function deposit() payable'],
     impersonatedSigner,
   )
 
   await contract.deposit({ value: ethers.utils.parseEther('100') })
-  const balanceWETH = (await contract.balanceOf(destinationAddress)) as bigint
+  const balanceWETH = (await contract.balanceOf(destinationAddress)) as BigNumber
   const balanceETH = await ethers.provider.getBalance(destinationAddress)
 
   console.log(
