@@ -41,4 +41,4 @@ typechain-types
 
 # deploy files
 vaults.json
-manager-address.json
+contracts.json
