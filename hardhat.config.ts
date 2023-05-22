@@ -1,5 +1,6 @@
 import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-toolbox'
+import 'hardhat-ethernal'
 import { type HardhatUserConfig } from 'hardhat/types'
 
 const config: HardhatUserConfig = {
