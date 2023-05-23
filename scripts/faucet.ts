@@ -1,68 +1,13 @@
 import { type BigNumber } from '@ethersproject/bignumber'
-import { ethers, network } from 'hardhat'
-import { type HttpNetworkConfig, type Network } from 'hardhat/types'
-import { request } from 'undici'
+import { ethers } from 'hardhat'
 
-import { simpleFund } from './helpers'
+import { fund, simpleFund } from './helpers'
 import { tokenMap } from './tokens'
 import { type Address } from './types'
-
-const isTenderly = (network: Network): boolean => {
-  return (
-    (network.config as HttpNetworkConfig).url != null &&
-    (network.config as HttpNetworkConfig).url.includes('tenderly.co')
-  )
-}
-
-const TENDERLY_PROJECT = 'ithil-testnet'
-const TENDERLY_USER = 'Ithil'
-const TENDERLY_ACCESS_KEY = '-qxVeJt1XhZrlX-UGzw9NG5oJd0XEien'
 
 const ArbitrumGateway = '0x096760F208390250649E3e8763348E783AEF5562'
 const ArbitrumDaiGateway = '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65'
 const ArbitrumBTCGateway = '0x09e9222E96E7B4AE2a407B98d48e330053351EEe'
-
-const mintUSDCtenderly = async (destinationAddress: Address) => {
-  const tokenAddress = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'
-  const SIMULATE_API = `https://api.tenderly.co/api/v1/account/${TENDERLY_USER}/project/${TENDERLY_PROJECT}/simulate`
-
-  const contract = new ethers.Contract(tokenAddress, [
-    'function balanceOf(address account) view returns (uint256)',
-    'function bridgeMint(address account, uint256 amount)',
-  ])
-
-  // tx data obtained using other means
-  const TX_DATA = await contract.populateTransaction.bridgeMint(destinationAddress, 100000n * 10n ** 6n) // 100k USDC
-
-  const transaction = {
-    network_id: '42161',
-    from: ArbitrumGateway,
-    input: TX_DATA.data,
-    to: tokenAddress,
-    block_number: null,
-    // tenderly specific
-    save: true,
-  }
-
-  const result = await ethers.provider.send('tenderly_addBalance', [
-    [ArbitrumGateway],
-    // amount in wei will be added for all wallets
-    ethers.utils.hexValue(ethers.utils.parseEther('1').toHexString()),
-  ])
-
-  console.log({ result })
-
-  const response = await request(SIMULATE_API, {
-    method: 'POST',
-    headers: {
-      'X-Access-Key': TENDERLY_ACCESS_KEY,
-    },
-    body: JSON.stringify(transaction),
-  })
-
-  console.log(response.statusCode)
-  console.log(await response.body.json())
-}
 
 const mintUSDC = async (destinationAddress: Address) => {
   const asset = tokenMap.USDC
@@ -175,23 +120,19 @@ const addressList: Address[] = [
 ]
 
 const main = async () => {
-  console.log({ network })
-  if (isTenderly(network)) {
-    await mintUSDCtenderly(addressList[0])
-  }
-  // await fund(ArbitrumGateway)
-  // await fund(ArbitrumDaiGateway)
-  // await fund(ArbitrumBTCGateway)
+  await fund(ArbitrumGateway)
+  await fund(ArbitrumDaiGateway)
+  await fund(ArbitrumBTCGateway)
 
-  // await Promise.all(
-  //   addressList.map(async (address) => {
-  //     await mintUSDC(address)
-  //     await mintUSDT(address)
-  //     await mintDAI(address)
-  //     await mintBTC(address)
-  //     await mintETH(address)
-  //   }),
-  // )
+  await Promise.all(
+    addressList.map(async (address) => {
+      await mintUSDC(address)
+      await mintUSDT(address)
+      await mintDAI(address)
+      await mintBTC(address)
+      await mintETH(address)
+    }),
+  )
 
   console.log(`Funded ${addressList.length} addresses with 100k USDC-USDT-DAI, 20 WBTC, 100 ETH-WETH`)
 }
