@@ -72,18 +72,14 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
         router.handleRewards(false, false, false, false, false, true, false);
     }
 
-    function quote(Agreement memory agreement)
-        public
-        view
-        override
-        returns (uint256[] memory results, uint256[] memory)
-    {
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory results) {
         uint256 aumInUsdg = glpManager.getAumInUsdg(false);
         uint256 glpSupply = glp.totalSupply();
 
         // agreement.collaterals[0].amount == GLP amount
         uint256 usdgAmount = (agreement.collaterals[0].amount * aumInUsdg) / glpSupply;
         results[0] = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
-        results[0] += rewardTracker.cumulativeRewards(address(this)); // TODO multiply per weight and add existing balance
+        results[0] += rewardTracker.cumulativeRewards(address(this));
+        // TODO multiply per weight and add existing balance
     }
 }

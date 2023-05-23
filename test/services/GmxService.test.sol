@@ -66,7 +66,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = 0;
 
-        uint256 initial = weth.balanceOf(address(this));
+        //uint256 initial = weth.balanceOf(address(this));
 
         IService.Order memory order = OrderHelper.createAdvancedOrder(
             tokens,
