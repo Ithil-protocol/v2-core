@@ -13,3 +13,10 @@ export interface MinimalToken {
 export interface LendingToken extends MinimalToken {
   vaultAddress: Address
 }
+
+export interface Replacement {
+  slot: number
+  from: number
+  to: number
+  value: string
+}
