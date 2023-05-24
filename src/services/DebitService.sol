@@ -68,6 +68,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             (freeLiquidity, ) = manager.borrow(
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
+                agreement.loans[index].amount,
                 exposures[agreement.loans[index].token],
                 address(this)
             );
@@ -77,9 +78,9 @@ abstract contract DebitService is Service, BaseRiskModel {
         Service.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override {
+    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory amountsOut) {
         Agreement memory agreement = agreements[tokenID];
-        address owner = ownerOf(tokenID); // needs to be registered because needed after closing
+        address owner = ownerOf(tokenID);
         if (owner != msg.sender && liquidationScore(tokenID) == 0 && agreement.createdAt + deadline > block.timestamp)
             revert RestrictedToOwner();
 
@@ -125,6 +126,7 @@ abstract contract DebitService is Service, BaseRiskModel {
                 );
             }
         }
+        return obtained;
     }
 
     /// @dev When quoting we need to return values for all owed items

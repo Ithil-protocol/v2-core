@@ -42,40 +42,32 @@ abstract contract CreditService is Service {
         Service.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data) public virtual override {
-        if (ownerOf(tokenID) != msg.sender) revert RestrictedToOwner();
-
+    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory) {
+        Agreement memory agreement = agreements[tokenID];
+        address owner = ownerOf(tokenID);
+        if (owner != msg.sender && agreement.createdAt + deadline > block.timestamp) revert RestrictedToOwner();
         Service.close(tokenID, data);
 
-        Agreement memory agreement = agreements[tokenID];
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
                 agreement.collaterals[index].amount
             );
+            IVault vault = IVault(manager.vaults(agreement.loans[index].token));
+            uint256 toTransfer = dueAmount(agreement, data);
+            uint256 redeemed = vault.redeem(
+                agreement.collaterals[index].amount.min(vault.maxWithdraw(address(this))),
+                address(this),
+                address(this)
+            );
+            // transfer toTransfer and pay the vault if toTransfer < redeemed
+            // otherwise transfer redeemed and do nothing
+            if (toTransfer < redeemed) {
+                IERC20(agreement.loans[index].token).transfer(owner, toTransfer);
+                manager.repay(agreement.loans[index].token, redeemed - toTransfer, 0, address(this));
+            } else IERC20(agreement.loans[index].token).transfer(owner, redeemed);
         }
     }
 
-    function mintShares(address token, uint256 maxAmountIn) external returns (uint256) {
-        uint256 sharesToMint = _canMint(token);
-        uint256 sharesMinted;
-        if (sharesToMint > 0) {
-            sharesMinted = manager.directMint(token, address(this), sharesToMint, exposures[token], maxAmountIn);
-            exposures[token] += sharesMinted;
-        }
-        return sharesMinted;
-    }
-
-    function burnShares(address token, uint256 maxAmountIn) external returns (uint256) {
-        uint256 sharesToBurn = _canBurn(token);
-        uint256 sharesBurnt;
-        if (sharesToBurn > 0) {
-            sharesBurnt = manager.directBurn(token, address(this), sharesToBurn, maxAmountIn);
-            exposures[token] = exposures[token].positiveSub(sharesBurnt);
-        }
-        return sharesBurnt;
-    }
-
-    function _canMint(address token) internal virtual returns (uint256) {}
-
-    function _canBurn(address token) internal virtual returns (uint256) {}
+    // dueAmount must be implemented otherwise the credit service is worthless
+    function dueAmount(Agreement memory agreement, bytes memory data) public view virtual returns (uint256);
 }

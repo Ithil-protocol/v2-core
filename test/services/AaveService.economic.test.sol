@@ -10,8 +10,6 @@ import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract AaveEconomicTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
     address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
@@ -166,7 +164,7 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             IService.Collateral[] memory actualCollaterals,
             uint256 createdAt,
             IService.Status status
-        ) = service.getAgreement(1);
+        ) = service.getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(actualLoans, actualCollaterals, createdAt, status);
 
@@ -195,7 +193,6 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             service.close(0, data);
         } else {
             service.close(0, data);
-            vm.stopPrank();
         }
         assertEq(
             IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),

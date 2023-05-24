@@ -58,7 +58,7 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 currentExposure, address receiver)
+    function borrow(address token, uint256 amount, uint256 loan, uint256 currentExposure, address receiver)
         external
         override
         supported(token)
@@ -66,10 +66,10 @@ contract Manager is IManager, Ownable {
         returns (uint256, uint256)
     {
         uint256 investmentCap = caps[msg.sender][token];
-        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, receiver);
+        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
             currentExposure,
-            freeLiquidity.safeAdd(netLoans - amount)
+            freeLiquidity.safeAdd(netLoans - loan)
         );
         if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);
@@ -83,39 +83,5 @@ contract Manager is IManager, Ownable {
         vaultExists(token)
     {
         IVault(vaults[token]).repay(amount, debt, repayer);
-    }
-
-    /// @inheritdoc IManager
-    function directMint(address token, address to, uint256 shares, uint256 currentExposure, uint256 maxAmountIn)
-        public
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256)
-    {
-        uint256 investmentCap = caps[msg.sender][token];
-        uint256 totalSupply = IVault(vaults[token]).totalSupply();
-        uint256 investedPortion = totalSupply == 0
-            ? GeneralMath.RESOLUTION
-            : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, totalSupply.safeAdd(shares));
-        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
-        uint256 amountIn = IVault(vaults[token]).directMint(shares, to);
-        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
-
-        return amountIn;
-    }
-
-    /// @inheritdoc IManager
-    function directBurn(address token, address from, uint256 shares, uint256 maxAmountIn)
-        public
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256)
-    {
-        uint256 amountIn = IVault(vaults[token]).directBurn(shares, from);
-        if (amountIn > maxAmountIn) revert MaxAmountExceeded();
-
-        return amountIn;
     }
 }

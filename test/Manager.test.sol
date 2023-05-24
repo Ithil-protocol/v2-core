@@ -117,7 +117,13 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 currentExposure, uint256 borrowed) public {
+    function testBorrow(
+        uint256 previousDeposit,
+        uint256 debitCap,
+        uint256 currentExposure,
+        uint256 borrowed,
+        uint256 loan
+    ) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
@@ -135,7 +141,7 @@ contract ManagerTest is Test {
         borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
-            manager.borrow(address(firstToken), borrowed, currentExposure, anyAddress);
+            manager.borrow(address(firstToken), borrowed, loan, currentExposure, anyAddress);
         }
     }
 
@@ -148,62 +154,5 @@ contract ManagerTest is Test {
 
         vm.prank(debitServiceOne);
         manager.repay(address(firstToken), repaid, debt, tokenSink);
-    }
-
-    function testDirectMint(
-        uint256 previousDeposit,
-        uint256 debitCap,
-        uint256 currentExposure,
-        uint256 minted,
-        uint256 maxAmountIn
-    ) public {
-        // The real use-case is for a credit service, but we use debit to avoid stack too deep
-        IVault vault = IVault(manager.vaults(address(firstToken)));
-        debitCap = _setupArbitraryState(previousDeposit, debitCap);
-
-        // Necessary to avoid overflow
-        minted = minted.safeAdd(vault.totalSupply()) - vault.totalSupply();
-        if (vault.totalAssets() > 0 && vault.totalSupply() > 0)
-            vm.assume(minted / vault.totalSupply() < (type(uint256).max / vault.totalAssets()));
-
-        uint256 investedPortion = vault.totalSupply() == 0
-            ? GeneralMath.RESOLUTION
-            : GeneralMath.RESOLUTION.safeMulDiv(currentExposure, vault.totalSupply().safeAdd(minted));
-        if (investedPortion > debitCap) {
-            manager.setCap(debitServiceOne, address(firstToken), investedPortion);
-        }
-        vm.startPrank(debitServiceOne);
-        uint256 increasedAssets = vault.convertToAssets(minted);
-        if (increasedAssets > maxAmountIn) {
-            vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
-            manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);
-        } else {
-            manager.directMint(address(firstToken), anyAddress, minted, currentExposure, maxAmountIn);
-        }
-    }
-
-    function testDirectBurn(uint256 previousDeposit, uint256 debitCap, uint256 burned, uint256 maxAmountIn) public {
-        IVault vault = IVault(manager.vaults(address(firstToken)));
-        debitCap = _setupArbitraryState(previousDeposit, debitCap);
-
-        uint256 initialShares = vault.balanceOf(anyAddress);
-        if (burned > initialShares) burned = initialShares;
-        // Avoid burning everything
-        uint256 totalSupply = vault.totalSupply();
-        burned = totalSupply == 0 ? 0 : burned % totalSupply;
-
-        vm.prank(anyAddress);
-        vault.approve(address(manager), burned);
-
-        if (burned > 0) {
-            vm.startPrank(debitServiceOne);
-            uint256 distributedAssets = vault.convertToAssets(burned);
-            if (distributedAssets > maxAmountIn) {
-                vm.expectRevert(bytes4(keccak256(abi.encodePacked("MaxAmountExceeded()"))));
-                manager.directBurn(address(firstToken), anyAddress, burned, maxAmountIn);
-            } else {
-                manager.directBurn(address(firstToken), anyAddress, burned, maxAmountIn);
-            }
-        }
     }
 }

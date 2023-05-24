@@ -142,65 +142,33 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return assets;
     }
 
-    // mint and burn are used to manage boosting and seniority in loans
-
-    // Minting during a loss is equivalent to declaring the receiver senior
-    // Minting dilutes stakers (damping)
-    // Use case: treasury, backing contract...
-    // Invariant: maximumWithdraw(account) for account != receiver
-    function directMint(uint256 shares, address receiver) external override onlyOwner returns (uint256) {
-        // When minting, the receiver assets increase
-        // Thus we produce negative profits and we need to lock them
-        uint256 increasedAssets = convertToAssets(shares);
-        _mint(receiver, shares);
-
-        currentProfits = _calculateLockedProfits();
-        currentLosses = _calculateLockedLosses() + increasedAssets;
-        latestRepay = block.timestamp;
-
-        emit DirectMint(receiver, shares, increasedAssets);
-
-        return increasedAssets;
-    }
-
-    // Burning during a loss is equivalent to declaring the owner junior
-    // Burning undilutes stakers (boosting)
-    // Use case: insurance reserve...
-    // Invariants: maximumWithdraw(account) for account != receiver
-    function directBurn(uint256 shares, address owner) external override onlyOwner returns (uint256) {
-        // Burning the entire supply would trigger an _initialConvertToShares at next deposit
-        // Meaning that the first to deposit will get everything
-        // To avoid overriding _initialConvertToShares, we make the following check
-        if (shares >= totalSupply()) revert BurnThresholdExceeded();
-
-        // When burning, the owner assets are distributed to others
-        // Thus we need to lock them in order to avoid flashloan attacks
-        uint256 distributedAssets = convertToAssets(shares);
-
-        _spendAllowance(owner, msg.sender, shares);
-        _burn(owner, shares);
-
-        // Since this is onlyOwner we are not worried about reentrancy
-        // So we can modify the state here
-        currentProfits = _calculateLockedProfits() + distributedAssets;
-        currentLosses = _calculateLockedLosses();
-        latestRepay = block.timestamp;
-
-        emit DirectBurn(owner, shares, distributedAssets);
-
-        return distributedAssets;
-    }
-
     // Owner is the only trusted borrower
     // Invariant: totalAssets()
-    function borrow(uint256 assets, address receiver) external override onlyOwner returns (uint256, uint256) {
+    function borrow(uint256 assets, uint256 loan, address receiver)
+        external
+        override
+        onlyOwner
+        returns (uint256, uint256)
+    {
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
         if (assets >= freeLiq) revert InsufficientFreeLiquidity();
-        // Net loans are in any moment less than IERC20(asset()).totalSupply()
-        // Thus the next sum never overflows
-        netLoans += assets;
+        netLoans = netLoans.safeAdd(loan);
+
+        // In general, this function can cause a profit or a loss, therefore we need to register it
+        // Since assets are transferred, this is always less than totalSupply() so no overflow
+        if (assets > loan) {
+            currentProfits = _calculateLockedProfits();
+            currentLosses = _calculateLockedLosses() + (assets - loan);
+        }
+        // Since loan is arbitrary, this can potentially overflow, thus we use safe math
+        else {
+            currentProfits = _calculateLockedProfits().safeAdd(loan - assets);
+            currentLosses = _calculateLockedLosses();
+        }
+        latestRepay = block.timestamp;
+
         IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Borrowed(receiver, assets);

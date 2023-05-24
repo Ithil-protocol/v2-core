@@ -78,7 +78,7 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
         uint256 minAmountsOut = 0; // TODO make it fuzzy
         bytes memory data = abi.encode(minAmountsOut);
         if (success) {
-            (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(1);
+            (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
             if (collaterals[0].amount < minAmountsOut) {
                 // Slippage check
                 vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
@@ -97,7 +97,7 @@ contract StargateServiceTest is BaseIntegrationServiceTest {
                 IService.Collateral[] memory collaterals,
                 uint256 createdAt,
                 IService.Status status
-            ) = service.getAgreement(1);
+            ) = service.getAgreement(0);
 
             IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
 
