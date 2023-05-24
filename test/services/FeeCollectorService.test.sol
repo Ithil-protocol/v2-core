@@ -15,7 +15,6 @@ import { VeIthil } from "../../src/VeIthil.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
-import { console2 } from "forge-std/console2.sol";
 
 contract Payer is Service {
     // Dummy service to produce fees
@@ -130,9 +129,16 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         usdc.transfer(manager.vaults(address(usdc)), 1e6);
         vm.stopPrank();
 
+        // TODO we want to test that WETH does not trigger a swap while USDC does
         address[] memory tokens = new address[](2);
         tokens[0] = address(weth);
         tokens[1] = address(usdc);
         service.harvestAndSwap(tokens);
+
+        // mock an order fill
+        uint256 amount = 1000 * 1e6;
+        vm.startPrank(usdcWhale);
+        usdc.approve(address(dex), amount);
+        dex.simuateOrderFulfillment(address(usdc), amount, manager.vaults(address(usdc)));
     }
 }

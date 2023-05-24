@@ -12,7 +12,6 @@ import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 import { Service } from "../Service.sol";
 import { VeIthil } from "../../VeIthil.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /// @title    FeeCollectorService contract
 /// @author   Ithil
@@ -173,8 +172,6 @@ contract FeeCollectorService is Service {
             if (tokens[i] != address(weth)) {
                 // TODO check assumption: all pools will have same the tick
                 IPool pool = IPool(dex.pools(tokens[i], address(weth), 5));
-
-                console2.log("test");
 
                 // TODO check oracle
                 uint256 price = oracle.getPrice(tokens[i], address(weth), 1);
