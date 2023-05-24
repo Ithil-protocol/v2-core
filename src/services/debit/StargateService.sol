@@ -3,8 +3,8 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
-import { IPool } from "../../interfaces/external/dex/IPool.sol";
+import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
+import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { IStargateRouter } from "../../interfaces/external/stargate/IStargateRouter.sol";
 import { IStargateLPStaking, IStargatePool } from "../../interfaces/external/stargate/IStargateLPStaking.sol";
 import { VaultHelper } from "../../libraries/VaultHelper.sol";
@@ -134,7 +134,7 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
 
         // TODO check oracle
         uint256 price = oracle.getPrice(stargate, token, 1);
-        address dexPool = factory.pools(stargate, token);
+        address dexPool = factory.pools(stargate, token, 10); // TODO hardcoded tick
         // TODO add discount
         IPool(dexPool).createOrder(IERC20(stargate).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
 

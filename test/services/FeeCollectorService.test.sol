@@ -14,6 +14,8 @@ import { Ithil } from "../../src/Ithil.sol";
 import { VeIthil } from "../../src/VeIthil.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
+import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract Payer is Service {
     // Dummy service to produce fees
@@ -32,30 +34,42 @@ contract Payer is Service {
 contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
+    MockChainLinkOracle internal immutable chainlinkOracleWeth;
+    MockChainLinkOracle internal immutable chainlinkOracleUsdc;
     FeeCollectorService internal immutable service;
     Ithil internal immutable ithil;
     Service internal immutable payer;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
     uint256 internal constant blockNumber = 55895589;
+
     IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     address internal constant wethWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
-
+    IERC20 internal constant usdc = IERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
+    address internal constant usdcWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
     uint256[] internal rewards = new uint64[](12);
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         ithil = new Ithil();
-        service = new FeeCollectorService(address(manager), address(weth), 1e17);
+        service = new FeeCollectorService(address(manager), address(weth), 1e17, address(oracle), address(dex));
         service.setTokenWeight(address(ithil), 1e18);
         payer = new Payer(address(manager));
         manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION);
+        chainlinkOracleWeth = new MockChainLinkOracle(8);
+        chainlinkOracleUsdc = new MockChainLinkOracle(8);
+        oracle.setPriceFeed(address(weth), address(chainlinkOracleWeth));
+        oracle.setPriceFeed(address(usdc), address(chainlinkOracleUsdc));
         vm.stopPrank();
 
-        loanLength = 1;
-        loanTokens = new address[](1);
+        loanLength = 3;
+        loanTokens = new address[](3);
         loanTokens[0] = address(ithil);
+        loanTokens[1] = address(weth);
+        loanTokens[2] = address(usdc);
         whales[loanTokens[0]] = admin;
+        whales[loanTokens[1]] = wethWhale;
+        whales[loanTokens[2]] = usdcWhale;
         collateralTokens = new address[](1);
         collateralTokens[0] = address(ithil);
         serviceAddress = address(service);
@@ -81,6 +95,7 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         service.open(order);
         assertEq(ithil.balanceOf(address(this)), initialBalance - order.agreement.loans[0].margin);
         assertEq(service.totalLoans(), order.agreement.loans[0].margin.safeMulDiv(rewards[months % 12], 1e18));
+
         return order.agreement.loans[0].margin;
     }
 
@@ -99,5 +114,25 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         service.close(0, "");
         assertEq(weth.balanceOf(address(this)), initialWethBalance + feeTransfered);
         assertEq(ithil.balanceOf(address(this)), initialIthilBalance + margin);
+    }
+
+    function testFeeCollectorHarvest() public {
+        vm.startPrank(admin);
+        chainlinkOracleWeth.setPrice(1800 * 1e8);
+        chainlinkOracleUsdc.setPrice(1e8);
+        vm.stopPrank();
+
+        vm.startPrank(wethWhale);
+        weth.transfer(manager.vaults(address(weth)), 1e18);
+        vm.stopPrank();
+
+        vm.startPrank(usdcWhale);
+        usdc.transfer(manager.vaults(address(usdc)), 1e6);
+        vm.stopPrank();
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(weth);
+        tokens[1] = address(usdc);
+        service.harvestAndSwap(tokens);
     }
 }

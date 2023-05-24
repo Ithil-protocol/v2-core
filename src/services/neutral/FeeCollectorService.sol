@@ -5,10 +5,14 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IVault } from "../../interfaces/IVault.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
+import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 import { Service } from "../Service.sol";
 import { VeIthil } from "../../VeIthil.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /// @title    FeeCollectorService contract
 /// @author   Ithil
@@ -21,6 +25,8 @@ contract FeeCollectorService is Service {
     uint256 public immutable feePercentage;
     IERC20 public immutable weth;
     VeIthil public immutable veToken;
+    IOracle public immutable oracle;
+    IFactory public immutable dex;
 
     // weights for different tokens, 0 => not supported
     mapping(address => uint256) public weights;
@@ -41,11 +47,14 @@ contract FeeCollectorService is Service {
     error UnsupportedToken();
     error MaxLockExceeded();
 
-    constructor(address _manager, address _weth, uint256 _feePercentage)
+    constructor(address _manager, address _weth, uint256 _feePercentage, address _oracle, address _dex)
         Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max)
     {
-        weth = IERC20(_weth);
         veToken = new VeIthil();
+
+        weth = IERC20(_weth);
+        oracle = IOracle(_oracle);
+        dex = IFactory(_dex);
 
         feePercentage = _feePercentage;
         rewards = new uint64[](12);
@@ -141,7 +150,7 @@ contract FeeCollectorService is Service {
         return toTransfer;
     }
 
-    function _harvestFees(address token) internal {
+    function _harvestFees(address token) internal returns (uint256, address) {
         IVault vault = IVault(manager.vaults(token));
         (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getStatus();
         if (latestRepay < latestHarvest[token]) revert Throttled();
@@ -151,13 +160,26 @@ contract FeeCollectorService is Service {
         // todo: what is that "maxAmountIn"? For now it's uint256(-1) to avoid reversals
         manager.borrow(token, feesToHarvest, 0, exposures[token], address(this));
         // todo: reward harvester
+
+        return (feesToHarvest, address(vault));
     }
 
     function harvestAndSwap(address[] calldata tokens) external {
         uint256 length = tokens.length;
         for (uint256 i = 0; i < length; i++) {
-            _harvestFees(tokens[i]);
-            // TODO swap if not WETH for WETH
+            (uint256 amount, address vault) = _harvestFees(tokens[i]);
+
+            // Swap if not WETH
+            if (tokens[i] != address(weth)) {
+                // TODO check assumption: all pools will have same the tick
+                IPool pool = IPool(dex.pools(tokens[i], address(weth), 5));
+
+                console2.log("test");
+
+                // TODO check oracle
+                uint256 price = oracle.getPrice(tokens[i], address(weth), 1);
+                pool.createOrder(amount, price, vault, block.timestamp + 1 weeks);
+            }
         }
     }
 }

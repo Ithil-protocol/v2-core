@@ -3,8 +3,8 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
-import { IPool } from "../../interfaces/external/dex/IPool.sol";
+import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
+import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Router.sol";
 import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Factory.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
@@ -160,7 +160,7 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
 
         // TODO check oracle
         uint256 price = oracle.getPrice(sushi, token, 1);
-        address dexPool = factory.pools(sushi, token);
+        address dexPool = factory.pools(sushi, token, 10); // TODO hardcoded tick
         // TODO add discount
         IPool(dexPool).createOrder(IERC20(sushi).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
 

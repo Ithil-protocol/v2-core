@@ -62,9 +62,9 @@ abstract contract CreditService is Service {
             // transfer toTransfer and pay the vault if toTransfer < redeemed
             // otherwise transfer redeemed and do nothing
             if (toTransfer < redeemed) {
-                IERC20(agreement.loans[index].token).transfer(owner, toTransfer);
+                IERC20(agreement.loans[index].token).safeTransfer(owner, toTransfer);
                 manager.repay(agreement.loans[index].token, redeemed - toTransfer, 0, address(this));
-            } else IERC20(agreement.loans[index].token).transfer(owner, redeemed);
+            } else IERC20(agreement.loans[index].token).safeTransfer(owner, redeemed);
         }
     }
 
