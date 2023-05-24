@@ -29,15 +29,11 @@ contract SeniorFixedYieldService is CreditService {
         // TODO: insert checks
     }
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory /*data*/)
-        internal
-        virtual
-        override
-    {
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
         // gas savings
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
         uint256 redeemable = vault.convertToAssets(agreement.collaterals[0].amount);
-        uint256 toTransfer = dueAmount(agreement);
+        uint256 toTransfer = dueAmount(agreement, data);
         if (toTransfer > redeemable) {
             // Since this service is senior, we need to pay the user even if redeemable is too low
             // To do this, we take liquidity from the vault and register the loss (no loan)
@@ -56,7 +52,13 @@ contract SeniorFixedYieldService is CreditService {
         // We do nothing in this case, since behaviour is the one of a vanilla CreditService
     }
 
-    function dueAmount(IService.Agreement memory agreement) public virtual override returns (uint256) {
+    function dueAmount(IService.Agreement memory agreement, bytes memory /*data*/)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         // loan * (1 + yield * time)
         return
             agreement.loans[0].amount +

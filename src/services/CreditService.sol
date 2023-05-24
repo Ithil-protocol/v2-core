@@ -53,7 +53,7 @@ abstract contract CreditService is Service {
                 agreement.collaterals[index].amount
             );
             IVault vault = IVault(manager.vaults(agreement.loans[index].token));
-            uint256 toTransfer = dueAmount(agreement);
+            uint256 toTransfer = dueAmount(agreement, data);
             uint256 redeemed = vault.redeem(
                 agreement.collaterals[index].amount.min(vault.maxWithdraw(address(this))),
                 address(this),
@@ -69,5 +69,5 @@ abstract contract CreditService is Service {
     }
 
     // dueAmount must be implemented otherwise the credit service is worthless
-    function dueAmount(Agreement memory agreement) public virtual returns (uint256);
+    function dueAmount(Agreement memory agreement, bytes memory data) public view virtual returns (uint256);
 }
