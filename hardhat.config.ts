@@ -15,6 +15,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      chainId: 1337,
       forking: {
         url: 'https://arb1.arbitrum.io/rpc',
       },
