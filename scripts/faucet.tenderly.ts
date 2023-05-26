@@ -4,18 +4,6 @@ import { ethers } from 'hardhat'
 import { tokenMap } from './tokens'
 import { type Address, type Replacement } from './types'
 
-// const ArbitrumGateway = '0x096760F208390250649E3e8763348E783AEF5562'
-// const ArbitrumDaiGateway = '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65'
-// const ArbitrumBTCGateway = '0x09e9222E96E7B4AE2a407B98d48e330053351EEe'
-
-const setContractStorage = async (contractAddress: Address, slot: number, value: string) => {
-  return await ethers.provider.send('tenderly_setStorageAt', [
-    contractAddress,
-    ethers.utils.hexZeroPad(ethers.utils.hexValue(slot), 32),
-    ethers.utils.hexZeroPad(value, 32),
-  ])
-}
-
 const replaceContractStorage = async (contractAddress: Address, replacements: Replacement[]) => {
   return await Promise.all(
     replacements.map(async ({ slot, from, to, value }) => {
@@ -39,7 +27,8 @@ const replaceContractStorage = async (contractAddress: Address, replacements: Re
 
 const overrideUSDC = async (newAddress: Address, replacements: Replacement[]) => {
   const asset = tokenMap.USDC
-  const contract = new ethers.Contract(asset.tokenAddress, ['function gatewayAddress() view returns (address)'])
+  const signer = ethers.provider.getSigner()
+  const contract = new ethers.Contract(asset.tokenAddress, ['function gatewayAddress() view returns (address)'], signer)
   const gatewayAddress = await contract.gatewayAddress()
 
   if (gatewayAddress.toLowerCase() === newAddress.toLowerCase()) return
@@ -72,12 +61,16 @@ const mintUSDC = async (destinationAddress: Address) => {
 
 const overrideUSDT = async (newAddress: Address, replacements: Replacement[]) => {
   const asset = tokenMap.USDT
-  const contract = new ethers.Contract(asset.tokenAddress, ['function l2Gateway() view returns (address)'])
+  const signer = ethers.provider.getSigner()
+  const contract = new ethers.Contract(asset.tokenAddress, ['function l2Gateway() view returns (address)'], signer)
+
   const gatewayAddress = await contract.l2Gateway()
+  console.log({ gatewayAddress })
   if (gatewayAddress.toLowerCase() === newAddress.toLowerCase()) return
 
   await replaceContractStorage(asset.tokenAddress, replacements)
   const gatewayAddressAfter = await contract.l2Gateway()
+  console.log({ gatewayAddressAfter })
 
   if (gatewayAddressAfter.toLowerCase() !== newAddress.toLowerCase()) throw new Error('Failed to set gateway address')
 }
@@ -118,31 +111,35 @@ const addressList: Address[] = [
 ]
 
 const main = async () => {
-  // const replacement = await findStorageSlot(tokenMap.USDC.tokenAddress, ArbitrumGateway)
-  // console.log({ replacement })
-
   const signer = ethers.provider.getSigner()
   const signerAddress = (await signer.getAddress()) as Address
 
-  // await overrideUSDC(signerAddress, [
-  //   {
-  //     slot: 204,
-  //     from: 24,
-  //     to: 64,
-  //     value: signerAddress.toLowerCase(),
-  //   },
-  // ])
-
-  console.log('before usdt')
-  await overrideUSDT(signerAddress, [
+  await overrideUSDC(signerAddress, [
     {
       slot: 204,
+      from: 24,
+      to: 64,
+      value: signerAddress.toLowerCase(),
+    },
+  ])
+
+  await overrideUSDT(signerAddress, [
+    {
+      slot: 256,
       from: 22,
       to: 62,
       value: signerAddress.toLowerCase(),
     },
   ])
-  console.log('after usdt')
+
+  await overrideWBTC(signerAddress, [
+    {
+      slot: 204,
+      from: 24,
+      to: 64,
+      value: signerAddress.toLowerCase(),
+    },
+  ])
 
   await mintUSDC(addressList[0])
   await mintUSDT(addressList[0])

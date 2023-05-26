@@ -20,7 +20,7 @@ const config: HardhatUserConfig = {
       },
     },
     tenderly01: {
-      url: 'https://rpc.vnet.tenderly.co/devnet/hardhat01/f8072df8-0fc3-4426-8df6-6828890612ca',
+      url: 'https://rpc.vnet.tenderly.co/devnet/hardhat01/019f7ffe-a0e0-4476-8613-60ed8f95a08f',
     },
   },
 }
