@@ -14,6 +14,8 @@ import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 
+import { console2 } from "forge-std/console2.sol";
+
 /// @title    GmxService contract
 /// @author   Ithil
 /// @notice   A service to perform margin trading on the GLP token
@@ -72,14 +74,26 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
         router.handleRewards(false, false, false, false, false, true, false);
     }
 
-    function quote(Agreement memory agreement) public view override returns (uint256[] memory results) {
+    function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
+        uint256[] memory results = new uint256[](1);
         uint256 aumInUsdg = glpManager.getAumInUsdg(false);
         uint256 glpSupply = glp.totalSupply();
-
         // agreement.collaterals[0].amount == GLP amount
         uint256 usdgAmount = (agreement.collaterals[0].amount * aumInUsdg) / glpSupply;
-        results[0] = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
-        results[0] += rewardTracker.cumulativeRewards(address(this));
+
+        uint256 usdgDelta = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount) +
+            rewardTracker.cumulativeRewards(address(this));
+
+        uint256 feeBasisPoints = usdgVault.getFeeBasisPoints(
+            agreement.loans[0].token,
+            usdgDelta,
+            usdgVault.swapFeeBasisPoints(),
+            usdgVault.taxBasisPoints(),
+            false
+        );
+        results[0] = (usdgDelta * (10000 - feeBasisPoints)) / 10000;
+
+        return results;
         // TODO multiply per weight and add existing balance
     }
 }

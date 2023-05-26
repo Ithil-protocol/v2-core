@@ -80,6 +80,16 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         );
 
         service.open(order);
+
+        (
+            IService.Loan[] memory loan,
+            IService.Collateral[] memory collaterals,
+            uint256 createdAt,
+            IService.Status status
+        ) = service.getAgreement(0);
+
+        IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
+        uint256[] memory results = service.quote(agreement);
         //vm.warp(block.timestamp + 30 days);
         service.close(0, abi.encode(uint256(1)));
 
