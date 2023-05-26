@@ -1,8 +1,9 @@
-import { type BigNumber } from '@ethersproject/bignumber'
+import { BigNumber } from '@ethersproject/bignumber'
 import { ethers } from 'hardhat'
 
+import { simpleFundTenderly } from './helpers'
 import { tokenMap } from './tokens'
-import { type Address, type Replacement } from './types'
+import { type Address, type MinimalToken, type Replacement } from './types'
 
 const replaceContractStorage = async (contractAddress: Address, replacements: Replacement[]) => {
   return await Promise.all(
@@ -14,8 +15,6 @@ const replaceContractStorage = async (contractAddress: Address, replacements: Re
       const newData =
         '0x' + origDataWithoutPrefix.substring(0, from) + lowerCaseValue + origDataWithoutPrefix.substring(to)
 
-      console.log({ newData })
-
       return await ethers.provider.send('tenderly_setStorageAt', [
         contractAddress,
         ethers.utils.hexZeroPad(ethers.utils.hexValue(slot), 32),
@@ -25,24 +24,26 @@ const replaceContractStorage = async (contractAddress: Address, replacements: Re
   )
 }
 
-const overrideUSDC = async (newAddress: Address, replacements: Replacement[]) => {
-  const asset = tokenMap.USDC
+const genericOverride = async (
+  newAddress: Address,
+  replacements: Replacement[],
+  asset: MinimalToken,
+  gatewayFn: string,
+) => {
   const signer = ethers.provider.getSigner()
-  const contract = new ethers.Contract(asset.tokenAddress, ['function gatewayAddress() view returns (address)'], signer)
-  const gatewayAddress = await contract.gatewayAddress()
+  const contract = new ethers.Contract(asset.tokenAddress, [`function ${gatewayFn}() view returns (address)`], signer)
 
+  const gatewayAddress = await contract[gatewayFn]()
   if (gatewayAddress.toLowerCase() === newAddress.toLowerCase()) return
 
   await replaceContractStorage(asset.tokenAddress, replacements)
-  const gatewayAddressAfter = await contract.gatewayAddress()
+  const gatewayAddressAfter = await contract[gatewayFn]()
 
   if (gatewayAddressAfter.toLowerCase() !== newAddress.toLowerCase()) throw new Error('Failed to set gateway address')
 }
 
-const mintUSDC = async (destinationAddress: Address) => {
-  const asset = tokenMap.USDC
+const genericMint = async (destinationAddress: Address, asset: MinimalToken, mintAmount: bigint) => {
   const signer = ethers.provider.getSigner()
-
   const contract = new ethers.Contract(
     asset.tokenAddress,
     [
@@ -53,46 +54,32 @@ const mintUSDC = async (destinationAddress: Address) => {
   )
 
   const oneUnit = 10n ** BigInt(asset.decimals)
-  await contract.bridgeMint(destinationAddress, 100000n * oneUnit) // 100_000 USDC
+  await contract.bridgeMint(destinationAddress, mintAmount * oneUnit) // 100_000 USDC
 
   const balanceOf = (await contract.balanceOf(destinationAddress)) as BigNumber
   console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, asset.decimals)}`)
 }
 
-const overrideUSDT = async (newAddress: Address, replacements: Replacement[]) => {
-  const asset = tokenMap.USDT
+const mintWETH = async (signerAddress: Address, destinationAddress: Address, mintAmount: bigint) => {
+  const asset = tokenMap.WETH
+  const oneUnit = 10n ** BigInt(asset.decimals)
+  const signerMintAmount = (mintAmount * 2n + 100n) * oneUnit // 100 extra for gas
+  await simpleFundTenderly(signerAddress, signerMintAmount)
+
   const signer = ethers.provider.getSigner()
-  const contract = new ethers.Contract(asset.tokenAddress, ['function l2Gateway() view returns (address)'], signer)
-
-  const gatewayAddress = await contract.l2Gateway()
-  console.log({ gatewayAddress })
-  if (gatewayAddress.toLowerCase() === newAddress.toLowerCase()) return
-
-  await replaceContractStorage(asset.tokenAddress, replacements)
-  const gatewayAddressAfter = await contract.l2Gateway()
-  console.log({ gatewayAddressAfter })
-
-  if (gatewayAddressAfter.toLowerCase() !== newAddress.toLowerCase()) throw new Error('Failed to set gateway address')
-}
-
-const mintUSDT = async (destinationAddress: Address) => {
-  const asset = tokenMap.USDT
-  const signer = ethers.provider.getSigner()
-
   const contract = new ethers.Contract(
     asset.tokenAddress,
-    [
-      'function balanceOf(address account) view returns (uint256)',
-      'function bridgeMint(address account, uint256 amount)',
-    ],
+    ['function balanceOf(address account) view returns (uint256)', 'function depositTo(address account) payable'],
     signer,
   )
 
-  const oneUnit = 10n ** BigInt(asset.decimals)
-  await contract.bridgeMint(destinationAddress, 100000n * oneUnit) // 100_000 USDC
+  await contract.depositTo(destinationAddress, { value: BigNumber.from(mintAmount * oneUnit) })
+  await signer.sendTransaction({ to: destinationAddress, value: BigNumber.from(mintAmount * oneUnit) })
 
-  const balanceOf = (await contract.balanceOf(destinationAddress)) as BigNumber
-  console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatUnits(balanceOf, asset.decimals)}`)
+  const balanceWETH = await contract.balanceOf(destinationAddress)
+  const balance = await ethers.provider.getBalance(destinationAddress)
+  console.log(`${asset.name} balance of ${destinationAddress}: ${ethers.utils.formatEther(balanceWETH)}`)
+  console.log(`ETH balance of ${destinationAddress}: ${ethers.utils.formatEther(balance)}`)
 }
 
 const addressList: Address[] = [
@@ -113,53 +100,59 @@ const addressList: Address[] = [
 const main = async () => {
   const signer = ethers.provider.getSigner()
   const signerAddress = (await signer.getAddress()) as Address
+  const lowerCaseAddress = signerAddress.toLowerCase() as Address
 
-  await overrideUSDC(signerAddress, [
-    {
-      slot: 204,
-      from: 24,
-      to: 64,
-      value: signerAddress.toLowerCase(),
-    },
-  ])
+  // USDC override
+  await genericOverride(
+    lowerCaseAddress,
+    [
+      {
+        slot: 204,
+        from: 24,
+        to: 64,
+        value: lowerCaseAddress,
+      },
+    ],
+    tokenMap.USDC,
+    'gatewayAddress',
+  )
 
-  await overrideUSDT(signerAddress, [
-    {
-      slot: 256,
-      from: 22,
-      to: 62,
-      value: signerAddress.toLowerCase(),
-    },
-  ])
+  await genericOverride(
+    lowerCaseAddress,
+    [
+      {
+        slot: 256,
+        from: 22,
+        to: 62,
+        value: lowerCaseAddress,
+      },
+    ],
+    tokenMap.USDT,
+    'l2Gateway',
+  )
 
-  await overrideWBTC(signerAddress, [
-    {
-      slot: 204,
-      from: 24,
-      to: 64,
-      value: signerAddress.toLowerCase(),
-    },
-  ])
+  await genericOverride(
+    lowerCaseAddress,
+    [
+      {
+        slot: 204,
+        from: 24,
+        to: 64,
+        value: lowerCaseAddress,
+      },
+    ],
+    tokenMap.WBTC,
+    'l2Gateway',
+  )
 
-  await mintUSDC(addressList[0])
-  await mintUSDT(addressList[0])
-
-  // await Promise.all(
-  //   addressList.map(async (address) => {
-  //     await mintUSDC(address, [
-  //       {
-  //         slot: 204,
-  //         from: 24,
-  //         to: 64,
-  //         value: signerAddress.toLowerCase(),
-  //       },
-  //     ])
-  //     // await mintUSDT(address)
-  //     // await mintDAI(address)
-  //     // await mintBTC(address)
-  //     // await mintETH(address)
-  //   }),
-  // )
+  await Promise.all(
+    addressList.map(async (address) => {
+      await genericMint(address, tokenMap.USDC, 100000n)
+      await genericMint(address, tokenMap.USDT, 100000n)
+      await genericMint(address, tokenMap.WBTC, 10n)
+      await mintWETH(signerAddress, address, 20n)
+    }),
+  )
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -71,9 +71,8 @@
     "hardhat": "hardhat",
     "hardhat:node": "hardhat node",
     "hardhat:deploy:localhost": "hardhat --network localhost run scripts/all.deploy.ts",
-    "hardhat:faucet:localhost": "hardhat --network localhost run scripts/faucet.ts"
-  },
-  "dependencies": {
-    "p-queue": "^7.3.4"
+    "hardhat:faucet:localhost": "hardhat --network localhost run scripts/faucet.ts",
+    "hardhat:deploy:tenderly": "hardhat --network tenderly01 run scripts/all.deploy.ts",
+    "hardhat:faucet:tenderly": "hardhat --network tenderly01 run scripts/faucet.ts"
   }
 }

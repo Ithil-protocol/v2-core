@@ -26,8 +26,8 @@ export const fundTenderly = async (address: Address, amount: BigNumber = ethers.
   }
 }
 
-export const simpleFundTenderly = async (address: Address, amount: BigNumber) => {
-  await ethers.provider.send('tenderly_setBalance', [[address], ethers.utils.hexValue(amount.toHexString())])
+export const simpleFundTenderly = async (address: Address, amount: bigint) => {
+  await ethers.provider.send('tenderly_addBalance', [[address], ethers.utils.hexValue(amount)])
 }
 
 export const findStorageSlot = async (address: Address, toFind: Address, scanAmount = 1000) => {
