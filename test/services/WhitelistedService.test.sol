@@ -11,8 +11,8 @@ import { Whitelisted } from "../../src/services/Whitelisted.sol";
 import { AuctionRateModel } from "../../src/irmodels/AuctionRateModel.sol";
 import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 
 contract TestService is Whitelisted, AuctionRateModel, Service {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager, 30 * 86400) {}
