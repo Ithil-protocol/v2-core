@@ -14,8 +14,6 @@ import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 /// @title    GmxService contract
 /// @author   Ithil
 /// @notice   A service to perform margin trading on the GLP token
