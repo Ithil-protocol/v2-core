@@ -1,8 +1,21 @@
-import { writeFileSync } from 'fs'
+import { config as dotenvConfig } from 'dotenv'
+import { statSync, writeFileSync } from 'fs'
 
 import { aaveSetCapacity, aaveToggleWhitelist, createVault, deployAave, deployManager } from './contracts'
 import { tokens } from './tokens'
 import { type LendingToken } from './types'
+
+dotenvConfig({ path: '.env.hardhat' })
+
+if (!statSync('.env.hardhat').isFile()) {
+  console.warn('No .env.hardhat file found, required to use tenderly')
+  console.warn('Please check .env.hardhat.example for an example')
+}
+
+const { FRONTEND_PATH } = process.env
+if (FRONTEND_PATH == null || FRONTEND_PATH.length === 0) {
+  console.warn('No FRONTEND_PATH found in .env.hardhat, will not produce JSON files')
+}
 
 const AAVE_POOL_ON_ARBITRUM = '0x794a61358D6845594F94dc1DB02A252b5b4814aD'
 

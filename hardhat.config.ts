@@ -1,7 +1,24 @@
 import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-toolbox'
+import { config as dotenvConfig } from 'dotenv'
+import { statSync } from 'fs'
 import 'hardhat-ethernal'
 import { type HardhatUserConfig } from 'hardhat/types'
+
+dotenvConfig({ path: '.env.hardhat' })
+
+if (!statSync('.env.hardhat').isFile()) {
+  console.warn('No .env.hardhat file found, required to use tenderly')
+  console.warn('Please check .env.hardhat.example for an example')
+}
+
+const { TENDERLY_URL } = process.env
+const tenderlyNetwork = {} as any
+if (TENDERLY_URL != null && TENDERLY_URL.length > 10) {
+  tenderlyNetwork.tenderly = {
+    url: TENDERLY_URL,
+  }
+}
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -20,9 +37,7 @@ const config: HardhatUserConfig = {
         url: 'https://arb1.arbitrum.io/rpc',
       },
     },
-    tenderly01: {
-      url: 'https://rpc.vnet.tenderly.co/devnet/hardhat01/019f7ffe-a0e0-4476-8613-60ed8f95a08f',
-    },
+    ...tenderlyNetwork,
   },
 }
 
