@@ -89,7 +89,6 @@ contract AaveGeneralTest is Test, IERC721Receiver {
 
         whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         margin = (((margin % whaleBalance) % 1e12) + 1e6).min(whaleBalance); // Max 1m, min 1
-        if (margin == 0) margin++;
         vm.prank(whales[loanTokens[0]]);
         IERC20(loanTokens[0]).transfer(address(this), margin);
         loan = (loan % vaultAmount) % 1e12; // Max 1m
@@ -132,7 +131,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         (loan, margin) = _prepareVaultAndUser(vaultAmount, loan, margin);
         IService.Order memory order = _prepareOrder(loan, margin);
         // No need to check invariants: they are already checked in other tests
-        if (order.agreement.loans[0].amount == 0 || order.agreement.loans[0].margin < 1e6) return;
+        if (order.agreement.loans[0].margin < 1e6) return;
         service.open(order);
         vm.warp(block.timestamp + warp);
     }
