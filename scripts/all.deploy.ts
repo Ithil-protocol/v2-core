@@ -1,5 +1,6 @@
 import { config as dotenvConfig } from 'dotenv'
 import { statSync, writeFileSync } from 'fs'
+import { resolve } from 'path'
 
 import { aaveSetCapacity, aaveToggleWhitelist, createVault, deployAave, deployManager } from './contracts'
 import { tokens } from './tokens'
@@ -13,8 +14,12 @@ if (!statSync('.env.hardhat').isFile()) {
 }
 
 const { FRONTEND_PATH } = process.env
+const projectDir = resolve(__dirname, '..')
+let frontendDir: null | string = null
 if (FRONTEND_PATH == null || FRONTEND_PATH.length === 0) {
   console.warn('No FRONTEND_PATH found in .env.hardhat, will not produce JSON files')
+} else {
+  frontendDir = resolve(projectDir, FRONTEND_PATH)
 }
 
 const AAVE_POOL_ON_ARBITRUM = '0x794a61358D6845594F94dc1DB02A252b5b4814aD'
@@ -38,15 +43,20 @@ const main = async () => {
   console.log('Disabled whitelist on AAVE service')
 
   const contracts = {
+    networkUrl: process.env.TENDERLY_URL ?? 'http://localhost:8545',
     manager: manager.address,
     aaveService: aaveService.address,
   }
 
-  writeFileSync('contracts.json', JSON.stringify(contracts, null, 2))
-  writeFileSync('vaults.json', JSON.stringify(vaults, null, 2))
+  if (frontendDir != null) {
+    const contractsPath = resolve(frontendDir, 'src/deploy/contracts.json')
+    const vaultsPath = resolve(frontendDir, 'src/deploy/vaults.json')
+    writeFileSync(contractsPath, JSON.stringify(contracts, null, 2))
+    writeFileSync(vaultsPath, JSON.stringify(vaults, null, 2))
 
-  console.log(`Wrote file vaults.json containing ${vaults.length} vaults`)
-  console.log('Wrote file contracts.json containing other deploy addresses')
+    console.log(`Wrote file vaults.json containing ${vaults.length} vaults`)
+    console.log('Wrote file contracts.json containing other deploy addresses')
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
