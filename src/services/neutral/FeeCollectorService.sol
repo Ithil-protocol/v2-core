@@ -149,7 +149,7 @@ contract FeeCollectorService is Service {
 
         uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feePercentage, GeneralMath.RESOLUTION);
         // todo: what is that "maxAmountIn"? For now it's uint256(-1) to avoid reversals
-        manager.borrow(token, feesToHarvest, 0, exposures[token], address(this));
+        manager.borrow(token, feesToHarvest, 0, address(this));
         // todo: reward harvester
     }
 

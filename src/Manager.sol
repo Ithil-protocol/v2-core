@@ -15,13 +15,14 @@ contract Manager is IManager, Ownable {
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
     // service => token => caps
-    mapping(address => mapping(address => uint256)) public override caps;
+    mapping(address => mapping(address => CapsAndExposures)) public override caps;
+    mapping(address => uint256) public exposures;
 
     // solhint-disable-next-line no-empty-blocks
     constructor() {}
 
     modifier supported(address token) {
-        if (caps[msg.sender][token] == 0) revert RestrictedToWhitelisted();
+        if (caps[msg.sender][token].cap == 0) revert RestrictedToWhitelisted();
         _;
     }
 
@@ -44,7 +45,7 @@ contract Manager is IManager, Ownable {
     }
 
     function setCap(address service, address token, uint256 cap) external override onlyOwner {
-        caps[service][token] = cap;
+        caps[service][token].cap = cap;
 
         emit CapWasUpdated(service, token, cap);
     }
@@ -58,18 +59,24 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 loan, uint256 currentExposure, address receiver)
+    function borrow(address token, uint256 amount, uint256 loan, address receiver)
         external
         override
         supported(token)
         vaultExists(token)
         returns (uint256, uint256)
     {
-        uint256 investmentCap = caps[msg.sender][token];
+        // Example with USDC: investmentCap = 2e17 (20%)
+        // initial freeLiquidity = 1e13 (10 million USDC), initial netLoans = 3e12 (3 million USDC)
+        // we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
+        // assume currentExposure = 1.1e12 (1.1 million USDC) coming also from last 100k
+        // finally investedPortion = 1e18 * 1.1e12 / (9.9e12 + 3.1e12) = 85271317829457364 or about 8.53%
+        uint256 investmentCap = caps[msg.sender][token].cap;
+        caps[msg.sender][token].exposure += loan;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
         uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
-            currentExposure,
-            freeLiquidity.safeAdd(netLoans - loan)
+            caps[msg.sender][token].exposure,
+            freeLiquidity.safeAdd(netLoans)
         );
         if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);
@@ -82,6 +89,7 @@ contract Manager is IManager, Ownable {
         supported(token)
         vaultExists(token)
     {
+        caps[msg.sender][token].exposure = caps[msg.sender][token].exposure.positiveSub(debt);
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 }

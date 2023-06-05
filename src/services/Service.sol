@@ -15,7 +15,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     IManager public immutable manager;
     address public guardian;
-    mapping(address => uint256) public exposures;
     Agreement[] public agreements;
     bool public locked;
     uint256 public id;

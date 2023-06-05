@@ -135,7 +135,6 @@ contract SeniorCallOption is CreditService {
                     agreement.loans[0].token,
                     (toTransfer - redeemable).min(freeLiquidity - 1),
                     0,
-                    0,
                     ownerOf(tokenID)
                 );
             }

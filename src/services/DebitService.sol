@@ -57,7 +57,6 @@ abstract contract DebitService is Service, BaseRiskModel {
         Agreement memory agreement = order.agreement;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             if (agreement.loans[index].margin < minMargin[agreement.loans[index].token]) revert MarginTooLow();
-            exposures[agreement.loans[index].token] += agreement.loans[index].amount;
             IERC20(agreement.loans[index].token).safeTransferFrom(
                 msg.sender,
                 address(this),
@@ -69,7 +68,6 @@ abstract contract DebitService is Service, BaseRiskModel {
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
                 agreement.loans[index].amount,
-                exposures[agreement.loans[index].token],
                 address(this)
             );
 
@@ -92,9 +90,6 @@ abstract contract DebitService is Service, BaseRiskModel {
 
         uint256[] memory dueFees = computeDueFees(agreement);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
-            exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
-                agreement.loans[index].amount
-            );
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - obtained[index];
             if (obtained[index] > dueFees[index] + agreement.loans[index].amount) {
                 IERC20(agreement.loans[index].token).approve(

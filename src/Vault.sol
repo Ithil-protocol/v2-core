@@ -19,6 +19,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     uint256 public immutable override creationTime;
     uint256 public override feeUnlockTime;
     uint256 public override netLoans;
+    // TODO: gas check the possibility of making them internal
     uint256 public override latestRepay;
     uint256 public override currentProfits;
     uint256 public override currentLosses;
@@ -58,6 +59,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
     }
 
+    // TODO: this is not the complete status, but rather the fees status: consider changing names
     function getStatus() external view override returns (uint256, uint256, uint256) {
         return (_calculateLockedProfits(), _calculateLockedLosses(), latestRepay);
     }
@@ -90,6 +92,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxRedeem(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
+        // TODO: this is unnecessarily gas expensive: it calls totalAssets() three times
+        // calling it once is enough: revisit calculations
         uint256 maxRedeemCache = balanceOf(owner);
         uint256 freeLiquidityCache = freeLiquidity();
         uint256 assets = convertToAssets(maxRedeemCache);
@@ -117,6 +121,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
+
+        // TODO: this calls totalAssets() twice, doubling its gas cost: reduce it by calling it once
         uint256 freeLiq = freeLiquidity();
         if (assets >= freeLiq) revert InsufficientLiquidity();
         uint256 shares = super.withdraw(assets, receiver, owner);
@@ -132,6 +138,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         override(ERC4626, IERC4626)
         returns (uint256)
     {
+        // TODO: this calls totalAssets() three times, doubling its gas cost: reduce it by calling it once
         uint256 freeLiq = freeLiquidity();
         uint256 assets = previewRedeem(shares);
         if (assets >= freeLiq) revert InsufficientLiquidity();

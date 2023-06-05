@@ -35,9 +35,8 @@ abstract contract CreditService is Service {
             ) IERC20(agreement.loans[index].token).approve(vaultAddress, type(uint256).max);
             uint256 shares = IVault(vaultAddress).deposit(agreement.loans[index].amount, address(this));
 
-            // Register obtained shares and update exposures
+            // Register obtained shares
             agreement.collaterals[index].amount = shares;
-            exposures[agreement.loans[index].token] += shares;
         }
         Service.open(order);
     }
@@ -49,9 +48,6 @@ abstract contract CreditService is Service {
         Service.close(tokenID, data);
 
         for (uint256 index = 0; index < agreement.loans.length; index++) {
-            exposures[agreement.loans[index].token] = exposures[agreement.loans[index].token].positiveSub(
-                agreement.collaterals[index].amount
-            );
             IVault vault = IVault(manager.vaults(agreement.loans[index].token));
             uint256 toTransfer = dueAmount(agreement, data);
             uint256 redeemed = vault.redeem(

@@ -86,7 +86,7 @@ contract ManagerTest is Test {
         cap = (cap % GeneralMath.RESOLUTION) + 1;
 
         manager.setCap(debitServiceOne, address(firstToken), cap);
-        uint256 storedCap = manager.caps(debitServiceOne, address(firstToken));
+        (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
         return cap;
     }
@@ -94,7 +94,7 @@ contract ManagerTest is Test {
     function testSetCap(uint256 previousDeposit, uint256 debitCap, uint256 cap) public {
         _setupArbitraryState(previousDeposit, debitCap);
         manager.setCap(debitServiceOne, address(firstToken), cap);
-        uint256 storedCap = manager.caps(debitServiceOne, address(firstToken));
+        (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
     }
 
@@ -117,21 +117,16 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(
-        uint256 previousDeposit,
-        uint256 debitCap,
-        uint256 currentExposure,
-        uint256 borrowed,
-        uint256 loan
-    ) public {
+    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 borrowed, uint256 loan) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
+        (, uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
 
         uint256 investedPortion = freeLiquidity == 0
             ? GeneralMath.RESOLUTION
             : GeneralMath.RESOLUTION.safeMulDiv(
-                currentExposure,
+                currentExposure + loan,
                 freeLiquidity.safeAdd(IVault(vaultAddress).netLoans())
             );
         if (investedPortion > debitCap) {
@@ -141,7 +136,7 @@ contract ManagerTest is Test {
         borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
-            manager.borrow(address(firstToken), borrowed, loan, currentExposure, anyAddress);
+            manager.borrow(address(firstToken), borrowed, loan, anyAddress);
         }
     }
 
