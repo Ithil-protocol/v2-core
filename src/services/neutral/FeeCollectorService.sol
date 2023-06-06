@@ -175,6 +175,8 @@ contract FeeCollectorService is Service {
 
                 // TODO check oracle
                 uint256 price = oracle.getPrice(tokens[i], address(weth), 1);
+
+                // TODO add discount to price
                 pool.createOrder(amount, price, vault, block.timestamp + 1 weeks);
             }
         }

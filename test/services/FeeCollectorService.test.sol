@@ -129,16 +129,22 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         usdc.transfer(manager.vaults(address(usdc)), 1e6);
         vm.stopPrank();
 
-        // TODO we want to test that WETH does not trigger a swap while USDC does
+        // we want to test that WETH does not trigger a swap while USDC does
         address[] memory tokens = new address[](2);
         tokens[0] = address(weth);
         tokens[1] = address(usdc);
         service.harvestAndSwap(tokens);
 
+        address usdcVault = manager.vaults(address(usdc));
+
         // mock an order fill
+        uint256 initialVaultBalance = usdc.balanceOf(usdcVault);
+
         uint256 amount = 1000 * 1e6;
-        vm.startPrank(usdcWhale);
-        usdc.approve(address(dex), amount);
-        dex.simuateOrderFulfillment(address(usdc), amount, manager.vaults(address(usdc)));
+        vm.prank(usdcWhale);
+        usdc.transfer(address(dex), amount);
+        dex.simuateOrderFulfillment(address(usdc), amount, usdcVault);
+
+        assertTrue(usdc.balanceOf(usdcVault) == initialVaultBalance + amount);
     }
 }
