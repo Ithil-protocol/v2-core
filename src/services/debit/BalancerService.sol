@@ -51,7 +51,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     uint256 public rewardRate;
     address public immutable bal;
     IOracle public immutable oracle;
-    IFactory public immutable factory;
+    IFactory public immutable dex;
 
     constructor(
         address _manager,
@@ -62,7 +62,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         uint256 _deadline
     ) Service("BalancerService", "BALANCER-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
-        factory = IFactory(_factory);
+        dex = IFactory(_factory);
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
     }
@@ -235,9 +235,9 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         (address token, address vault) = VaultHelper.getBestVault(pool.tokens, manager);
         // TODO check oracle
         uint256 price = oracle.getPrice(bal, token, 1);
-        address dexPool = factory.pools(bal, token, 10); // TODO hardcoded tick
+        address dexPool = dex.pools(bal, token, 10); // TODO hardcoded tick
         // TODO add discount
-        IPool(dexPool).createOrder(IERC20(bal).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+        IPool(dexPool).createOrder(IERC20(bal).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
 
         // TODO add premium to the caller
     }

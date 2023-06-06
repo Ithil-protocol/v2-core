@@ -43,7 +43,7 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
     address internal immutable crv;
     address internal immutable cvx;
     IOracle public immutable oracle;
-    IFactory public immutable factory;
+    IFactory public immutable dex;
 
     constructor(
         address _manager,
@@ -55,7 +55,7 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         uint256 _deadline
     ) Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
-        factory = IFactory(_factory);
+        dex = IFactory(_factory);
         booster = IConvexBooster(_booster);
         cvx = _cvx;
         crv = _crv;
@@ -159,8 +159,8 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
 
-    function harvest(address token) external {
-        PoolData memory pool = pools[token];
+    function harvest(address _token) external {
+        PoolData memory pool = pools[_token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
         pool.baseRewardPool.getReward(address(this));
@@ -169,15 +169,15 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
 
         // TODO check oracle
         uint256 price = oracle.getPrice(crv, token, 1);
-        address dexPool = factory.pools(crv, token, 10); // TODO hardcoded tick
+        address dexPool = dex.pools(crv, token, 10); // TODO hardcoded tick
         // TODO add discount
-        IPool(dexPool).createOrder(IERC20(crv).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+        IPool(dexPool).createOrder(IERC20(crv).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
 
         // TODO check oracle
         price = oracle.getPrice(cvx, token, 1);
-        dexPool = factory.pools(cvx, token, 10); // TODO hardcoded tick
+        dexPool = dex.pools(cvx, token, 10); // TODO hardcoded tick
         // TODO add discount
-        IPool(dexPool).createOrder(IERC20(cvx).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+        IPool(dexPool).createOrder(IERC20(cvx).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
 
         // TODO add premium to the caller
     }
