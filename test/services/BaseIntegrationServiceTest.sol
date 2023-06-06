@@ -13,7 +13,7 @@ import { Oracle } from "../../src/Oracle.sol";
 import { MockDex } from "../helpers/MockDex.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
-    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
+    address internal constant admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
     Oracle internal immutable oracle;
     MockDex internal immutable dex;
