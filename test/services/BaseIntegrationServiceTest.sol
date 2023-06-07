@@ -8,7 +8,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { Oracle } from "../../src/Oracle.sol";
 import { MockDex } from "../helpers/MockDex.sol";
 

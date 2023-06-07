@@ -84,7 +84,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 freeLiq = freeLiquidity();
         uint256 supply = totalSupply();
         uint256 shares = balanceOf(owner);
-        // super.maxWithdraw gas efficient
+        // super.maxWithdraw but we leverage the fact of having already computed freeLiq which contains balanceOf()
         return
             freeLiq < 2
                 ? 0
@@ -100,10 +100,12 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 freeLiquidityCache = super.totalAssets() - _calculateLockedProfits();
         uint256 totalAssetsCache = freeLiquidityCache + netLoans + _calculateLockedLosses();
         uint256 supply = totalSupply();
-        // convertToAssets, gas efficient
+        // convertToAssets but we leverage the fact of having already computed totalAssetsCache
+        // we need to compute it separately because we use freeLiquidityCache later
+        // in this way, the entire function has only one call to balanceOf()
         uint256 assets = (supply == 0) ? maxRedeemCache : maxRedeemCache.mulDiv(totalAssetsCache, supply);
 
-        // convertToShares, gas efficient
+        // convertToShares using the already computed variables
         if (assets == freeLiquidityCache && assets > 0) {
             maxRedeemCache = (assets == 1 || supply == 0) ? assets - 1 : (assets - 1).mulDiv(supply, totalAssetsCache);
         }
@@ -134,7 +136,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 freeLiq = freeLiquidity();
         if (assets >= freeLiq) revert InsufficientLiquidity();
 
-        // super.withdraw but gas efficient
+        // super.withdraw but we leverage the fact of having already computed freeLiq
         uint256 supply = totalSupply();
         uint256 shares = (assets == 0 || supply == 0)
             ? assets
@@ -154,11 +156,11 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     {
         uint256 freeLiq = freeLiquidity();
         uint256 totalAssetsCache = freeLiq + netLoans + _calculateLockedLosses();
-        // preview redeem
+        // previewRedeem, leveraging the fact of having already computed freeLiq
         uint256 supply = totalSupply();
         uint256 assets = (supply == 0) ? shares : shares.mulDiv(totalAssetsCache, supply);
         if (assets >= freeLiq) revert InsufficientLiquidity();
-        // redeem
+        // redeem, now all data have been computed
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);

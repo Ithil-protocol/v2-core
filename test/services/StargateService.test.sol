@@ -9,7 +9,7 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { StargateService } from "../../src/services/debit/StargateService.sol";
 import { IStargatePool } from "../../src/interfaces/external/stargate/IStargateLPStaking.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
