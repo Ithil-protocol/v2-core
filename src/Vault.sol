@@ -81,8 +81,16 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
-        uint256 freeLiquidityCache = freeLiquidity();
-        return freeLiquidityCache == 0 ? 0 : (freeLiquidityCache - 1).min(super.maxWithdraw(owner));
+        uint256 freeLiq = freeLiquidity();
+        uint256 supply = totalSupply();
+        uint256 shares = balanceOf(owner);
+        // super.maxWithdraw gas efficient
+        return
+            freeLiq < 2
+                ? 0
+                : (freeLiq - 1).min(
+                    (supply == 0) ? shares : shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply)
+                );
     }
 
     // Assets include netLoans but they are not available for withdraw
@@ -224,20 +232,12 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Starts from currentProfits and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedProfits() internal view returns (uint256) {
-        uint256 unlockTime = feeUnlockTime;
-        return
-            block.timestamp - latestRepay < unlockTime
-                ? currentProfits.mulDiv(unlockTime - (block.timestamp - latestRepay), unlockTime)
-                : 0;
+        return currentProfits.mulDiv(feeUnlockTime - (block.timestamp - latestRepay).min(feeUnlockTime), feeUnlockTime);
     }
 
     // Starts from currentLosses and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedLosses() internal view returns (uint256) {
-        uint256 unlockTime = feeUnlockTime;
-        return
-            block.timestamp - latestRepay < unlockTime
-                ? currentLosses.mulDiv(unlockTime - (block.timestamp - latestRepay), unlockTime)
-                : 0;
+        return currentLosses.mulDiv(feeUnlockTime - (block.timestamp - latestRepay).min(feeUnlockTime), feeUnlockTime);
     }
 }

@@ -3,11 +3,9 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IVault } from "../interfaces/IVault.sol";
-import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { Service } from "./Service.sol";
 
 abstract contract CreditService is Service {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
     error InvalidInput();
@@ -28,7 +26,7 @@ abstract contract CreditService is Service {
                 agreement.loans[index].amount
             );
 
-            // Deposit toekns to the relevant vault
+            // Deposit tokens to the relevant vault
             if (
                 IERC20(agreement.loans[index].token).allowance(address(this), vaultAddress) <
                 agreement.loans[index].amount
@@ -50,16 +48,18 @@ abstract contract CreditService is Service {
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             IVault vault = IVault(manager.vaults(agreement.loans[index].token));
             uint256 toTransfer = dueAmount(agreement, data);
+
+            uint256 maxWithdraw = vault.maxWithdraw(address(this));
             uint256 redeemed = vault.redeem(
-                agreement.collaterals[index].amount.min(vault.maxWithdraw(address(this))),
+                agreement.collaterals[index].amount > maxWithdraw ? maxWithdraw : agreement.collaterals[index].amount,
                 address(this),
                 address(this)
             );
-            // transfer toTransfer and pay the vault if toTransfer < redeemed
+            // give toTransfer to the user and pay the vault if toTransfer < redeemed
             // otherwise transfer redeemed and do nothing
             if (toTransfer < redeemed) {
-                IERC20(agreement.loans[index].token).transfer(owner, toTransfer);
                 manager.repay(agreement.loans[index].token, redeemed - toTransfer, 0, address(this));
+                IERC20(agreement.loans[index].token).transfer(owner, toTransfer);
             } else IERC20(agreement.loans[index].token).transfer(owner, redeemed);
         }
     }

@@ -2,17 +2,12 @@
 pragma solidity =0.8.17;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
-import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { Vault } from "../Vault.sol";
 
 abstract contract Service is IService, ERC721Enumerable, Ownable {
-    using GeneralMath for uint256;
-    using SafeERC20 for IERC20;
-
     IManager public immutable manager;
     address public guardian;
     Agreement[] public agreements;
@@ -98,10 +93,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _close(tokenID, agreement, data);
         // Burning after closing since owner may be needed during closure
         _burn(tokenID);
-        // for (uint256 index = 0; index < agreement.loans.length; index++)
-        //     amountsOut[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - amountsOut[index];
-
-        // return amountsOut;
     }
 
     /// @notice modifies an existing service agreement
