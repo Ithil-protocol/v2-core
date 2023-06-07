@@ -21,6 +21,7 @@ contract FeeCollectorService is Service {
     VeIthil public immutable veToken;
 
     // weights for different tokens, 0 => not supported
+    // assumes 18 digit fixed point math
     mapping(address => uint256) public weights;
     // Locking of the position in seconds
     mapping(uint256 => uint256) public locktimes;
@@ -29,12 +30,13 @@ contract FeeCollectorService is Service {
     // Necessary to properly distribute fees and prevent snatching
     uint256 public totalLoans;
     // 2^((n+1)/12) with 18 digit fixed point
-    uint64[] internal rewards;
+    uint64[] internal _rewards;
 
     event TokenWeightWasChanged(address indexed token, uint256 weight);
 
     error Throttled();
     error InsufficientProfits();
+    error ZeroLoan();
     error BeforeExpiry();
     error ZeroAmount();
     error UnsupportedToken();
@@ -47,19 +49,19 @@ contract FeeCollectorService is Service {
         veToken = new VeIthil();
 
         feePercentage = _feePercentage;
-        rewards = new uint64[](12);
-        rewards[0] = 1059463094359295265;
-        rewards[1] = 1122462048309372981;
-        rewards[2] = 1189207115002721067;
-        rewards[3] = 1259921049894873165;
-        rewards[4] = 1334839854170034365;
-        rewards[5] = 1414213562373095049;
-        rewards[6] = 1498307076876681499;
-        rewards[7] = 1587401051968199475;
-        rewards[8] = 1681792830507429086;
-        rewards[9] = 1781797436280678609;
-        rewards[10] = 1887748625363386993;
-        rewards[11] = 2000000000000000000;
+        _rewards = new uint64[](12);
+        _rewards[0] = 1059463094359295265;
+        _rewards[1] = 1122462048309372981;
+        _rewards[2] = 1189207115002721067;
+        _rewards[3] = 1259921049894873165;
+        _rewards[4] = 1334839854170034365;
+        _rewards[5] = 1414213562373095049;
+        _rewards[6] = 1498307076876681499;
+        _rewards[7] = 1587401051968199475;
+        _rewards[8] = 1681792830507429086;
+        _rewards[9] = 1781797436280678609;
+        _rewards[10] = 1887748625363386993;
+        _rewards[11] = 2000000000000000000;
     }
 
     modifier expired(uint256 tokenId) {
@@ -83,20 +85,23 @@ contract FeeCollectorService is Service {
         if (agreement.loans[0].margin == 0) revert ZeroAmount();
         if (weights[agreement.loans[0].token] == 0) revert UnsupportedToken();
         // Update collateral using ERC4626 formula
-        agreement.loans[0].amount = totalLoans == 0
+        uint256 assets = totalAssets();
+        agreement.loans[0].amount = assets == 0
             ? agreement.loans[0].margin
-            : (agreement.loans[0].margin * totalLoans) / totalAssets();
+            : (agreement.loans[0].margin * totalLoans) / assets;
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
         if (monthsLocked > 11) revert MaxLockExceeded();
         agreement.loans[0].amount =
-            (agreement.loans[0].amount * (rewards[monthsLocked] * weights[agreement.loans[0].token])) /
+            (agreement.loans[0].amount * (_rewards[monthsLocked] * weights[agreement.loans[0].token])) /
             1e36;
         // Total loans is updated
+        // We must be sure it's positive, otherwise division by zero would make the position impossible to close
+        if (agreement.loans[0].amount == 0) revert ZeroLoan();
         totalLoans += agreement.loans[0].amount;
         // Collateral is equal to the amount of veTokens to mint
         agreement.collaterals[0].amount =
-            (agreement.loans[0].margin * (rewards[monthsLocked] * weights[agreement.loans[0].token])) /
+            (agreement.loans[0].margin * (_rewards[monthsLocked] * weights[agreement.loans[0].token])) /
             1e36;
         veToken.mint(msg.sender, agreement.collaterals[0].amount);
         // register locktime

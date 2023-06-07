@@ -21,6 +21,7 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     error IncorrectObtainedToken();
     error InsufficientAmountOut();
     error ZeroCollateral();
+    error ImpossibleToQuote();
 
     constructor(address _manager, address _aave, uint256 _deadline)
         Service("AaveService", "AAVE-SERVICE", _manager, _deadline)
@@ -43,11 +44,13 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
         uint256 computedCollateral = aToken.balanceOf(address(this)) - initialBalance;
         if (computedCollateral < agreement.collaterals[0].amount) revert InsufficientAmountOut();
         agreement.collaterals[0].amount = computedCollateral;
+        // Due to the above check, totalAllowance is positive if there is at least one open agreement
         totalAllowance = totalAllowance + computedCollateral;
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
+        // Recall totalAllowance > 0 if there is at least one open agreement
         uint256 toRedeem = (IAToken(agreement.collaterals[0].token).balanceOf(address(this)) *
             agreement.collaterals[0].amount) / totalAllowance;
         totalAllowance = totalAllowance > agreement.collaterals[0].amount
@@ -59,6 +62,8 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         uint256[] memory toRedeem = new uint256[](1);
+        // This reverts if there are no open agreements, which is expected since it would be impossible to quote
+        if (totalAllowance == 0) revert ImpossibleToQuote();
         toRedeem[0] =
             (IAToken(agreement.collaterals[0].token).balanceOf(address(this)) * agreement.collaterals[0].amount) /
             totalAllowance;

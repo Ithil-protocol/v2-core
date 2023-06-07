@@ -13,6 +13,7 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     error InvalidInitParams();
     error InterestRateOverflow();
     error AboveRiskThreshold();
+    error ZeroMarginLoan();
 
     /**
      * @dev gas saving trick
@@ -31,7 +32,10 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     }
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
-    function riskSpreadFromMargin(address token, uint256 amount, uint256 margin) internal view returns (uint256) {
+    function _riskSpreadFromMargin(address token, uint256 amount, uint256 margin) internal view returns (uint256) {
+        if (amount == 0) return 0;
+        // We do not allow a zero margin on a loan with positive amount
+        if (margin == 0) revert ZeroMarginLoan();
         return (riskSpreads[token] * amount) / margin;
     }
 
@@ -50,9 +54,10 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
         (uint256 latestBorrow, uint256 base) = (latestAndBase[token] >> 128, latestAndBase[token] % (1 << 128));
         // Increase base due to new borrow and then
         // apply time based discount: after halvingTime it is divided by 2
+        // this will revert if loan = freeLiquidity, which is expected
         uint256 newBase = ((halvingTime[token] * (base * freeLiquidity)) / (freeLiquidity - loan)) /
             (block.timestamp - latestBorrow + halvingTime[token]);
-        uint256 spread = riskSpreadFromMargin(token, loan, margin);
+        uint256 spread = _riskSpreadFromMargin(token, loan, margin);
         return (newBase, spread);
     }
 

@@ -34,6 +34,7 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
     error InvalidInput();
     error SushiLPMismatch();
     error WrongTokenOrder();
+    error ZeroTotalSupply();
 
     mapping(address => PoolData) public pools;
     IUniswapV2Router public immutable router;
@@ -113,6 +114,7 @@ contract SushiService is Whitelisted, AuctionRateModel, DebitService {
         uint256 rootK = Math.sqrt(balanceA + agreement.loans[0].amount) * (balanceB + agreement.loans[1].amount);
         uint256 rootKLast = Math.sqrt(abi.decode(klast, (uint256)));
         totalSupply += (totalSupply * (rootK - rootKLast)) / (5 * rootK + rootKLast);
+        if (totalSupply == 0) revert ZeroTotalSupply();
         quoted[0] = (agreement.collaterals[0].amount * balanceA) / totalSupply;
         quoted[1] = (agreement.collaterals[0].amount * balanceB) / totalSupply;
 

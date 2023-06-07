@@ -26,7 +26,10 @@ abstract contract DebitService is Service, BaseRiskModel {
         virtual
         returns (uint256)
     {
+        // In a zero-risk case, we just liquidate when the loan amount is reached
+        if (interestAndSpread == 0) return amount;
         (uint256 interestRate, uint256 riskSpread) = (interestAndSpread >> 128, interestAndSpread % (1 << 128));
+        // at this point, we are not dividing by zero
         return amount + (margin * riskSpread) / (interestRate + riskSpread);
     }
 

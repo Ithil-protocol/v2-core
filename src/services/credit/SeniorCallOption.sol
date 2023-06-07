@@ -52,6 +52,7 @@ contract SeniorCallOption is CreditService {
         uint256 _halvingTime,
         address _underlying
     ) Service("Ithil Senior Call Option", "SCALL", _manager, _deadline) {
+        require(_initialPrice > 0, "Zero initial price");
         initialPrice = _initialPrice;
         treasury = _treasury;
         underlying = IERC20(_underlying);
@@ -93,6 +94,7 @@ contract SeniorCallOption is CreditService {
         // Total price increases as a function of the remaining allocation in inverse proportionality
         // E.g. if 50% of the entire allocation is bought, the current price gets multiplied by 2
         // if 10% of the allocation is bought, remaining is 9/10 so price gets multiplied by 10/9, etc...
+        // notice that the denominator is positive since totalAllocation > virtualBoughtAmount
         latestSpread = (currentPrice * totalAllocation) / (totalAllocation - virtualBoughtAmount) - initialPrice;
 
         // We register the amount of ITHIL to be redeemed as collateral
