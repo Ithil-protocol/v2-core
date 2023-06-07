@@ -8,7 +8,6 @@ import { IPool } from "../../interfaces/external/dex/IPool.sol";
 import { IUniswapV2Router } from "../../interfaces/external/sushi/IUniswapV2Router.sol";
 import { IUniswapV2Factory } from "../../interfaces/external/sushi/IUniswapV2Factory.sol";
 import { IMiniChef } from "../../interfaces/external/sushi/IMiniChef.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { Math } from "../../libraries/external/Uniswap/Math.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
@@ -20,7 +19,6 @@ import { Whitelisted } from "../Whitelisted.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Sushi pool
 contract SushiService is Whitelisted, AuctionRateModel, DebitService {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
     struct PoolData {

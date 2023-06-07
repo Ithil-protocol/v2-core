@@ -4,7 +4,6 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IPool } from "../../interfaces/external/aave/IPool.sol";
 import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
@@ -14,10 +13,9 @@ import { Whitelisted } from "../Whitelisted.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
 contract AaveService is Whitelisted, AuctionRateModel, DebitService {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
-    IPool internal immutable aave;
+    IPool public immutable aave;
     uint256 public totalAllowance;
 
     error IncorrectObtainedToken();
@@ -45,26 +43,25 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
         uint256 computedCollateral = aToken.balanceOf(address(this)) - initialBalance;
         if (computedCollateral < agreement.collaterals[0].amount) revert InsufficientAmountOut();
         agreement.collaterals[0].amount = computedCollateral;
-        totalAllowance = totalAllowance.safeAdd(computedCollateral);
+        totalAllowance = totalAllowance + computedCollateral;
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
-        uint256 toRedeem = IAToken(agreement.collaterals[0].token).balanceOf(address(this)).safeMulDiv(
-            agreement.collaterals[0].amount,
-            totalAllowance
-        );
-        totalAllowance = totalAllowance.positiveSub(agreement.collaterals[0].amount);
+        uint256 toRedeem = (IAToken(agreement.collaterals[0].token).balanceOf(address(this)) *
+            agreement.collaterals[0].amount) / totalAllowance;
+        totalAllowance = totalAllowance > agreement.collaterals[0].amount
+            ? totalAllowance - agreement.collaterals[0].amount
+            : 0;
         uint256 amountIn = aave.withdraw(agreement.loans[0].token, toRedeem, address(this));
         if (amountIn < minimumAmountOut) revert InsufficientAmountOut();
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         uint256[] memory toRedeem = new uint256[](1);
-        toRedeem[0] = IAToken(agreement.collaterals[0].token).balanceOf(address(this)).safeMulDiv(
-            agreement.collaterals[0].amount,
-            totalAllowance
-        );
+        toRedeem[0] =
+            (IAToken(agreement.collaterals[0].token).balanceOf(address(this)) * agreement.collaterals[0].amount) /
+            totalAllowance;
         return toRedeem;
     }
 }

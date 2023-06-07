@@ -2,24 +2,21 @@
 pragma solidity =0.8.17;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { IService } from "../interfaces/IService.sol";
 import { DebitService } from "../services/DebitService.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 
 /// @dev IR = baseIR + spread
 /// Rate model in which baseIR is based on a Dutch auction
-/// GeneralMath.RESOLUTION corresponds to 1, i.e. an interest rate of 100%
+/// 1e18 corresponds to 1, i.e. an interest rate of 100%
 abstract contract AuctionRateModel is Ownable, BaseRiskModel {
-    using GeneralMath for uint256;
-
     error InvalidInitParams();
     error InterestRateOverflow();
     error AboveRiskThreshold();
 
     /**
      * @dev gas saving trick
-     * latest is a timestamp and base < GeneralMath.RESOLUTION, they all fit in uint256
+     * latest is a timestamp and base < 1e18, they all fit in uint256
      * latestAndBase = timestamp * 2^128 + base
      */
     mapping(address => uint256) public halvingTime;
@@ -27,16 +24,15 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     mapping(address => uint256) public latestAndBase;
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
-        if (baseRate > GeneralMath.RESOLUTION || riskSpread > GeneralMath.RESOLUTION || halfTime == 0)
-            revert InvalidInitParams();
+        if (baseRate > 1e18 || riskSpread > 1e18 || halfTime == 0) revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
-        latestAndBase[token] = GeneralMath.packInUint(block.timestamp, baseRate);
+        latestAndBase[token] = (block.timestamp << 128) + baseRate;
         halvingTime[token] = halfTime;
     }
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
     function riskSpreadFromMargin(address token, uint256 amount, uint256 margin) internal view returns (uint256) {
-        return riskSpreads[token].safeMulDiv(amount, margin);
+        return (riskSpreads[token] * amount) / margin;
     }
 
     /**
@@ -51,13 +47,11 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
         view
         returns (uint256, uint256)
     {
-        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(latestAndBase[token]);
+        (uint256 latestBorrow, uint256 base) = (latestAndBase[token] >> 128, latestAndBase[token] % (1 << 128));
         // Increase base due to new borrow and then
         // apply time based discount: after halvingTime it is divided by 2
-        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - loan).safeMulDiv(
-            halvingTime[token],
-            block.timestamp - latestBorrow + halvingTime[token]
-        );
+        uint256 newBase = ((halvingTime[token] * (base * freeLiquidity)) / (freeLiquidity - loan)) /
+            (block.timestamp - latestBorrow + halvingTime[token]);
         uint256 spread = riskSpreadFromMargin(token, loan, margin);
         return (newBase, spread);
     }
@@ -70,15 +64,18 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
             freeLiquidity
         );
         // Reset new base and latest borrow, force IR stays below resolution
-        if (newBase >= GeneralMath.RESOLUTION) revert InterestRateOverflow();
-        latestAndBase[loan.token] = GeneralMath.packInUint(block.timestamp, newBase);
+        if (newBase >= 1e18) revert InterestRateOverflow();
+        latestAndBase[loan.token] = (block.timestamp << 128) + newBase;
 
         return (newBase, spread);
     }
 
     function _checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) internal override(BaseRiskModel) {
         (uint256 baseRate, uint256 spread) = _updateBase(loan, freeLiquidity);
-        (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
+        (uint256 requestedIr, uint256 requestedSpread) = (
+            loan.interestAndSpread >> 128,
+            loan.interestAndSpread % (1 << 128)
+        );
         if (requestedIr < baseRate || requestedSpread < spread) revert AboveRiskThreshold();
     }
 }

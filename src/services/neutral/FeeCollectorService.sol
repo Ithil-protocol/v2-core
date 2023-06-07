@@ -5,7 +5,6 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IVault } from "../../interfaces/IVault.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 import { Service } from "../Service.sol";
 import { VeIthil } from "../../VeIthil.sol";
@@ -14,7 +13,6 @@ import { VeIthil } from "../../VeIthil.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
 contract FeeCollectorService is Service {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
     // Percentage of fees which can be harvested. Only locked fees can be harvested
@@ -36,6 +34,7 @@ contract FeeCollectorService is Service {
     event TokenWeightWasChanged(address indexed token, uint256 weight);
 
     error Throttled();
+    error InsufficientProfits();
     error BeforeExpiry();
     error ZeroAmount();
     error UnsupportedToken();
@@ -86,21 +85,19 @@ contract FeeCollectorService is Service {
         // Update collateral using ERC4626 formula
         agreement.loans[0].amount = totalLoans == 0
             ? agreement.loans[0].margin
-            : agreement.loans[0].margin.safeMulDiv(totalLoans, totalAssets());
+            : (agreement.loans[0].margin * totalLoans) / totalAssets();
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
         if (monthsLocked > 11) revert MaxLockExceeded();
-        agreement.loans[0].amount = agreement.loans[0].amount.safeMulDiv(
-            rewards[monthsLocked] * weights[agreement.loans[0].token],
-            1e36
-        );
+        agreement.loans[0].amount =
+            (agreement.loans[0].amount * (rewards[monthsLocked] * weights[agreement.loans[0].token])) /
+            1e36;
         // Total loans is updated
         totalLoans += agreement.loans[0].amount;
         // Collateral is equal to the amount of veTokens to mint
-        agreement.collaterals[0].amount = agreement.loans[0].margin.safeMulDiv(
-            rewards[monthsLocked] * weights[agreement.loans[0].token],
-            1e36
-        );
+        agreement.collaterals[0].amount =
+            (agreement.loans[0].margin * (rewards[monthsLocked] * weights[agreement.loans[0].token])) /
+            1e36;
         veToken.mint(msg.sender, agreement.collaterals[0].amount);
         // register locktime
         locktimes[id] = monthsLocked + 1;
@@ -113,13 +110,14 @@ contract FeeCollectorService is Service {
         override
         expired(tokenID)
     {
-        uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.loans[0].amount, totalLoans);
+        uint256 totalWithdraw = (totalAssets() * agreement.loans[0].amount) / totalLoans;
         totalLoans -= agreement.loans[0].amount;
         veToken.burn(msg.sender, agreement.collaterals[0].amount);
         // give back Ithil tokens
         IERC20(agreement.loans[0].token).safeTransfer(msg.sender, agreement.loans[0].margin);
         // Transfer weth
-        weth.safeTransfer(msg.sender, totalWithdraw.positiveSub(agreement.collaterals[0].amount));
+        if (totalWithdraw > agreement.collaterals[0].amount)
+            weth.safeTransfer(msg.sender, totalWithdraw - agreement.collaterals[0].amount);
     }
 
     function withdrawFees(uint256 tokenId) external returns (uint256) {
@@ -127,16 +125,19 @@ contract FeeCollectorService is Service {
         Agreement memory agreement = agreements[tokenId];
         // This is the total withdrawable, consisting of virtualIthil + weth
         // Thus it has no physical meaning: it's an auxiliary variable
-        uint256 totalWithdraw = totalAssets().safeMulDiv(agreement.loans[0].amount, totalLoans);
+        uint256 totalWithdraw = (totalAssets() * agreement.loans[0].amount) / totalLoans;
         // By subtracting the Ithil staked we get only the weth part: this is the weth the user is entitled to
-        uint256 toTransfer = totalWithdraw.positiveSub(agreement.collaterals[0].amount);
-        // Update collateral and totalCollateral
-        // With the new state, we will have totalAssets * collateral / totalCollateral = margin
-        // Thus, the user cannot withdraw again (unless other fees are generated)
-        uint256 toSubtract = agreement.loans[0].amount.safeMulDiv(toTransfer, totalWithdraw);
-        agreement.loans[0].amount -= toSubtract;
-        totalLoans -= toSubtract;
-        weth.safeTransfer(msg.sender, toTransfer);
+        uint256 toTransfer;
+        if (totalWithdraw > agreement.collaterals[0].amount) {
+            toTransfer = totalWithdraw - agreement.collaterals[0].amount;
+            // Update collateral and totalCollateral
+            // With the new state, we will have totalAssets * collateral / totalCollateral = margin
+            // Thus, the user cannot withdraw again (unless other fees are generated)
+            uint256 toSubtract = (agreement.loans[0].amount * toTransfer) / totalWithdraw;
+            agreement.loans[0].amount -= toSubtract;
+            totalLoans -= toSubtract;
+            weth.safeTransfer(msg.sender, toTransfer);
+        }
 
         return toTransfer;
     }
@@ -145,10 +146,10 @@ contract FeeCollectorService is Service {
         IVault vault = IVault(manager.vaults(token));
         (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getFeeStatus();
         if (latestRepay < latestHarvest[token]) revert Throttled();
+        if (profits <= losses) revert InsufficientProfits();
         latestHarvest[token] = block.timestamp;
 
-        uint256 feesToHarvest = (profits.positiveSub(losses)).safeMulDiv(feePercentage, GeneralMath.RESOLUTION);
-        // todo: what is that "maxAmountIn"? For now it's uint256(-1) to avoid reversals
+        uint256 feesToHarvest = ((profits - losses) * feePercentage) / 1e18;
         manager.borrow(token, feesToHarvest, 0, address(this));
         // todo: reward harvester
     }
