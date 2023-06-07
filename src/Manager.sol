@@ -2,16 +2,16 @@
 pragma solidity =0.8.17;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
-import { GeneralMath } from "./libraries/GeneralMath.sol";
 import { Vault } from "./Vault.sol";
 
 contract Manager is IManager, Ownable {
-    using GeneralMath for uint256;
-
+    using Math for uint256;
+    uint256 internal constant RESOLUTION = 1e18;
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
     // service => token => caps
@@ -74,9 +74,9 @@ contract Manager is IManager, Ownable {
         uint256 investmentCap = caps[msg.sender][token].cap;
         caps[msg.sender][token].exposure += loan;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
-        uint256 investedPortion = GeneralMath.RESOLUTION.safeMulDiv(
+        uint256 investedPortion = RESOLUTION.mulDiv(
             caps[msg.sender][token].exposure,
-            freeLiquidity.safeAdd(netLoans)
+            (freeLiquidity - amount) + netLoans
         );
         if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);
@@ -89,7 +89,8 @@ contract Manager is IManager, Ownable {
         supported(token)
         vaultExists(token)
     {
-        caps[msg.sender][token].exposure = caps[msg.sender][token].exposure.positiveSub(debt);
+        uint256 exposure = caps[msg.sender][token].exposure;
+        caps[msg.sender][token].exposure = exposure < debt ? 0 : exposure - debt;
         IVault(vaults[token]).repay(amount, debt, repayer);
     }
 }

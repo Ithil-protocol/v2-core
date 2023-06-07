@@ -143,7 +143,7 @@ contract FeeCollectorService is Service {
 
     function _harvestFees(address token) internal {
         IVault vault = IVault(manager.vaults(token));
-        (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getStatus();
+        (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getFeeStatus();
         if (latestRepay < latestHarvest[token]) revert Throttled();
         latestHarvest[token] = block.timestamp;
 

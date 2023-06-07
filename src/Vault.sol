@@ -1,25 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.17;
 
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import { GeneralMath } from "./libraries/GeneralMath.sol";
 import { IVault } from "./interfaces/IVault.sol";
 
 contract Vault is IVault, ERC4626, ERC20Permit {
-    using GeneralMath for uint256;
-    using GeneralMath for int256;
+    using Math for uint256;
     using SafeERC20 for IERC20;
 
     address public immutable manager;
     uint256 public immutable override creationTime;
     uint256 public override feeUnlockTime;
     uint256 public override netLoans;
-    // TODO: gas check the possibility of making them internal
     uint256 public override latestRepay;
     uint256 public override currentProfits;
     uint256 public override currentLosses;
@@ -59,8 +56,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
     }
 
-    // TODO: this is not the complete status, but rather the fees status: consider changing names
-    function getStatus() external view override returns (uint256, uint256, uint256) {
+    function getFeeStatus() external view override returns (uint256, uint256, uint256) {
         return (_calculateLockedProfits(), _calculateLockedLosses(), latestRepay);
     }
 
@@ -72,7 +68,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // totalAssets() must adjust so that maxWithdraw() is an invariant for all functions
     // As profits unlock, assets increase or decrease
     function totalAssets() public view override(ERC4626, IERC4626) returns (uint256) {
-        return (super.totalAssets() - _calculateLockedProfits()).safeAdd(netLoans + _calculateLockedLosses());
+        return (super.totalAssets() - _calculateLockedProfits()) + netLoans + _calculateLockedLosses();
     }
 
     // Free liquidity available to withdraw or borrow
@@ -92,12 +88,17 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxRedeem(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
-        // TODO: this is unnecessarily gas expensive: it calls totalAssets() three times
-        // calling it once is enough: revisit calculations
         uint256 maxRedeemCache = balanceOf(owner);
-        uint256 freeLiquidityCache = freeLiquidity();
-        uint256 assets = convertToAssets(maxRedeemCache);
-        if (assets == freeLiquidityCache && assets > 0) maxRedeemCache = convertToShares(assets - 1);
+        uint256 freeLiquidityCache = super.totalAssets() - _calculateLockedProfits();
+        uint256 totalAssetsCache = freeLiquidityCache + netLoans + _calculateLockedLosses();
+        uint256 supply = totalSupply();
+        // convertToAssets, gas efficient
+        uint256 assets = (supply == 0) ? maxRedeemCache : maxRedeemCache.mulDiv(totalAssetsCache, supply);
+
+        // convertToShares, gas efficient
+        if (assets == freeLiquidityCache && assets > 0) {
+            maxRedeemCache = (assets == 1 || supply == 0) ? assets - 1 : (assets - 1).mulDiv(supply, totalAssetsCache);
+        }
 
         return maxRedeemCache;
     }
@@ -122,10 +123,15 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
         // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
 
-        // TODO: this calls totalAssets() twice, doubling its gas cost: reduce it by calling it once
         uint256 freeLiq = freeLiquidity();
         if (assets >= freeLiq) revert InsufficientLiquidity();
-        uint256 shares = super.withdraw(assets, receiver, owner);
+
+        // super.withdraw but gas efficient
+        uint256 supply = totalSupply();
+        uint256 shares = (assets == 0 || supply == 0)
+            ? assets
+            : assets.mulDiv(supply, freeLiq + netLoans + _calculateLockedLosses());
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
 
@@ -138,11 +144,14 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         override(ERC4626, IERC4626)
         returns (uint256)
     {
-        // TODO: this calls totalAssets() three times, doubling its gas cost: reduce it by calling it once
         uint256 freeLiq = freeLiquidity();
-        uint256 assets = previewRedeem(shares);
+        uint256 totalAssetsCache = freeLiq + netLoans + _calculateLockedLosses();
+        // preview redeem
+        uint256 supply = totalSupply();
+        uint256 assets = (supply == 0) ? shares : shares.mulDiv(totalAssetsCache, supply);
         if (assets >= freeLiq) revert InsufficientLiquidity();
-        super.redeem(shares, receiver, owner);
+        // redeem
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
 
@@ -157,23 +166,19 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         onlyOwner
         returns (uint256, uint256)
     {
+        // We do not allow loans higher than the assets: borrowing cannot generate profits
+        // This prevents overflow in totalAssets() and netLoans
+        // And makes totalAssets() a sub-invariant of this function
+        if (loan > assets) revert LoanHigherThanAssetsInBorrow();
         uint256 freeLiq = freeLiquidity();
         // At the very worst case, the borrower repays nothing
         // In this case we need to avoid division by zero by putting >= rather than >
+        // This is required as per ERC4626 documentation to have a "healthy vault"
         if (assets >= freeLiq) revert InsufficientFreeLiquidity();
-        netLoans = netLoans.safeAdd(loan);
 
-        // In general, this function can cause a profit or a loss, therefore we need to register it
-        // Since assets are transferred, this is always less than totalSupply() so no overflow
-        if (assets > loan) {
-            currentProfits = _calculateLockedProfits();
-            currentLosses = _calculateLockedLosses() + (assets - loan);
-        }
-        // Since loan is arbitrary, this can potentially overflow, thus we use safe math
-        else {
-            currentProfits = _calculateLockedProfits().safeAdd(loan - assets);
-            currentLosses = _calculateLockedLosses();
-        }
+        netLoans += loan;
+        currentProfits = _calculateLockedProfits();
+        currentLosses = _calculateLockedLosses() + (assets - loan);
         latestRepay = block.timestamp;
 
         IERC20(asset()).safeTransfer(receiver, assets);
@@ -219,12 +224,20 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Starts from currentProfits and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedProfits() internal view returns (uint256) {
-        return currentProfits.safeMulDiv(feeUnlockTime.positiveSub(block.timestamp - latestRepay), feeUnlockTime);
+        uint256 unlockTime = feeUnlockTime;
+        return
+            block.timestamp - latestRepay < unlockTime
+                ? currentProfits.mulDiv(unlockTime - (block.timestamp - latestRepay), unlockTime)
+                : 0;
     }
 
     // Starts from currentLosses and go linearly to 0
     // It is zero when block.timestamp-latestRepay > feeUnlockTime
     function _calculateLockedLosses() internal view returns (uint256) {
-        return currentLosses.safeMulDiv(feeUnlockTime.positiveSub(block.timestamp - latestRepay), feeUnlockTime);
+        uint256 unlockTime = feeUnlockTime;
+        return
+            block.timestamp - latestRepay < unlockTime
+                ? currentLosses.mulDiv(unlockTime - (block.timestamp - latestRepay), unlockTime)
+                : 0;
     }
 }

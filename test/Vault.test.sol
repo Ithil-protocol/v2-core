@@ -517,6 +517,7 @@ contract VaultTest is Test {
 
         vm.assume(borrowed < vault.freeLiquidity());
         uint256 initialBalance = token.balanceOf(receiver);
+        loan = borrowed == 0 ? 0 : loan % borrowed;
         vault.borrow(borrowed, loan, receiver);
 
         assertTrue(token.balanceOf(receiver) == initialBalance + borrowed);
@@ -527,8 +528,8 @@ contract VaultTest is Test {
             balanceOf - borrowed,
             netLoans.safeAdd(loan),
             latestRepay,
-            currentProfits.safeAdd(borrowed < loan ? loan - borrowed : 0),
-            currentLosses + (borrowed > loan ? borrowed - loan : 0)
+            currentProfits,
+            currentLosses + (borrowed - loan)
         );
     }
 
@@ -556,14 +557,7 @@ contract VaultTest is Test {
 
         uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
-        uint256 lockedProfits = currentProfits.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
-        uint256 lockedLosses = currentLosses.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
+        (uint256 lockedProfits, uint256 lockedLosses, ) = vault.getFeeStatus();
 
         if (repaid > token.balanceOf(repayer)) {
             vm.assume(repaid - token.balanceOf(repayer) <= token.balanceOf(tokenSink));

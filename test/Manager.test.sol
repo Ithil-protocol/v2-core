@@ -6,7 +6,7 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { Test } from "forge-std/Test.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IManager, Manager } from "../src/Manager.sol";
-import { GeneralMath } from "../src/libraries/GeneralMath.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @dev Manager native state:
 /// bytes32 public constant override salt = "ithil";
@@ -17,7 +17,7 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// --> see Vault test
 
 contract ManagerTest is Test {
-    using GeneralMath for uint256;
+    using Math for uint256;
 
     Manager internal immutable manager;
     ERC20PresetMinterPauser internal immutable firstToken;
@@ -83,7 +83,7 @@ contract ManagerTest is Test {
         vm.stopPrank();
 
         // Take only meaningful caps
-        cap = (cap % GeneralMath.RESOLUTION) + 1;
+        cap = (cap % 1e18) + 1;
 
         manager.setCap(debitServiceOne, address(firstToken), cap);
         (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
@@ -100,7 +100,7 @@ contract ManagerTest is Test {
 
     function testFeeUnlockTime(uint256 previousDeposit, uint256 debitCap, uint256 feeUnlockTime) public {
         _setupArbitraryState(previousDeposit, debitCap);
-        feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
+        feeUnlockTime = Math.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
         assertTrue(IVault(manager.vaults(address(firstToken))).feeUnlockTime() == feeUnlockTime);
     }
@@ -123,17 +123,21 @@ contract ManagerTest is Test {
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
         (, uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
 
+        // Avoid revert due to insufficient free liquidity
+        borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
+
+        // Loan must always be less than the actual borrowed quantity
+        loan = loan % (borrowed + 1);
+
         uint256 investedPortion = freeLiquidity == 0
-            ? GeneralMath.RESOLUTION
-            : GeneralMath.RESOLUTION.safeMulDiv(
-                currentExposure + loan,
-                freeLiquidity.safeAdd(IVault(vaultAddress).netLoans())
+            ? 1e18
+            : uint256(1e18).mulDiv(
+                (currentExposure + loan),
+                (freeLiquidity - borrowed) + (IVault(vaultAddress).netLoans() + loan)
             );
         if (investedPortion > debitCap) {
             manager.setCap(debitServiceOne, address(firstToken), investedPortion);
         }
-        // Avoid revert due to insufficient free liquidity
-        borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
             manager.borrow(address(firstToken), borrowed, loan, anyAddress);
