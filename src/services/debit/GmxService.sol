@@ -29,6 +29,7 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
     IUsdgVault public immutable usdgVault;
 
     error InvalidToken();
+    error ZeroGlpSupply();
 
     constructor(address _manager, address _router, address _routerV2, uint256 _deadline)
         Service("GmxService", "GMX-SERVICE", _manager, _deadline)
@@ -77,6 +78,7 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
         uint256 aumInUsdg = glpManager.getAumInUsdg(false);
         uint256 glpSupply = glp.totalSupply();
         // agreement.collaterals[0].amount == GLP amount
+        if (glpSupply == 0) revert ZeroGlpSupply();
         uint256 usdgAmount = (agreement.collaterals[0].amount * aumInUsdg) / glpSupply;
 
         uint256 usdgDelta = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount) +

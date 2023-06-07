@@ -8,7 +8,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { FeeCollectorService } from "../../src/services/neutral/FeeCollectorService.sol";
 import { Service } from "../../src/services/Service.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { Ithil } from "../../src/Ithil.sol";
 import { VeIthil } from "../../src/VeIthil.sol";

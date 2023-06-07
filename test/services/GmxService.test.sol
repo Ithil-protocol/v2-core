@@ -7,7 +7,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { GmxService } from "../../src/services/debit/GmxService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 

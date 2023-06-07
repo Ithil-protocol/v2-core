@@ -5,11 +5,16 @@ pragma solidity =0.8.17;
 /// @author   Ithil
 /// @notice   Manages lending and borrowing from and to the ERC4626 vaults
 interface IManager {
+    struct CapsAndExposures {
+        uint256 cap;
+        uint256 exposure;
+    }
+
     function salt() external pure returns (bytes32);
 
     function vaults(address token) external view returns (address);
 
-    function caps(address service, address token) external view returns (uint256);
+    function caps(address service, address token) external view returns (uint256, uint256);
 
     function create(address token) external returns (address);
 
@@ -17,9 +22,7 @@ interface IManager {
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external;
 
-    function borrow(address token, uint256 amount, uint256 loan, uint256 currentExposure, address receiver)
-        external
-        returns (uint256, uint256);
+    function borrow(address token, uint256 amount, uint256 loan, address receiver) external returns (uint256, uint256);
 
     function repay(address token, uint256 amount, uint256 debt, address repayer) external;
 

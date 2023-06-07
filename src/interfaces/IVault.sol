@@ -28,7 +28,7 @@ interface IVault is IERC4626 {
 
     function repay(uint256 assets, uint256 debt, address repayer) external;
 
-    function getStatus() external view returns (uint256, uint256, uint256);
+    function getFeeStatus() external view returns (uint256, uint256, uint256);
 
     // Events
     event DegradationCoefficientWasUpdated(uint256 degradationCoefficient);
@@ -50,4 +50,5 @@ interface IVault is IERC4626 {
     error BurnThresholdExceeded();
     error FeeUnlockTimeOutOfRange();
     error RestrictedToOwner();
+    error LoanHigherThanAssetsInBorrow();
 }

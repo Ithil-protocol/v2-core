@@ -3,7 +3,6 @@ pragma solidity =0.8.17;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CreditService } from "../CreditService.sol";
 import { Service } from "../Service.sol";
 import { IService } from "../../interfaces/IService.sol";
@@ -14,7 +13,6 @@ import { Service } from "../Service.sol";
 /// @author   Ithil
 /// @notice   A service to obtain a call option on ITHIL by boosting
 contract SeniorCallOption is CreditService {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     // It would be very hard to make a multi-token call option and ensuring consistency between prices
     // Therefore we make a single-token call option with a dutch auction price scheme
@@ -54,6 +52,7 @@ contract SeniorCallOption is CreditService {
         uint256 _halvingTime,
         address _underlying
     ) Service("Ithil Senior Call Option", "SCALL", _manager, _deadline) {
+        require(_initialPrice > 0, "Zero initial price");
         initialPrice = _initialPrice;
         treasury = _treasury;
         underlying = IERC20(_underlying);
@@ -84,10 +83,8 @@ contract SeniorCallOption is CreditService {
         if (monthsLocked > 11) revert MaxLockExceeded();
 
         // The amount bought if no price update were applied
-        uint256 virtualBoughtAmount = agreement.loans[0].amount.safeMulDiv(_precision, currentPrice).safeMulDiv(
-            _rewards[monthsLocked],
-            1e18
-        );
+        uint256 virtualBoughtAmount = (((agreement.loans[0].amount * _precision) / currentPrice) *
+            _rewards[monthsLocked]) / 1e18;
         // Update current price based on the current balance and the collateral amount
         // One cannot purchase more than the total allocation
         if (totalAllocation <= virtualBoughtAmount) revert MaxPurchaseExceeded();
@@ -97,33 +94,32 @@ contract SeniorCallOption is CreditService {
         // Total price increases as a function of the remaining allocation in inverse proportionality
         // E.g. if 50% of the entire allocation is bought, the current price gets multiplied by 2
         // if 10% of the allocation is bought, remaining is 9/10 so price gets multiplied by 10/9, etc...
-        latestSpread = currentPrice.safeMulDiv(totalAllocation, totalAllocation - virtualBoughtAmount) - initialPrice;
+        // notice that the denominator is positive since totalAllocation > virtualBoughtAmount
+        latestSpread = (currentPrice * totalAllocation) / (totalAllocation - virtualBoughtAmount) - initialPrice;
 
         // We register the amount of ITHIL to be redeemed as collateral
         // The user obtains a discount based on how many months the position is locked
-        agreement.collaterals[0].amount = agreement
-            .loans[0]
-            .amount
-            .safeMulDiv(_precision, initialPrice + latestSpread)
-            .safeMulDiv(_rewards[monthsLocked], 1e18)
-            .min(totalAllocation);
+        agreement.collaterals[0].amount =
+            (((agreement.loans[0].amount * _precision) / (initialPrice + latestSpread)) * _rewards[monthsLocked]) /
+            1e18;
 
         if (agreement.collaterals[0].amount == 0) revert ZeroCollateral();
 
         // update allocation: since we cannot know how much will be called, we subtract max
+        // since collateral <= totalAllocation, this subtraction does not underflow
         totalAllocation -= agreement.collaterals[0].amount;
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
         // The portion of the loan amount we want to call
         uint256 calledPortion = abi.decode(data, (uint256));
-        if (calledPortion > GeneralMath.RESOLUTION) revert InvalidCalledPortion();
+        if (calledPortion > 1e18) revert InvalidCalledPortion();
 
         // gas savings
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
         uint256 redeemable = vault.convertToAssets(agreement.collaterals[0].amount);
         uint256 toTransfer = dueAmount(agreement, data);
-        uint256 toCall = agreement.collaterals[0].amount.safeMulDiv(calledPortion, GeneralMath.RESOLUTION);
+        uint256 toCall = (agreement.collaterals[0].amount * calledPortion) / 1e18;
         // The amount of ithil not called can be added back to the total allocation
         totalAllocation += (agreement.collaterals[0].amount - toCall);
         if (toTransfer > redeemable) {
@@ -133,8 +129,7 @@ contract SeniorCallOption is CreditService {
             if (freeLiquidity > 0) {
                 manager.borrow(
                     agreement.loans[0].token,
-                    (toTransfer - redeemable).min(freeLiquidity - 1),
-                    0,
+                    toTransfer - redeemable > freeLiquidity - 1 ? freeLiquidity - 1 : toTransfer - redeemable,
                     0,
                     ownerOf(tokenID)
                 );
@@ -146,7 +141,7 @@ contract SeniorCallOption is CreditService {
     }
 
     function _currentPrice() internal view returns (uint256) {
-        return initialPrice + latestSpread.safeMulDiv(halvingTime, block.timestamp - latestOpen + halvingTime);
+        return initialPrice + (latestSpread * halvingTime) / (block.timestamp - latestOpen + halvingTime);
     }
 
     function dueAmount(Agreement memory agreement, bytes memory data) public view virtual override returns (uint256) {
@@ -154,7 +149,7 @@ contract SeniorCallOption is CreditService {
         uint256 calledPortion = abi.decode(data, (uint256));
 
         // The non-called portion is capital to give back to the user
-        return agreement.loans[0].amount.safeMulDiv(GeneralMath.RESOLUTION - calledPortion, GeneralMath.RESOLUTION);
+        return (agreement.loans[0].amount * (1e18 - calledPortion)) / 1e18;
     }
 
     function allocateIthil(uint256 amount) external onlyOwner {

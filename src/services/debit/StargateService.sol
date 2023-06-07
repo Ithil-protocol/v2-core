@@ -38,6 +38,9 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     error InexistentPool();
     error AmountTooLow();
     error InsufficientAmountOut();
+    error ZeroConvertRate();
+    error ZeroTotalLiquidity();
+    error ZeroTotalSupply();
 
     constructor(
         address _manager,
@@ -144,16 +147,22 @@ contract StargateService is Whitelisted, ConstantRateModel, DebitService {
     function _expectedMintedTokens(uint256 amount, address lpToken) internal view returns (uint256 expected) {
         IStargatePool pool = IStargatePool(lpToken);
 
-        uint256 amountSD = amount / pool.convertRate();
+        (uint256 convertRate, uint256 totalLiquidity) = (pool.convertRate(), pool.totalLiquidity());
+        if (convertRate == 0) revert ZeroConvertRate();
+        if (totalLiquidity == 0) revert ZeroTotalLiquidity();
+        uint256 amountSD = amount / convertRate;
         uint256 mintFeeSD = (amountSD * pool.mintFeeBP()) / 10000;
+        // The following will not underflow if mintFeeBP <= 10000;
         amountSD = amountSD - mintFeeSD;
-        expected = (amountSD * pool.totalSupply()) / pool.totalLiquidity();
+        expected = (amountSD * pool.totalSupply()) / totalLiquidity;
     }
 
     function _expectedObtainedTokens(uint256 amount, address lpToken) internal view returns (uint256 expected) {
         IStargatePool pool = IStargatePool(lpToken);
 
-        uint256 amountSD = (amount * pool.totalLiquidity()) / pool.totalSupply();
+        uint256 totalSupply = pool.totalSupply();
+        if (totalSupply == 0) revert ZeroTotalSupply();
+        uint256 amountSD = (amount * pool.totalLiquidity()) / totalSupply;
         expected = amountSD * pool.convertRate();
     }
 }

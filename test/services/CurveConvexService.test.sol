@@ -10,7 +10,7 @@ import { IConvexBooster } from "../../src/interfaces/external/convex/IConvexBoos
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { CurveConvexService } from "../../src/services/debit/CurveConvexService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
@@ -193,7 +193,6 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             uint256 createdAt,
             IService.Status status
         ) = service.getAgreement(0);
-
         IService.Agreement memory agreement = IService.Agreement(loan, collateral, createdAt, status);
 
         uint256[2] memory minAmountsOut = [minAmount1, minAmount2];
