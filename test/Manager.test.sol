@@ -117,6 +117,19 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
+    function testLockVault() public {
+        manager.toggleVaultLock(address(firstToken));
+        address vaultAddress = manager.vaults(address(firstToken));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("VaultPaused()"))));
+        IVault(vaultAddress).deposit(1e18, anyAddress);
+
+        manager.setCap(debitServiceOne, address(firstToken), 1e18);
+        vm.startPrank(debitServiceOne);
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("VaultPaused()"))));
+        manager.borrow(address(firstToken), 1e18, 0, anyAddress);
+        vm.stopPrank();
+    }
+
     function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 borrowed, uint256 loan) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
