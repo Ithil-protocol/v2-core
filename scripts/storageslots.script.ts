@@ -1,4 +1,4 @@
-import { findStorageSlot } from './helpers'
+import { findStorageSlot } from './contract-helpers'
 import { tokenMap } from './tokens'
 
 const ArbitrumGateway = '0x096760F208390250649E3e8763348E783AEF5562'

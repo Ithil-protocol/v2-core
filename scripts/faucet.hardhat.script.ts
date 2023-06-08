@@ -1,7 +1,7 @@
 import { type BigNumber } from '@ethersproject/bignumber'
 import { ethers } from 'hardhat'
 
-import { fund, simpleFund } from './helpers'
+import { fund, simpleFund } from './contract-helpers'
 import { tokenMap } from './tokens'
 import { type Address } from './types'
 
