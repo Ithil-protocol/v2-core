@@ -2,8 +2,9 @@ import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-toolbox'
 import { config as dotenvConfig } from 'dotenv'
 import { statSync } from 'fs'
-import 'hardhat-ethernal'
-import { type HardhatUserConfig } from 'hardhat/types'
+import { type HardhatUserConfig, type NetworkUserConfig } from 'hardhat/types'
+
+import { accountsPrivates } from './scripts/address-list'
 
 dotenvConfig({ path: '.env.hardhat' })
 
@@ -17,7 +18,8 @@ const tenderlyNetwork = {} as any
 if (TENDERLY_URL != null && TENDERLY_URL.length > 10) {
   tenderlyNetwork.tenderly = {
     url: TENDERLY_URL,
-  }
+    accounts: accountsPrivates,
+  } as NetworkUserConfig
 }
 
 const config: HardhatUserConfig = {
@@ -36,6 +38,10 @@ const config: HardhatUserConfig = {
       forking: {
         url: 'https://arb1.arbitrum.io/rpc',
       },
+    },
+    tenderly: {
+      url: TENDERLY_URL,
+      accounts: ['0x'],
     },
     ...tenderlyNetwork,
   },

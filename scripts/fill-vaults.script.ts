@@ -43,11 +43,18 @@ const main = async () => {
   const erc20ApproveAbi = ['function approve(address,uint256)']
 
   await Promise.all(
-    depositorList.map(async (depositor) => {
-      const usdc = new ethers.Contract(tokenMap.USDC.tokenAddress, erc20ApproveAbi, ethers.provider)
-      const usdt = new ethers.Contract(tokenMap.USDT.tokenAddress, erc20ApproveAbi, ethers.provider)
-      const weth = new ethers.Contract(tokenMap.WETH.tokenAddress, erc20ApproveAbi, ethers.provider)
-      const wbtc = new ethers.Contract(tokenMap.WBTC.tokenAddress, erc20ApproveAbi, ethers.provider)
+    depositorList.map(async ({ address }) => {
+      const signer = ethers.provider.getSigner(address)
+
+      const usdc = new ethers.Contract(tokenMap.USDC.tokenAddress, erc20ApproveAbi, signer)
+      const usdt = new ethers.Contract(tokenMap.USDT.tokenAddress, erc20ApproveAbi, signer)
+      const weth = new ethers.Contract(tokenMap.WETH.tokenAddress, erc20ApproveAbi, signer)
+      const wbtc = new ethers.Contract(tokenMap.WBTC.tokenAddress, erc20ApproveAbi, signer)
+      // customized vaults with specific signer
+      const usdcVaultConnected = usdcVault.connect(signer)
+      const usdtVaultConnected = usdtVault.connect(signer)
+      const wethVaultConnected = wethVault.connect(signer)
+      const btcVaultConnected = btcVault.connect(signer)
 
       const usdcOneUnit = 10n ** BigInt(tokenMap.USDC.decimals)
       const usdtOneUnit = 10n ** BigInt(tokenMap.USDT.decimals)
@@ -61,11 +68,13 @@ const main = async () => {
         wbtc.approve(btcVault.address, 4n * wbtcOneUnit),
       ])
 
-      return await Promise.all([
-        usdcVault.deposit(91000n * usdcOneUnit, depositor),
-        usdtVault.deposit(78000n * usdtOneUnit, depositor),
-        wethVault.deposit(9n * wethOneUnit, depositor),
-        btcVault.deposit(4n * wbtcOneUnit, depositor),
+      console.log('completed the approvals for depositor: ', address)
+
+      await Promise.all([
+        usdcVaultConnected.deposit(91000n * usdcOneUnit, address),
+        usdtVaultConnected.deposit(78000n * usdtOneUnit, address),
+        wethVaultConnected.deposit(9n * wethOneUnit, address),
+        btcVaultConnected.deposit(4n * wbtcOneUnit, address),
       ])
     }),
   )
