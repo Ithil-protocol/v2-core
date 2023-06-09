@@ -58,6 +58,10 @@ contract Manager is IManager, Ownable {
         IVault(vaults[vaultToken]).sweep(to, spuriousToken);
     }
 
+    function toggleVaultLock(address vaultToken) external onlyOwner {
+        IVault(vaults[vaultToken]).toggleLock();
+    }
+
     /// @inheritdoc IManager
     function borrow(address token, uint256 amount, uint256 loan, address receiver)
         external
