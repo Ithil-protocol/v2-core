@@ -1,3 +1,4 @@
+import { BigNumber } from '@ethersproject/bignumber'
 import { config as dotenvConfig } from 'dotenv'
 import { readFileSync, statSync } from 'fs'
 import { ethers } from 'hardhat'
@@ -27,8 +28,8 @@ const main = async () => {
   // load liquidity to vaults
   const manager = await ethers.getContractAt('Manager', contracts.manager)
   const [usdcVaultAddress, usdtVaultAddress, wethVaultAddress, btcVaultAddress] = await Promise.all([
-    manager.vaults(tokenMap.USDT.tokenAddress),
     manager.vaults(tokenMap.USDC.tokenAddress),
+    manager.vaults(tokenMap.USDT.tokenAddress),
     manager.vaults(tokenMap.WETH.tokenAddress),
     manager.vaults(tokenMap.WBTC.tokenAddress),
   ])
@@ -43,13 +44,14 @@ const main = async () => {
   const erc20ApproveAbi = ['function approve(address,uint256)']
 
   await Promise.all(
-    depositorList.map(async ({ address }) => {
+    depositorList.map(async (address) => {
       const signer = ethers.provider.getSigner(address)
 
       const usdc = new ethers.Contract(tokenMap.USDC.tokenAddress, erc20ApproveAbi, signer)
       const usdt = new ethers.Contract(tokenMap.USDT.tokenAddress, erc20ApproveAbi, signer)
       const weth = new ethers.Contract(tokenMap.WETH.tokenAddress, erc20ApproveAbi, signer)
       const wbtc = new ethers.Contract(tokenMap.WBTC.tokenAddress, erc20ApproveAbi, signer)
+
       // customized vaults with specific signer
       const usdcVaultConnected = usdcVault.connect(signer)
       const usdtVaultConnected = usdtVault.connect(signer)
@@ -61,23 +63,33 @@ const main = async () => {
       const wethOneUnit = 10n ** BigInt(tokenMap.WETH.decimals)
       const wbtcOneUnit = 10n ** BigInt(tokenMap.WBTC.decimals)
 
+      const usdcAmount = BigNumber.from(1000n * usdcOneUnit)
+      const usdtAmount = BigNumber.from(78000n * usdtOneUnit)
+      const wethAmount = BigNumber.from(9n * wethOneUnit)
+      const wbtcAmount = BigNumber.from(4n * wbtcOneUnit)
+
       await Promise.all([
-        usdc.approve(usdcVault.address, 91000n * usdcOneUnit),
-        usdt.approve(usdtVault.address, 78000n * usdtOneUnit),
+        usdc.approve(usdcVault.address, usdcAmount),
+        usdt.approve(usdtVault.address, usdtAmount),
         weth.approve(wethVault.address, 9n * wethOneUnit),
         wbtc.approve(btcVault.address, 4n * wbtcOneUnit),
       ])
 
-      console.log('completed the approvals for depositor: ', address)
-
       await Promise.all([
-        usdcVaultConnected.deposit(91000n * usdcOneUnit, address),
-        usdtVaultConnected.deposit(78000n * usdtOneUnit, address),
-        wethVaultConnected.deposit(9n * wethOneUnit, address),
-        btcVaultConnected.deposit(4n * wbtcOneUnit, address),
+        usdcVaultConnected.deposit(usdcAmount, address),
+        usdtVaultConnected.deposit(usdtAmount, address),
+        wethVaultConnected.deposit(wethAmount, address),
+        btcVaultConnected.deposit(wbtcAmount, address),
       ])
     }),
   )
+
+  console.log(`Filled vaults with:
+  - USDC: ${91 * depositorList.length}k
+  - USDT: ${78 * depositorList.length}k
+  - WETH: ${9 * depositorList.length}
+  - WBTC: ${4 * depositorList.length}
+`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

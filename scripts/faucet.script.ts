@@ -133,10 +133,10 @@ const main = async () => {
 
   await Promise.all(
     faucetList.map(async (address) => {
+      await mintWETH(signerAddress, address, 20n)
       await genericMint(address, tokenMap.USDC, 100000n)
       await genericMint(address, tokenMap.USDT, 100000n)
       await genericMint(address, tokenMap.WBTC, 10n)
-      await mintWETH(signerAddress, address, 20n)
     }),
   )
 }
