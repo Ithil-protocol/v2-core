@@ -120,12 +120,12 @@ contract ManagerTest is Test {
     function testLockVault() public {
         manager.toggleVaultLock(address(firstToken));
         address vaultAddress = manager.vaults(address(firstToken));
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("VaultPaused()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Locked()"))));
         IVault(vaultAddress).deposit(1e18, anyAddress);
 
         manager.setCap(debitServiceOne, address(firstToken), 1e18);
         vm.startPrank(debitServiceOne);
-        vm.expectRevert(bytes4(keccak256(abi.encodePacked("VaultPaused()"))));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Locked()"))));
         manager.borrow(address(firstToken), 1e18, 0, anyAddress);
         vm.stopPrank();
     }

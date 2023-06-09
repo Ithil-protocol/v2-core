@@ -59,7 +59,7 @@ contract Manager is IManager, Ownable {
     }
 
     function toggleVaultLock(address vaultToken) external onlyOwner {
-        IVault(vaults[vaultToken]).togglePause();
+        IVault(vaults[vaultToken]).toggleLock();
     }
 
     /// @inheritdoc IManager

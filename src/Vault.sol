@@ -20,7 +20,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     uint256 public override latestRepay;
     uint256 public override currentProfits;
     uint256 public override currentLosses;
-    bool public override isPaused;
+    bool public override isLocked;
 
     constructor(IERC20Metadata _token)
         ERC20(string(abi.encodePacked("Ithil ", _token.name())), string(abi.encodePacked("i", _token.symbol())))
@@ -38,7 +38,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     modifier unlocked() {
-        if (isPaused) revert VaultPaused();
+        if (isLocked) revert Locked();
         _;
     }
 
@@ -46,10 +46,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return ERC4626.decimals();
     }
 
-    function togglePause() external override onlyOwner {
-        isPaused = !isPaused;
+    function toggleLock() external override onlyOwner {
+        isLocked = !isLocked;
 
-        emit PauseToggled(isPaused);
+        emit LockToggled(isLocked);
     }
 
     function setFeeUnlockTime(uint256 _feeUnlockTime) external override onlyOwner {
@@ -123,6 +123,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         }
 
         return maxRedeemCache;
+    }
+
+    function mint(uint256 shares, address receiver) public override(IERC4626, ERC4626) unlocked returns (uint256) {
+        return ERC4626.mint(shares, receiver);
     }
 
     function deposit(uint256 _assets, address receiver) public override(IERC4626, ERC4626) unlocked returns (uint256) {

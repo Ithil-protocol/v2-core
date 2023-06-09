@@ -30,9 +30,9 @@ interface IVault is IERC4626 {
 
     function getFeeStatus() external view returns (uint256, uint256, uint256);
 
-    function togglePause() external;
+    function toggleLock() external;
 
-    function isPaused() external view returns (bool);
+    function isLocked() external view returns (bool);
 
     // Events
     event DegradationCoefficientWasUpdated(uint256 degradationCoefficient);
@@ -48,7 +48,7 @@ interface IVault is IERC4626 {
     event Repaid(address indexed repayer, uint256 amount, uint256 debt);
     event DirectMint(address indexed receiver, uint256 shares, uint256 increasedAssets);
     event DirectBurn(address indexed receiver, uint256 shares, uint256 distributedAssets);
-    event PauseToggled(bool isPaused);
+    event LockToggled(bool isLocked);
 
     error InsufficientLiquidity();
     error InsufficientFreeLiquidity();
@@ -56,5 +56,5 @@ interface IVault is IERC4626 {
     error FeeUnlockTimeOutOfRange();
     error RestrictedToOwner();
     error LoanHigherThanAssetsInBorrow();
-    error VaultPaused();
+    error Locked();
 }
