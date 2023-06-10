@@ -40,7 +40,7 @@ struct Collateral {
     uint256 amount; // ratio given by AAVE
 }
 
-# Retrieve posizioni
+# Retrieve positions
 list all tokenId on specific user, base this on ERC721Enumerable
 ```
 getAgreement(uint256)
