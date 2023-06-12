@@ -19,18 +19,17 @@ abstract contract DebitService is Service, BaseRiskModel {
         minMargin[token] = margin;
     }
 
-    /// @dev Defaults to amount + margin * riskSpread / (ir + riskSpread)
+    /// @dev Defaults to amount + margin * (ir + riskSpread) / 1e18
     function _liquidationThreshold(uint256 amount, uint256 margin, uint256 interestAndSpread)
         internal
         view
         virtual
         returns (uint256)
     {
-        // In a zero-risk case, we just liquidate when the loan amount is reached
-        if (interestAndSpread == 0) return amount;
         (uint256 interestRate, uint256 riskSpread) = (interestAndSpread >> 128, interestAndSpread % (1 << 128));
-        // at this point, we are not dividing by zero
-        return amount + (margin * riskSpread) / (interestRate + riskSpread);
+        // Any good interest rate model must have interestRate + riskSpread < _RESOLUTION
+        // otherwise a position may be instantly liquidable
+        return amount + (margin * (interestRate + riskSpread)) / _RESOLUTION;
     }
 
     /// @dev This function defaults to positive if and only if at least one of the quoted values
@@ -43,12 +42,16 @@ abstract contract DebitService is Service, BaseRiskModel {
 
         uint256 score = 0;
         for (uint256 index = 0; index < quotes.length; index++) {
+            // minimumQuote = liquidationThreshold + fees
             uint256 minimumQuote = _liquidationThreshold(
                 agreement.loans[index].amount,
                 agreement.loans[index].margin,
                 agreement.loans[index].interestAndSpread
             ) + fees[index];
-            score = minimumQuote > quotes[index] ? score + (minimumQuote - quotes[index]) : score;
+            // The score is the sum of percentage negative displacements from the minimumQuotes
+            score = minimumQuote > quotes[index]
+                ? score + ((minimumQuote - quotes[index]) * _RESOLUTION) / minimumQuote
+                : score;
         }
 
         return score;
@@ -81,7 +84,8 @@ abstract contract DebitService is Service, BaseRiskModel {
     function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory amountsOut) {
         Agreement memory agreement = agreements[tokenID];
         address owner = ownerOf(tokenID);
-        if (owner != msg.sender && liquidationScore(tokenID) == 0 && agreement.createdAt + deadline > block.timestamp)
+        uint256 score = liquidationScore(tokenID);
+        if (owner != msg.sender && score == 0 && agreement.createdAt + deadline > block.timestamp)
             revert RestrictedToOwner();
 
         uint256[] memory obtained = new uint256[](agreement.loans.length);
@@ -93,35 +97,39 @@ abstract contract DebitService is Service, BaseRiskModel {
         uint256[] memory dueFees = computeDueFees(agreement);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             obtained[index] = IERC20(agreement.loans[index].token).balanceOf(address(this)) - obtained[index];
-            if (obtained[index] > dueFees[index] + agreement.loans[index].amount) {
-                IERC20(agreement.loans[index].token).approve(
-                    manager.vaults(agreement.loans[index].token),
-                    dueFees[index] + agreement.loans[index].amount
-                );
-                // Good repay: the difference is transferred to the user
-                manager.repay(
-                    agreement.loans[index].token,
-                    dueFees[index] + agreement.loans[index].amount,
-                    agreement.loans[index].amount,
-                    address(this)
-                );
-                IERC20(agreement.loans[index].token).safeTransfer(
-                    owner,
-                    obtained[index] - (dueFees[index] + agreement.loans[index].amount)
-                );
-            } else {
-                // Bad repay: all the obtained amount is given to the vault
-                IERC20(agreement.loans[index].token).approve(
-                    manager.vaults(agreement.loans[index].token),
-                    obtained[index]
-                );
-                manager.repay(
-                    agreement.loans[index].token,
-                    obtained[index],
-                    agreement.loans[index].amount,
-                    address(this)
-                );
+            // first repay the liquidator
+            // the liquidation reward can never be higher than the margin
+            // if the liquidable position is closed by its owner, it is *not* considered a liquidation event
+            if (owner != msg.sender) {
+                // This can either due to score > 0 or deadline exceeded
+                // In the latter case, the fee is linear with time until reacing 5% in one month (31 days)
+                // If a position is both liquidable and expired, liquidation has the priority
+                uint256 liquidatorReward;
+                if (score > 0) liquidatorReward = (agreement.loans[index].margin * score) / _RESOLUTION;
+                else {
+                    // in this case agreement.createdAt + deadline <= block.timestamp
+                    uint256 timeMaxOneMonth = block.timestamp - (deadline + agreement.createdAt) < 86400 * 31
+                        ? block.timestamp - (deadline + agreement.createdAt)
+                        : 86400 * 31;
+                    liquidatorReward = (agreement.loans[index].margin * timeMaxOneMonth) / (86400 * 31 * 20);
+                }
+                // We cap further the liquidation reward with the obtained amount (no cross-position rewarding)
+                // This also prevents the following transfer to revert
+                liquidatorReward = liquidatorReward < obtained[index] ? liquidatorReward : obtained[index];
+                IERC20(agreement.loans[index].token).safeTransfer(msg.sender, liquidatorReward);
+                obtained[index] -= liquidatorReward;
             }
+
+            // secondly repay the vault
+            uint256 repaidAmount = obtained[index] > dueFees[index] + agreement.loans[index].amount
+                ? dueFees[index] + agreement.loans[index].amount
+                : obtained[index];
+
+            IERC20(agreement.loans[index].token).approve(manager.vaults(agreement.loans[index].token), repaidAmount);
+            manager.repay(agreement.loans[index].token, repaidAmount, agreement.loans[index].amount, address(this));
+
+            // finally repay the owner
+            IERC20(agreement.loans[index].token).safeTransfer(owner, obtained[index] - repaidAmount);
         }
         return obtained;
     }

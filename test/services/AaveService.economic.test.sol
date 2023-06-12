@@ -131,7 +131,8 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             uint256 freeLiquidity = IVault(manager.vaults(loanTokens[0])).freeLiquidity();
             // Loan cannot be more than a certain amount or it causes an InterestRateOverflow()
             (, uint256 currentBase) = service.latestAndBase(loanTokens[0]).unpackUint();
-            uint256 maxLoan = freeLiquidity.safeMulDiv(GeneralMath.RESOLUTION - currentBase, GeneralMath.RESOLUTION);
+            uint256 maxLoan = (freeLiquidity * (GeneralMath.RESOLUTION - currentBase - 5e15)) / GeneralMath.RESOLUTION;
+            maxLoan = maxLoan.min((GeneralMath.RESOLUTION * margin) / (currentBase + 5e15));
             loan = maxLoan == 0 ? 0 : loan % maxLoan;
             (uint256 baseRate, uint256 spread) = service.computeBaseRateAndSpread(
                 loanTokens[0],

@@ -69,7 +69,7 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
             freeLiquidity
         );
         // Reset new base and latest borrow, force IR stays below resolution
-        if (newBase >= 1e18) revert InterestRateOverflow();
+        if (newBase + spread >= 1e18) revert InterestRateOverflow();
         latestAndBase[loan.token] = (block.timestamp << 128) + newBase;
 
         return (newBase, spread);

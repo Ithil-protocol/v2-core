@@ -92,10 +92,12 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         vm.prank(whales[loanTokens[0]]);
         IERC20(loanTokens[0]).transfer(address(this), margin);
         loan = (loan % vaultAmount) % 1e12; // Max 1m
+        (, uint256 currentBase) = service.latestAndBase(loanTokens[0]).unpackUint();
+        loan = loan.min((GeneralMath.RESOLUTION * margin) / (currentBase + 5e15));
         return (loan, margin);
     }
 
-    function _prepareOrder(uint256 loan, uint256 margin) internal view returns (IService.Order memory) {
+    function _prepareOrder(uint256 loan, uint256 margin) internal returns (IService.Order memory) {
         IService.Order memory order;
         {
             IService.Loan[] memory loans = new IService.Loan[](loanLength);

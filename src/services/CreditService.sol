@@ -49,12 +49,8 @@ abstract contract CreditService is Service {
             IVault vault = IVault(manager.vaults(agreement.loans[index].token));
             uint256 toTransfer = dueAmount(agreement, data);
 
-            uint256 maxWithdraw = vault.maxWithdraw(address(this));
-            uint256 redeemed = vault.redeem(
-                agreement.collaterals[index].amount > maxWithdraw ? maxWithdraw : agreement.collaterals[index].amount,
-                address(this),
-                address(this)
-            );
+            // we allow the closure to fail if there is not enough liquidity: we always redeem the maximum amount
+            uint256 redeemed = vault.redeem(agreement.collaterals[index].amount, address(this), address(this));
             // give toTransfer to the user and pay the vault if toTransfer < redeemed
             // otherwise transfer redeemed and do nothing
             if (toTransfer < redeemed) {

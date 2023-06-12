@@ -138,6 +138,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         // super.withdraw but we leverage the fact of having already computed freeLiq
         uint256 supply = totalSupply();
+        // TODO: this has the usual mulDiv vulnerability (known in ERC4626)
+        // A hack consists of artificially increasing the denominator via a "donation" to the vault
+        // A fix is to always ensure the vault has a positive balance (1 unit is typically enough)
+        // question can an attacker modify profits, losses and loans in this way?
         uint256 shares = (assets == 0 || supply == 0)
             ? assets
             : assets.mulDiv(supply, freeLiq + netLoans + _calculateLockedLosses());
@@ -158,6 +162,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 totalAssetsCache = freeLiq + netLoans + _calculateLockedLosses();
         // previewRedeem, leveraging the fact of having already computed freeLiq
         uint256 supply = totalSupply();
+        // TODO: same as withdraw(), this time totalAssetsCache can be manipulated
         uint256 assets = (supply == 0) ? shares : shares.mulDiv(totalAssetsCache, supply);
         if (assets >= freeLiq) revert InsufficientLiquidity();
         // redeem, now all data have been computed

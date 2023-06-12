@@ -74,6 +74,8 @@ contract Manager is IManager, Ownable {
         uint256 investmentCap = caps[msg.sender][token].cap;
         caps[msg.sender][token].exposure += loan;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
+        // a hack could manipulate the denominator to artificially decrease the invested portion
+        // in this way, a quantity of funds higher than the investment cap could be deployed
         uint256 investedPortion = RESOLUTION.mulDiv(
             caps[msg.sender][token].exposure,
             (freeLiquidity - amount) + netLoans
