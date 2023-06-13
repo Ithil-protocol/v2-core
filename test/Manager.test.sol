@@ -37,20 +37,23 @@ contract ManagerTest is Test {
         firstToken = new ERC20PresetMinterPauser("firstToken", "FIRSTTOKEN");
         secondToken = new ERC20PresetMinterPauser("secondToken", "SECONDTOKEN");
         spuriousToken = new ERC20PresetMinterPauser("spuriousToken", "THIRDTOKEN");
+        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
+        firstToken.mint(tokenSink, type(uint256).max);
+        secondToken.mint(tokenSink, type(uint256).max);
+        spuriousToken.mint(tokenSink, type(uint256).max);
+        vm.startPrank(tokenSink);
+        firstToken.transfer(address(this), 1);
+        secondToken.transfer(address(this), 1);
+        vm.stopPrank();
+        firstToken.approve(address(manager), 1);
+        secondToken.approve(address(manager), 1);
         firstVault = manager.create(address(firstToken));
         secondVault = manager.create(address(secondToken));
-        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
         notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
         anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
         debitCustody = address(uint160(uint(keccak256(abi.encodePacked("Debit Custody")))));
         debitServiceOne = address(uint160(uint(keccak256(abi.encodePacked("debitServiceOne")))));
         debitServiceTwo = address(uint160(uint(keccak256(abi.encodePacked("debitServiceTwo")))));
-    }
-
-    function setUp() public {
-        firstToken.mint(tokenSink, type(uint256).max);
-        secondToken.mint(tokenSink, type(uint256).max);
-        spuriousToken.mint(tokenSink, type(uint256).max);
     }
 
     function testBase() public {
@@ -71,12 +74,16 @@ contract ManagerTest is Test {
     }
 
     function testCreate() public {
+        vm.prank(tokenSink);
+        spuriousToken.transfer(address(this), 1);
+        spuriousToken.approve(address(manager), 1);
         address spuriousVault = manager.create(address(spuriousToken));
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
     function _setupArbitraryState(uint256 previousDeposit, uint256 cap) private returns (uint256) {
         address vaultAddress = manager.vaults(address(firstToken));
+        if (previousDeposit == type(uint256).max) previousDeposit--;
         vm.startPrank(tokenSink);
         firstToken.approve(vaultAddress, previousDeposit);
         IVault(vaultAddress).deposit(previousDeposit, anyAddress);
