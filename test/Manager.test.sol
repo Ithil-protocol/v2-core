@@ -23,22 +23,20 @@ contract ManagerTest is Test {
     ERC20PresetMinterPauser internal immutable firstToken;
     ERC20PresetMinterPauser internal immutable secondToken;
     ERC20PresetMinterPauser internal immutable spuriousToken;
-    address internal immutable firstVault;
-    address internal immutable secondVault;
     address internal immutable tokenSink;
     address internal immutable notOwner;
     address internal immutable anyAddress;
     address internal immutable debitCustody;
     address internal immutable debitServiceOne;
     address internal immutable debitServiceTwo;
+    address internal firstVault;
+    address internal secondVault;
 
     constructor() {
         manager = new Manager();
         firstToken = new ERC20PresetMinterPauser("firstToken", "FIRSTTOKEN");
         secondToken = new ERC20PresetMinterPauser("secondToken", "SECONDTOKEN");
         spuriousToken = new ERC20PresetMinterPauser("spuriousToken", "THIRDTOKEN");
-        firstVault = manager.create(address(firstToken));
-        secondVault = manager.create(address(secondToken));
         tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
         notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
         anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
@@ -48,18 +46,29 @@ contract ManagerTest is Test {
     }
 
     function setUp() public {
-        firstToken.mint(tokenSink, type(uint256).max);
-        secondToken.mint(tokenSink, type(uint256).max);
-        spuriousToken.mint(tokenSink, type(uint256).max);
+        firstToken.mint(tokenSink, type(uint256).max - 1);
+        secondToken.mint(tokenSink, type(uint256).max - 1);
+        spuriousToken.mint(tokenSink, type(uint256).max - 1);
+
+        firstToken.mint(address(this), 1);
+        firstToken.approve(address(manager), 1);
+        firstVault = manager.create(address(firstToken));
+
+        secondToken.mint(address(this), 1);
+        secondToken.approve(address(manager), 1);
+        secondVault = manager.create(address(secondToken));
     }
 
-    function testBase() public {
+    function testManagerBase() public {
         assertTrue(manager.vaults(address(firstToken)) == firstVault);
         assertTrue(manager.vaults(address(secondToken)) == secondVault);
     }
 
-    function testAccess(uint256 spread, uint256 cap, uint256 feeUnlockTime) public {
+    function testAccess(uint256 cap, uint256 feeUnlockTime) public {
+        spuriousToken.mint(address(this), 1);
+
         vm.startPrank(anyAddress);
+        spuriousToken.approve(address(manager), 1);
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.create(address(spuriousToken));
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
@@ -68,9 +77,12 @@ contract ManagerTest is Test {
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.sweep(address(firstToken), address(spuriousToken), anyAddress);
+        vm.stopPrank();
     }
 
-    function testCreate() public {
+    function testManagerCreateVault() public {
+        spuriousToken.mint(address(this), 1);
+        spuriousToken.approve(address(manager), 1);
         address spuriousVault = manager.create(address(spuriousToken));
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
@@ -133,7 +145,7 @@ contract ManagerTest is Test {
     function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 borrowed, uint256 loan) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
-        uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
+        uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity() - 1;
         (, uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
 
         // Avoid revert due to insufficient free liquidity

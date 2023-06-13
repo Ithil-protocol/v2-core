@@ -50,12 +50,14 @@ contract WhitelistedTest is Test, IERC721Receiver {
 
     function setUp() public {
         token.mint(whitelistedUser, type(uint128).max);
-        token.mint(address(this), type(uint128).max);
+        token.mint(admin, 1);
+        token.mint(address(this), type(uint128).max - 1);
 
         vm.prank(whitelistedUser);
         token.approve(address(service), type(uint256).max);
 
         vm.startPrank(admin);
+        token.approve(address(manager), 1);
         manager.create(address(token));
         manager.setCap(address(service), address(token), GeneralMath.RESOLUTION);
         vm.stopPrank();

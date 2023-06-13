@@ -44,8 +44,14 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             vm.deal(whales[loanTokens[i]], 1 ether);
         }
         for (uint i = 0; i < loanLength; i++) {
-            // Create Vault: DAI
+            // give admin 1 token unit to make up for the vault creation
+            vm.prank(whales[loanTokens[i]]);
+            IERC20 token = IERC20(loanTokens[i]);
+            token.transfer(admin, 1);
+
+            // Create Vaults
             vm.startPrank(admin);
+            token.approve(address(manager), 1);
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
