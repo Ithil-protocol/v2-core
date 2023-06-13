@@ -23,14 +23,14 @@ contract ManagerTest is Test {
     ERC20PresetMinterPauser internal immutable firstToken;
     ERC20PresetMinterPauser internal immutable secondToken;
     ERC20PresetMinterPauser internal immutable spuriousToken;
-    address internal immutable firstVault;
-    address internal immutable secondVault;
-    address internal immutable tokenSink;
-    address internal immutable notOwner;
-    address internal immutable anyAddress;
-    address internal immutable debitCustody;
-    address internal immutable debitServiceOne;
-    address internal immutable debitServiceTwo;
+    address internal firstVault;
+    address internal secondVault;
+    address internal tokenSink;
+    address internal notOwner;
+    address internal anyAddress;
+    address internal debitCustody;
+    address internal debitServiceOne;
+    address internal debitServiceTwo;
 
     constructor() {
         manager = new Manager();
@@ -47,6 +47,9 @@ contract ManagerTest is Test {
         vm.stopPrank();
         firstToken.approve(address(manager), 1);
         secondToken.approve(address(manager), 1);
+    }
+
+    function setUp() public {
         firstVault = manager.create(address(firstToken));
         secondVault = manager.create(address(secondToken));
         notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
