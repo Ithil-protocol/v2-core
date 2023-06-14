@@ -2,5 +2,11 @@
   "solidity.defaultCompiler": "remote",
   "solidity.compileUsingRemoteVersion": "v0.8.17+commit.8df45f5f",
   "solidity.packageDefaultDependenciesContractsDirectory": "src",
-  "solidity.packageDefaultDependenciesDirectory": "lib"
+  "solidity.packageDefaultDependenciesDirectory": "lib",
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "editor.formatOnSave": true
+  }
 }
