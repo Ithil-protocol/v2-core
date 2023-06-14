@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/prettierrc.json",
-  "singleQuote": true,
+  "singleQuote": false,
   "semi": false,
   "trailingComma": "all",
   "importOrder": ["^@/(.*)$", "^[./]"],
@@ -20,6 +20,12 @@
         "compiler": "0.8.17",
         "singleQuote": false,
         "tabWidth": 4
+      }
+    },
+    {
+      "files": ["*.ts"],
+      "options": {
+        "singleQuote": true
       }
     }
   ]
