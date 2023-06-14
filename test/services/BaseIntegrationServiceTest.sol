@@ -8,12 +8,12 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { Oracle } from "../../src/Oracle.sol";
 import { MockDex } from "../helpers/MockDex.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
-    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
+    address internal constant admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
     Oracle internal immutable oracle;
     MockDex internal immutable dex;

@@ -10,7 +10,6 @@ import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVaul
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
@@ -23,7 +22,6 @@ import { Whitelisted } from "../Whitelisted.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
 contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
 

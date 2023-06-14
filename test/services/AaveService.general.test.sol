@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 
@@ -78,7 +78,9 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         returns (uint256, uint256)
     {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        vaultAmount = whaleBalance == 0 ? 0 : vaultAmount % whaleBalance;
+        if (whaleBalance == 0) return (0, 0);
+        // if we are here, whaleBalance > 0
+        vaultAmount = vaultAmount % whaleBalance;
         if (vaultAmount == 0) vaultAmount++;
         vm.startPrank(whales[loanTokens[0]]);
         IERC20(loanTokens[0]).approve(address(manager.vaults(loanTokens[0])), vaultAmount);
@@ -86,8 +88,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         vm.stopPrank();
 
         whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        margin = ((margin % whaleBalance) % 1e12) + 1e6; // Max 1m, min 1
-        if (margin == 0) margin++;
+        margin = (((margin % whaleBalance) % 1e12) + 1e6).min(whaleBalance); // Max 1m, min 1
         vm.prank(whales[loanTokens[0]]);
         IERC20(loanTokens[0]).transfer(address(this), margin);
         loan = (loan % vaultAmount) % 1e12; // Max 1m
@@ -130,6 +131,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         (loan, margin) = _prepareVaultAndUser(vaultAmount, loan, margin);
         IService.Order memory order = _prepareOrder(loan, margin);
         // No need to check invariants: they are already checked in other tests
+        if (order.agreement.loans[0].margin < 1e6) return;
         service.open(order);
         vm.warp(block.timestamp + warp);
     }

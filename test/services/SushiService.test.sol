@@ -8,7 +8,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { SushiService } from "../../src/services/debit/SushiService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { Math } from "../../src/libraries/external/Uniswap/Math.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";

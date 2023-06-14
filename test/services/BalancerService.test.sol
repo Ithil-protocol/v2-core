@@ -9,7 +9,7 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../src/interfaces/external/balancer/IBalancerPool.sol";
 import { BalancerService } from "../../src/services/debit/BalancerService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
