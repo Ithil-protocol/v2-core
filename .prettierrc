@@ -1,6 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/prettierrc.json",
-  "editorconfig": true,
   "singleQuote": true,
   "semi": false,
   "trailingComma": "all",
@@ -8,7 +7,6 @@
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true,
 
-  // previous rules
   "bracketSpacing": true,
   "endOfLine": "auto",
   "printWidth": 120,
