@@ -87,11 +87,13 @@ contract Manager is IManager, Ownable {
         uint256 investmentCap = caps[msg.sender][token].cap;
         caps[msg.sender][token].exposure += loan;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
-        // a hack could manipulate the denominator to artificially decrease the invested portion
-        // in this way, a quantity of funds higher than the investment cap could be deployed
+        // recall that freeLiquidity is before the loan, while netLoans is after
+        // therefore, the quantity freeLiquidity + netLoans - loan is invariant during the borrow
+        // notice that since amount >= loan in general, we cannot make (freeLiquidity - amount)
+        // otherwise credit services could be unclosable when experiencing a loss at high liquidity pressure
         uint256 investedPortion = RESOLUTION.mulDiv(
             caps[msg.sender][token].exposure,
-            (freeLiquidity - amount) + netLoans
+            freeLiquidity + (netLoans - loan)
         );
         if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);

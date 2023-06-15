@@ -136,7 +136,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             invariantBeforeJoin,
             protocolSwapFees
         );
-
         balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
     }
 
@@ -240,9 +239,9 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
         (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         // this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        minAmountsOut0 = minAmountsOut0 % totalBalances[0];
-        minAmountsOut1 = minAmountsOut1 % totalBalances[1];
-        minAmountsOut2 = minAmountsOut2 % totalBalances[2];
+        minAmountsOut0 = minAmountsOut0 % (1 + totalBalances[0] / 2);
+        minAmountsOut1 = minAmountsOut1 % (1 + totalBalances[1] / 2);
+        minAmountsOut2 = minAmountsOut2 % (1 + totalBalances[2] / 2);
 
         uint256[] memory initialBalances = new uint256[](loanLength);
         for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
@@ -270,7 +269,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             for (uint256 i = 0; i < loanLength; i++) {
                 minAmountsOut[i] = GeneralMath.max(minAmountsOut[i], actualLoans[i].amount);
             }
-
             uint256 firstStep = _calculateExpectedBPTToExit(balances, minAmountsOut);
             if (firstStep > collaterals[0].amount) {
                 // In this case we must annihilate minAmountsOut to obtain correct assertEq at the end
