@@ -240,9 +240,9 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
         (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         // this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOut0 <= totalBalances[0]);
-        vm.assume(minAmountsOut1 <= totalBalances[1]);
-        vm.assume(minAmountsOut2 <= totalBalances[2]);
+        minAmountsOut0 = minAmountsOut0 % totalBalances[0];
+        minAmountsOut1 = minAmountsOut1 % totalBalances[1];
+        minAmountsOut2 = minAmountsOut2 % totalBalances[2];
 
         uint256[] memory initialBalances = new uint256[](loanLength);
         for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
