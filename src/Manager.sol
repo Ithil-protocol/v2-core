@@ -9,11 +9,11 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
+import { RESOLUTION } from "./Resolution.sol";
 
 contract Manager is IManager, Ownable {
     using Math for uint256;
     using SafeERC20 for IERC20;
-    uint256 internal constant RESOLUTION = 1e18;
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
     // service => token => caps
