@@ -9,7 +9,7 @@ import { RESOLUTION, ONE_YEAR } from "../Constants.sol";
 abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
-    mapping(address token => uint256) public minMargin;
+    mapping(address => uint256) public minMargin;
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();

@@ -14,8 +14,8 @@
 
 pragma solidity =0.8.18;
 
-import "./FixedPoint.sol";
-import "./Math.sol";
+import { FixedPoint } from "./FixedPoint.sol";
+import { Math } from "./Math.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 
