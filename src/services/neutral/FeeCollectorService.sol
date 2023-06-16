@@ -22,11 +22,11 @@ contract FeeCollectorService is Service {
 
     // weights for different tokens, 0 => not supported
     // assumes 18 digit fixed point math
-    mapping(address token => uint256) public weights;
+    mapping(address => uint256) public weights;
     // Locking of the position in seconds
-    mapping(uint256 tokenID => uint256) public locktimes;
+    mapping(uint256 => uint256) public locktimes;
     // Necessary to avoid a double harvest: harvesting is allowed only once after each repay
-    mapping(address token => uint256) public latestHarvest;
+    mapping(address => uint256) public latestHarvest;
     // Necessary to properly distribute fees and prevent snatching
     uint256 public totalLoans;
     // 2^((n+1)/12) with 18 digit fixed point
