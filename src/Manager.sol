@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -16,10 +16,8 @@ contract Manager is IManager, Ownable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant override salt = "ithil";
-    mapping(address => address) public override vaults;
-    // service => token => caps
-    mapping(address => mapping(address => CapsAndExposures)) public override caps;
-    mapping(address => uint256) public exposures;
+    mapping(address token => address vault) public override vaults;
+    mapping(address service => mapping(address token => CapsAndExposures)) public override caps;
 
     modifier supported(address token) {
         if (caps[msg.sender][token].cap == 0) revert RestrictedToWhitelisted();
@@ -70,13 +68,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 loan, address receiver)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256, uint256)
-    {
+    function borrow(
+        address token,
+        uint256 amount,
+        uint256 loan,
+        address receiver
+    ) external override supported(token) vaultExists(token) returns (uint256, uint256) {
         // Example with USDC: investmentCap = 2e17 (20%)
         // initial freeLiquidity = 1e13 (10 million USDC), initial netLoans = 3e12 (3 million USDC)
         // we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
@@ -98,12 +95,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-    {
+    function repay(
+        address token,
+        uint256 amount,
+        uint256 debt,
+        address repayer
+    ) external override supported(token) vaultExists(token) {
         uint256 exposure = caps[msg.sender][token].exposure;
         caps[msg.sender][token].exposure = exposure < debt ? 0 : exposure - debt;
         IVault(vaults[token]).repay(amount, debt, repayer);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
@@ -15,9 +15,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     uint256 public id;
     uint256 public immutable deadline;
 
-    constructor(string memory _name, string memory _symbol, address _manager, uint256 _deadline)
-        ERC721(_name, _symbol)
-    {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        address _manager,
+        uint256 _deadline
+    ) ERC721(_name, _symbol) {
         manager = IManager(_manager);
         locked = false;
         id = 0;
@@ -99,18 +102,15 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data)
-        public
-        virtual
-        unlocked
-        editable(tokenID)
-    {}
+    function edit(
+        uint256 tokenID,
+        Agreement calldata agreement,
+        bytes calldata data
+    ) public virtual unlocked editable(tokenID) {}
 
-    function getAgreement(uint256 tokenID)
-        public
-        view
-        returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status)
-    {
+    function getAgreement(
+        uint256 tokenID
+    ) public view returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status) {
         Agreement memory agreement = agreements[tokenID];
         return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
     }

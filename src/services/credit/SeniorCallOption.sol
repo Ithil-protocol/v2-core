@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -57,7 +57,7 @@ contract SeniorCallOption is CreditService {
         treasury = _treasury;
         underlying = IERC20(_underlying);
         ithil = IERC20(_ithil);
-        _precision = 10**IERC20Metadata(_underlying).decimals();
+        _precision = 10 ** IERC20Metadata(_underlying).decimals();
         halvingTime = _halvingTime;
 
         _rewards = new uint64[](12);

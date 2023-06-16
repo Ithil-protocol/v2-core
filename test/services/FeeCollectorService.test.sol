@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
@@ -20,11 +20,11 @@ contract Payer is Service {
     // TODO: test fee generation
     constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
-        internal
-        virtual
-        override
-    {}
+    function _close(
+        uint256 tokenID,
+        IService.Agreement memory agreement,
+        bytes memory data
+    ) internal virtual override {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
 }

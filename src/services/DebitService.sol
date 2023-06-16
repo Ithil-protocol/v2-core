@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Service } from "./Service.sol";
@@ -9,21 +9,20 @@ import { RESOLUTION, ONE_YEAR } from "../Constants.sol";
 abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
-    error MarginTooLow();
+    mapping(address token => uint256) public minMargin;
 
-    mapping(address => uint256) public minMargin;
+    error MarginTooLow();
 
     function setMinMargin(address token, uint256 margin) external onlyOwner {
         minMargin[token] = margin;
     }
 
     /// @dev Defaults to amount + margin * (ir + riskSpread) / 1e18
-    function _liquidationThreshold(uint256 amount, uint256 margin, uint256 interestAndSpread)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _liquidationThreshold(
+        uint256 amount,
+        uint256 margin,
+        uint256 interestAndSpread
+    ) internal view virtual returns (uint256) {
         (uint256 interestRate, uint256 riskSpread) = (interestAndSpread >> 128, interestAndSpread % (1 << 128));
         // Any good interest rate model must have interestRate + riskSpread < RESOLUTION
         // otherwise a position may be instantly liquidable

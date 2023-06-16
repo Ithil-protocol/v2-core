@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -22,11 +22,11 @@ contract FeeCollectorService is Service {
 
     // weights for different tokens, 0 => not supported
     // assumes 18 digit fixed point math
-    mapping(address => uint256) public weights;
+    mapping(address token => uint256) public weights;
     // Locking of the position in seconds
-    mapping(uint256 => uint256) public locktimes;
+    mapping(uint256 tokenID => uint256) public locktimes;
     // Necessary to avoid a double harvest: harvesting is allowed only once after each repay
-    mapping(address => uint256) public latestHarvest;
+    mapping(address token => uint256) public latestHarvest;
     // Necessary to properly distribute fees and prevent snatching
     uint256 public totalLoans;
     // 2^((n+1)/12) with 18 digit fixed point
@@ -42,9 +42,11 @@ contract FeeCollectorService is Service {
     error UnsupportedToken();
     error MaxLockExceeded();
 
-    constructor(address _manager, address _weth, uint256 _feePercentage)
-        Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max)
-    {
+    constructor(
+        address _manager,
+        address _weth,
+        uint256 _feePercentage
+    ) Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max) {
         weth = IERC20(_weth);
         veToken = new VeIthil();
 
@@ -110,11 +112,11 @@ contract FeeCollectorService is Service {
         IERC20(agreement.loans[0].token).safeTransferFrom(msg.sender, address(this), agreement.loans[0].margin);
     }
 
-    function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/)
-        internal
-        override
-        expired(tokenID)
-    {
+    function _close(
+        uint256 tokenID,
+        Agreement memory agreement,
+        bytes memory /*data*/
+    ) internal override expired(tokenID) {
         uint256 totalWithdraw = (totalAssets() * agreement.loans[0].amount) / totalLoans;
         totalLoans -= agreement.loans[0].amount;
         veToken.burn(msg.sender, agreement.collaterals[0].amount);

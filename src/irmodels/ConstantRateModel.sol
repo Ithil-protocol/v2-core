@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IService } from "../interfaces/IService.sol";
@@ -27,11 +27,10 @@ abstract contract ConstantRateModel is Ownable, BaseRiskModel {
     }
 
     // todo: with this it's constant, do we want to increase based on Vault's usage?
-    function _checkRiskiness(IService.Loan memory loan, uint256 /*freeLiquidity*/)
-        internal
-        view
-        override(BaseRiskModel)
-    {
+    function _checkRiskiness(
+        IService.Loan memory loan,
+        uint256 /*freeLiquidity*/
+    ) internal view override(BaseRiskModel) {
         uint256 spread = _riskSpreadFromMargin(loan.token, loan.amount, loan.margin);
         (uint256 requestedIr, uint256 requestedSpread) = (
             loan.interestAndSpread >> 128,
