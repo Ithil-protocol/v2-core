@@ -5,12 +5,14 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
 
 contract Manager is IManager, Ownable {
     using Math for uint256;
+    using SafeERC20 for IERC20;
     uint256 internal constant RESOLUTION = 1e18;
     bytes32 public constant override salt = "ithil";
     mapping(address => address) public override vaults;
@@ -40,6 +42,13 @@ contract Manager is IManager, Ownable {
             abi.encodePacked(type(Vault).creationCode, abi.encode(IERC20Metadata(token)))
         );
         vaults[token] = vault;
+        // deposit 1 token unit to avoid the typical ERC4626 issue
+        // by placing the resulting iToken in the manager, it becomes unredeemable
+        // therefore, the Vault is guaranteed to always stay in a healthy status
+        IERC20 tkn = IERC20(token);
+        tkn.safeTransferFrom(msg.sender, address(this), 1);
+        tkn.approve(vault, 1);
+        IVault(vault).deposit(1, address(this));
 
         return vault;
     }
@@ -78,9 +87,13 @@ contract Manager is IManager, Ownable {
         uint256 investmentCap = caps[msg.sender][token].cap;
         caps[msg.sender][token].exposure += loan;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
+        // recall that freeLiquidity is before the loan, while netLoans is after
+        // therefore, the quantity freeLiquidity + netLoans - loan is invariant during the borrow
+        // notice that since amount >= loan in general, we cannot make (freeLiquidity - amount)
+        // otherwise credit services could be unclosable when experiencing a loss at high liquidity pressure
         uint256 investedPortion = RESOLUTION.mulDiv(
             caps[msg.sender][token].exposure,
-            (freeLiquidity - amount) + netLoans
+            freeLiquidity + (netLoans - loan)
         );
         if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
         return (freeLiquidity, netLoans);

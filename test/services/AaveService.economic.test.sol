@@ -51,7 +51,10 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         }
         for (uint i = 0; i < loanLength; i++) {
             // Create Vault: DAI
+            vm.prank(whales[loanTokens[i]]);
+            IERC20(loanTokens[i]).transfer(admin, 1);
             vm.startPrank(admin);
+            IERC20(loanTokens[i]).approve(address(manager), 1);
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION);
@@ -131,7 +134,8 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             uint256 freeLiquidity = IVault(manager.vaults(loanTokens[0])).freeLiquidity();
             // Loan cannot be more than a certain amount or it causes an InterestRateOverflow()
             (, uint256 currentBase) = service.latestAndBase(loanTokens[0]).unpackUint();
-            uint256 maxLoan = freeLiquidity.safeMulDiv(GeneralMath.RESOLUTION - currentBase, GeneralMath.RESOLUTION);
+            uint256 maxLoan = (freeLiquidity * (GeneralMath.RESOLUTION - currentBase - 5e15)) / GeneralMath.RESOLUTION;
+            maxLoan = maxLoan.min((GeneralMath.RESOLUTION * margin) / (currentBase + 5e15));
             loan = maxLoan == 0 ? 0 : loan % maxLoan;
             (uint256 baseRate, uint256 spread) = service.computeBaseRateAndSpread(
                 loanTokens[0],

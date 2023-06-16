@@ -9,6 +9,9 @@ import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensio
 import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { IVault } from "./interfaces/IVault.sol";
 
+// Since this vault inherits from ERC4626, it has the known vulnerability of the "donation attack"
+// In the Ithil framework this is fixed by deploying the Vault already with 1 token deposited
+// This means that both the balance and the supply are at least 1 every time
 contract Vault is IVault, ERC4626, ERC20Permit {
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -86,6 +89,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Free liquidity available to withdraw or borrow
     // Locked profits are locked for every operation
     // We do not consider negative profits since they are not true liquidity
+    // We subtract 1 because there is always 1 token deposited at the beginning: this will never be taken
     function freeLiquidity() public view override returns (uint256) {
         return super.totalAssets() - _calculateLockedProfits();
     }
@@ -97,12 +101,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 supply = totalSupply();
         uint256 shares = balanceOf(owner);
         // super.maxWithdraw but we leverage the fact of having already computed freeLiq which contains balanceOf()
-        return
-            freeLiq < 2
-                ? 0
-                : (freeLiq - 1).min(
-                    (supply == 0) ? shares : shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply)
-                );
+        // notice that shares are always at least 1
+        return freeLiq.min(shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply));
     }
 
     // Assets include netLoans but they are not available for withdraw
@@ -115,11 +115,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // convertToAssets but we leverage the fact of having already computed totalAssetsCache
         // we need to compute it separately because we use freeLiquidityCache later
         // in this way, the entire function has only one call to balanceOf()
-        uint256 assets = (supply == 0) ? maxRedeemCache : maxRedeemCache.mulDiv(totalAssetsCache, supply);
+        uint256 assets = maxRedeemCache.mulDiv(totalAssetsCache, supply);
 
         // convertToShares using the already computed variables
-        if (assets == freeLiquidityCache && assets > 0) {
-            maxRedeemCache = (assets == 1 || supply == 0) ? assets - 1 : (assets - 1).mulDiv(supply, totalAssetsCache);
+        // if the assets the owner can theoretically withdraw are higher than the free liquidity
+        // we cap them with the convertToShares of the free liquidity
+        if (assets >= freeLiquidityCache && assets > 0) {
+            maxRedeemCache = freeLiquidityCache.mulDiv(supply, totalAssetsCache);
         }
 
         return maxRedeemCache;
@@ -151,17 +153,15 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         override(ERC4626, IERC4626)
         returns (uint256)
     {
-        // Due to ERC4626 collateralization constraint, we must enforce impossibility of zero balance
-        // Therefore we need to revert if assets >= freeLiq rather than assets > freeLiq
-
+        // assets cannot be more than the current free liquidity
         uint256 freeLiq = freeLiquidity();
         if (assets >= freeLiq) revert InsufficientLiquidity();
 
         // super.withdraw but we leverage the fact of having already computed freeLiq
         uint256 supply = totalSupply();
-        uint256 shares = (assets == 0 || supply == 0)
-            ? assets
-            : assets.mulDiv(supply, freeLiq + netLoans + _calculateLockedLosses());
+
+        // assets > 0 and supply > 0 always
+        uint256 shares = assets.mulDiv(supply, freeLiq + netLoans + _calculateLockedLosses());
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
@@ -179,7 +179,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 totalAssetsCache = freeLiq + netLoans + _calculateLockedLosses();
         // previewRedeem, leveraging the fact of having already computed freeLiq
         uint256 supply = totalSupply();
-        uint256 assets = (supply == 0) ? shares : shares.mulDiv(totalAssetsCache, supply);
+
+        uint256 assets = shares.mulDiv(totalAssetsCache, supply);
         if (assets >= freeLiq) revert InsufficientLiquidity();
         // redeem, now all data have been computed
         _withdraw(_msgSender(), receiver, owner, assets, shares);
@@ -203,9 +204,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // And makes totalAssets() a sub-invariant of this function
         if (loan > assets) revert LoanHigherThanAssetsInBorrow();
         uint256 freeLiq = freeLiquidity();
-        // At the very worst case, the borrower repays nothing
-        // In this case we need to avoid division by zero by putting >= rather than >
-        // This is required as per ERC4626 documentation to have a "healthy vault"
+
         if (assets >= freeLiq) revert InsufficientFreeLiquidity();
 
         netLoans += loan;

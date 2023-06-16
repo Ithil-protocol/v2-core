@@ -34,7 +34,10 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
     function setUp() public override {
         weth.approve(address(service), type(uint256).max);
 
+        vm.prank(whale);
+        weth.transfer(admin, 1);
         vm.startPrank(admin);
+        weth.approve(address(manager), 1);
         manager.create(address(weth));
         manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
         vm.stopPrank();
