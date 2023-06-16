@@ -4,15 +4,13 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Service } from "./Service.sol";
 import { BaseRiskModel } from "./BaseRiskModel.sol";
+import { RESOLUTION, ONE_YEAR } from "../Constants.sol";
 
 abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
-    uint256 internal constant _ONE_YEAR = 31536000;
-    uint256 internal constant _RESOLUTION = 1e18;
-
     mapping(address => uint256) public minMargin;
-
+    
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();
 
@@ -28,9 +26,9 @@ abstract contract DebitService is Service, BaseRiskModel {
         returns (uint256)
     {
         (uint256 interestRate, uint256 riskSpread) = (interestAndSpread >> 128, interestAndSpread % (1 << 128));
-        // Any good interest rate model must have interestRate + riskSpread < _RESOLUTION
+        // Any good interest rate model must have interestRate + riskSpread < RESOLUTION
         // otherwise a position may be instantly liquidable
-        return amount + (margin * (interestRate + riskSpread)) / _RESOLUTION;
+        return amount + (margin * (interestRate + riskSpread)) / RESOLUTION;
     }
 
     /// @dev This function defaults to positive if and only if at least one of the quoted values
@@ -51,7 +49,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             ) + fees[index];
             // The score is the sum of percentage negative displacements from the minimumQuotes
             score = minimumQuote > quotes[index]
-                ? score + ((minimumQuote - quotes[index]) * _RESOLUTION) / minimumQuote
+                ? score + ((minimumQuote - quotes[index]) * RESOLUTION) / minimumQuote
                 : score;
         }
 
@@ -106,7 +104,7 @@ abstract contract DebitService is Service, BaseRiskModel {
                 // In the latter case, the fee is linear with time until reacing 5% in one month (31 days)
                 // If a position is both liquidable and expired, liquidation has the priority
                 uint256 liquidatorReward;
-                if (score > 0) liquidatorReward = (agreement.loans[index].margin * score) / _RESOLUTION;
+                if (score > 0) liquidatorReward = (agreement.loans[index].margin * score) / RESOLUTION;
                 else {
                     // in this case agreement.createdAt + deadline <= block.timestamp
                     uint256 timeMaxOneMonth = block.timestamp - (deadline + agreement.createdAt) < 86400 * 31
@@ -153,7 +151,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             );
             dueFees[i] =
                 (agreement.loans[i].amount * ((base + spread) * (block.timestamp - agreement.createdAt))) /
-                (_RESOLUTION * _ONE_YEAR);
+                (RESOLUTION * ONE_YEAR);
         }
         return dueFees;
     }
