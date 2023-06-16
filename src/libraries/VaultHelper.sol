@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IManager } from "../interfaces/IManager.sol";
 import { IVault } from "../interfaces/IVault.sol";

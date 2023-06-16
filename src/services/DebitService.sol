@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Service } from "./Service.sol";
@@ -9,7 +9,7 @@ import { RESOLUTION, ONE_YEAR } from "../Constants.sol";
 abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
-    mapping(address => uint256) public minMargin;
+    mapping(address token => uint256) public minMargin;
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();

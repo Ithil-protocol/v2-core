@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -16,10 +16,8 @@ contract Manager is IManager, Ownable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant override salt = "ithil";
-    mapping(address => address) public override vaults;
-    // service => token => caps
-    mapping(address => mapping(address => CapsAndExposures)) public override caps;
-    mapping(address => uint256) public exposures;
+    mapping(address token => address vault) public override vaults;
+    mapping(address service => mapping(address token => CapsAndExposures)) public override caps;
 
     modifier supported(address token) {
         if (caps[msg.sender][token].cap == 0) revert RestrictedToWhitelisted();

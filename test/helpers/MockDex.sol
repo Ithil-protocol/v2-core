@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IFactory } from "../../src/interfaces/external/dex/IFactory.sol";
 import { IPool } from "../../src/interfaces/external/dex/IPool.sol";

@@ -46,8 +46,9 @@
     "hardhat-gas-reporter": "^1.0.8",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
+    "p-queue": "^7.3.4",
     "prettier": "^2.8.8",
-    "prettier-plugin-solidity": "^1.0.0-dev.24",
+    "prettier-plugin-solidity": "^1.1.3",
     "rimraf": "^3.0.2",
     "solhint": "^3.3.7",
     "solhint-plugin-prettier": "^0.0.5",
@@ -75,8 +76,5 @@
     "hardhat:deploy:tenderly": "hardhat --network tenderly run scripts/deploy.script.ts",
     "hardhat:faucet:tenderly": "hardhat --network tenderly run scripts/faucet.script.ts",
     "hardhat:vaults:tenderly": "hardhat --network tenderly run scripts/fill-vaults.script.ts"
-  },
-  "dependencies": {
-    "p-queue": "^7.3.4"
   }
 }
