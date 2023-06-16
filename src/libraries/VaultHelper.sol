@@ -3,7 +3,7 @@ pragma solidity =0.8.17;
 
 import { IManager } from "../interfaces/IManager.sol";
 import { IVault } from "../interfaces/IVault.sol";
-import { RESOLUTION } from "../Resolution.sol";
+import { RESOLUTION } from "../Constants.sol";
 
 library VaultHelper {
     /// @dev gets the vault with the highest free liquidity

@@ -2,3 +2,4 @@
 pragma solidity =0.8.17;
 
 uint256 constant RESOLUTION = 1e18;
+uint256 constant ONE_YEAR = 31536000;

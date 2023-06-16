@@ -4,14 +4,12 @@ pragma solidity =0.8.17;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Service } from "./Service.sol";
 import { BaseRiskModel } from "./BaseRiskModel.sol";
-import { RESOLUTION } from "../Resolution.sol";
+import { RESOLUTION, ONE_YEAR } from "../Constants.sol";
 
 abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
     error MarginTooLow();
-
-    uint256 internal constant _ONE_YEAR = 31536000;
 
     mapping(address => uint256) public minMargin;
 
@@ -149,7 +147,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             );
             dueFees[i] =
                 (agreement.loans[i].amount * ((base + spread) * (block.timestamp - agreement.createdAt))) /
-                (RESOLUTION * _ONE_YEAR);
+                (RESOLUTION * ONE_YEAR);
         }
         return dueFees;
     }
