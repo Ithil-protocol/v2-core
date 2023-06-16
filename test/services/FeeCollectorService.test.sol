@@ -20,11 +20,11 @@ contract Payer is Service {
     // TODO: test fee generation
     constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
-        internal
-        virtual
-        override
-    {}
+    function _close(
+        uint256 tokenID,
+        IService.Agreement memory agreement,
+        bytes memory data
+    ) internal virtual override {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
 }

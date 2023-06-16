@@ -42,9 +42,11 @@ contract FeeCollectorService is Service {
     error UnsupportedToken();
     error MaxLockExceeded();
 
-    constructor(address _manager, address _weth, uint256 _feePercentage)
-        Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max)
-    {
+    constructor(
+        address _manager,
+        address _weth,
+        uint256 _feePercentage
+    ) Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max) {
         weth = IERC20(_weth);
         veToken = new VeIthil();
 
@@ -110,11 +112,11 @@ contract FeeCollectorService is Service {
         IERC20(agreement.loans[0].token).safeTransferFrom(msg.sender, address(this), agreement.loans[0].margin);
     }
 
-    function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/)
-        internal
-        override
-        expired(tokenID)
-    {
+    function _close(
+        uint256 tokenID,
+        Agreement memory agreement,
+        bytes memory /*data*/
+    ) internal override expired(tokenID) {
         uint256 totalWithdraw = (totalAssets() * agreement.loans[0].amount) / totalLoans;
         totalLoans -= agreement.loans[0].amount;
         veToken.burn(msg.sender, agreement.collaterals[0].amount);

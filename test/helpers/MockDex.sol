@@ -9,9 +9,10 @@ contract MockDex is IFactory, IPool {
         return address(this);
     }
 
-    function createOrder(uint256 amount, uint256 price, address recipient, uint256 deadline)
-        external
-        payable
-        override
-    {}
+    function createOrder(
+        uint256 amount,
+        uint256 price,
+        address recipient,
+        uint256 deadline
+    ) external payable override {}
 }

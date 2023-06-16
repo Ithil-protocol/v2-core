@@ -70,13 +70,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 loan, address receiver)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256, uint256)
-    {
+    function borrow(
+        address token,
+        uint256 amount,
+        uint256 loan,
+        address receiver
+    ) external override supported(token) vaultExists(token) returns (uint256, uint256) {
         // Example with USDC: investmentCap = 2e17 (20%)
         // initial freeLiquidity = 1e13 (10 million USDC), initial netLoans = 3e12 (3 million USDC)
         // we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
@@ -98,12 +97,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-    {
+    function repay(
+        address token,
+        uint256 amount,
+        uint256 debt,
+        address repayer
+    ) external override supported(token) vaultExists(token) {
         uint256 exposure = caps[msg.sender][token].exposure;
         caps[msg.sender][token].exposure = exposure < debt ? 0 : exposure - debt;
         IVault(vaults[token]).repay(amount, debt, repayer);
