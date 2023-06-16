@@ -4,7 +4,7 @@
 
 <div align="center">
 
-![Solidity](https://img.shields.io/badge/Solidity-0.8.17-e6e6e6?style=for-the-badge&logo=solidity&logoColor=black)
+![Solidity](https://img.shields.io/badge/Solidity-0.8.18-e6e6e6?style=for-the-badge&logo=solidity&logoColor=black)
 ![NodeJS](https://img.shields.io/badge/Node.js-16.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 
 [![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/tEaGBcGdQC)

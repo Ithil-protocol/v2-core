@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IPool } from "../../interfaces/external/aave/IPool.sol";
@@ -23,9 +23,11 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     error ZeroCollateral();
     error ImpossibleToQuote();
 
-    constructor(address _manager, address _aave, uint256 _deadline)
-        Service("AaveService", "AAVE-SERVICE", _manager, _deadline)
-    {
+    constructor(
+        address _manager,
+        address _aave,
+        uint256 _deadline
+    ) Service("AaveService", "AAVE-SERVICE", _manager, _deadline) {
         aave = IPool(_aave);
     }
 

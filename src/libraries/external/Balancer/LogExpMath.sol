@@ -12,7 +12,7 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 /* solhint-disable */
 
@@ -53,7 +53,7 @@ library LogExpMath {
     int256 constant LN_36_LOWER_BOUND = ONE_18 - 1e17;
     int256 constant LN_36_UPPER_BOUND = ONE_18 + 1e17;
 
-    uint256 constant MILD_EXPONENT_BOUND = 2**254 / uint256(ONE_20);
+    uint256 constant MILD_EXPONENT_BOUND = 2 ** 254 / uint256(ONE_20);
 
     // 18 decimal constants
     int256 constant x0 = 128000000000000000000; // 2ˆ7

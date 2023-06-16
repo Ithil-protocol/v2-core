@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Test } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -67,11 +67,12 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         require(success, "toggleWhitelistFlag failed");
     }
 
-    function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
-        external
-        pure
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address /*operator*/,
+        address /*from*/,
+        uint256 /*tokenId*/,
+        bytes calldata /*data*/
+    ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -101,10 +102,12 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         assertGe(amount2 + tolerance, amount1);
     }
 
-    function _prepareVaultAndUser(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp)
-        internal
-        returns (uint256, uint256, uint256, uint64)
-    {
+    function _prepareVaultAndUser(
+        uint256 vaultAmount,
+        uint256 loan,
+        uint256 margin,
+        uint64 warp
+    ) internal returns (uint256, uint256, uint256, uint64) {
         warp = warp % (365 * 86400 * 10); // Warp 10y maximum
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         vaultAmount = whaleBalance == 0 ? 0 : vaultAmount % whaleBalance;
