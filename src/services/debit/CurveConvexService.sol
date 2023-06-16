@@ -158,8 +158,8 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         emit PoolWasRemoved(pool.curve, pool.convex);
     }
 
-    function harvest(address token) external {
-        PoolData memory pool = pools[token];
+    function harvest(address _token) external {
+        PoolData memory pool = pools[_token];
         if (pool.tokens.length == 0) revert InexistentPool();
 
         pool.baseRewardPool.getReward(address(this));

@@ -11,6 +11,7 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     mapping(address token => uint256) public minMargin;
 
+    event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();
 
     function setMinMargin(address token, uint256 margin) external onlyOwner {
@@ -115,6 +116,8 @@ abstract contract DebitService is Service, BaseRiskModel {
                 liquidatorReward = liquidatorReward < obtained[index] ? liquidatorReward : obtained[index];
                 IERC20(agreement.loans[index].token).safeTransfer(msg.sender, liquidatorReward);
                 obtained[index] -= liquidatorReward;
+
+                emit LiquidationTriggered(tokenID, agreement.loans[index].token, msg.sender, liquidatorReward);
             }
 
             // secondly repay the vault
@@ -128,6 +131,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             // finally repay the owner
             IERC20(agreement.loans[index].token).safeTransfer(owner, obtained[index] - repaidAmount);
         }
+
         return obtained;
     }
 
