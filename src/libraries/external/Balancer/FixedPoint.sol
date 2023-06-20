@@ -12,9 +12,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
-import "./LogExpMath.sol";
+import { LogExpMath } from "./LogExpMath.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 

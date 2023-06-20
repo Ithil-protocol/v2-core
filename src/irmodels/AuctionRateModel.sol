@@ -1,25 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { GeneralMath } from "../libraries/GeneralMath.sol";
 import { IService } from "../interfaces/IService.sol";
 import { DebitService } from "../services/DebitService.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 
 /// @dev IR = baseIR + spread
 /// Rate model in which baseIR is based on a Dutch auction
-/// GeneralMath.RESOLUTION corresponds to 1, i.e. an interest rate of 100%
+/// 1e18 corresponds to 1, i.e. an interest rate of 100%
 abstract contract AuctionRateModel is Ownable, BaseRiskModel {
-    using GeneralMath for uint256;
-
     error InvalidInitParams();
     error InterestRateOverflow();
     error AboveRiskThreshold();
+    error ZeroMarginLoan();
 
     /**
      * @dev gas saving trick
-     * latest is a timestamp and base < GeneralMath.RESOLUTION, they all fit in uint256
+     * latest is a timestamp and base < 1e18, they all fit in uint256
      * latestAndBase = timestamp * 2^128 + base
      */
     mapping(address => uint256) public halvingTime;
@@ -27,16 +25,18 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     mapping(address => uint256) public latestAndBase;
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
-        if (baseRate > GeneralMath.RESOLUTION || riskSpread > GeneralMath.RESOLUTION || halfTime == 0)
-            revert InvalidInitParams();
+        if (baseRate > 1e18 || riskSpread > 1e18 || halfTime == 0) revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
-        latestAndBase[token] = GeneralMath.packInUint(block.timestamp, baseRate);
+        latestAndBase[token] = (block.timestamp << 128) + baseRate;
         halvingTime[token] = halfTime;
     }
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin
-    function riskSpreadFromMargin(address token, uint256 amount, uint256 margin) internal view returns (uint256) {
-        return riskSpreads[token].safeMulDiv(amount, margin);
+    function _riskSpreadFromMargin(address token, uint256 amount, uint256 margin) internal view returns (uint256) {
+        if (amount == 0) return 0;
+        // We do not allow a zero margin on a loan with positive amount
+        if (margin == 0) revert ZeroMarginLoan();
+        return (riskSpreads[token] * amount) / margin;
     }
 
     /**
@@ -46,19 +46,19 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
      * throws if spread > type(uint256).max - newBase
      */
 
-    function computeBaseRateAndSpread(address token, uint256 loan, uint256 margin, uint256 freeLiquidity)
-        public
-        view
-        returns (uint256, uint256)
-    {
-        (uint256 latestBorrow, uint256 base) = GeneralMath.unpackUint(latestAndBase[token]);
+    function computeBaseRateAndSpread(
+        address token,
+        uint256 loan,
+        uint256 margin,
+        uint256 freeLiquidity
+    ) public view returns (uint256, uint256) {
+        (uint256 latestBorrow, uint256 base) = (latestAndBase[token] >> 128, latestAndBase[token] % (1 << 128));
         // Increase base due to new borrow and then
         // apply time based discount: after halvingTime it is divided by 2
-        uint256 newBase = base.safeMulDiv(freeLiquidity, freeLiquidity - loan).safeMulDiv(
-            halvingTime[token],
-            block.timestamp - latestBorrow + halvingTime[token]
-        );
-        uint256 spread = riskSpreadFromMargin(token, loan, margin);
+        // this will revert if loan = freeLiquidity, which is expected
+        uint256 newBase = ((halvingTime[token] * (base * freeLiquidity)) / (freeLiquidity - loan)) /
+            (block.timestamp - latestBorrow + halvingTime[token]);
+        uint256 spread = _riskSpreadFromMargin(token, loan, margin);
         return (newBase, spread);
     }
 
@@ -70,15 +70,18 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
             freeLiquidity
         );
         // Reset new base and latest borrow, force IR stays below resolution
-        if (newBase >= GeneralMath.RESOLUTION) revert InterestRateOverflow();
-        latestAndBase[loan.token] = GeneralMath.packInUint(block.timestamp, newBase);
+        if (newBase + spread >= 1e18) revert InterestRateOverflow();
+        latestAndBase[loan.token] = (block.timestamp << 128) + newBase;
 
         return (newBase, spread);
     }
 
     function _checkRiskiness(IService.Loan memory loan, uint256 freeLiquidity) internal override(BaseRiskModel) {
         (uint256 baseRate, uint256 spread) = _updateBase(loan, freeLiquidity);
-        (uint256 requestedIr, uint256 requestedSpread) = loan.interestAndSpread.unpackUint();
+        (uint256 requestedIr, uint256 requestedSpread) = (
+            loan.interestAndSpread >> 128,
+            loan.interestAndSpread % (1 << 128)
+        );
         if (requestedIr < baseRate || requestedSpread < spread) revert AboveRiskThreshold();
     }
 }

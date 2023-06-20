@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -7,7 +7,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { GmxService } from "../../src/services/debit/GmxService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 
@@ -34,7 +34,10 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
     function setUp() public override {
         weth.approve(address(service), type(uint256).max);
 
+        vm.prank(whale);
+        weth.transfer(admin, 1);
         vm.startPrank(admin);
+        weth.approve(address(manager), 1);
         manager.create(address(weth));
         manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
         vm.stopPrank();

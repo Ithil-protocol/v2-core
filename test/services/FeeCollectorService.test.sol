@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
@@ -8,7 +8,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { FeeCollectorService } from "../../src/services/neutral/FeeCollectorService.sol";
 import { Service } from "../../src/services/Service.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { Ithil } from "../../src/Ithil.sol";
 import { VeIthil } from "../../src/VeIthil.sol";
@@ -18,14 +18,13 @@ import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
 
 contract Payer is Service {
     // Dummy service to produce fees
-    // TODO: test fee generation
     constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
-        internal
-        virtual
-        override
-    {}
+    function _close(
+        uint256 tokenID,
+        IService.Agreement memory agreement,
+        bytes memory data
+    ) internal virtual override {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
 }
@@ -55,6 +54,7 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         service.setTokenWeight(address(ithil), 1e18);
         payer = new Payer(address(manager));
         manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION);
+        manager.setCap(address(payer), address(usdc), GeneralMath.RESOLUTION);
         chainlinkOracleWeth = new MockChainLinkOracle(8);
         chainlinkOracleUsdc = new MockChainLinkOracle(8);
         oracle.setPriceFeed(address(weth), address(chainlinkOracleWeth));
@@ -121,12 +121,17 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         chainlinkOracleUsdc.setPrice(1e8);
         vm.stopPrank();
 
-        vm.startPrank(wethWhale);
-        weth.transfer(manager.vaults(address(weth)), 1e18);
-        vm.stopPrank();
+        vm.prank(wethWhale);
+        weth.transfer(address(payer), 1e18);
 
-        vm.startPrank(usdcWhale);
-        usdc.transfer(manager.vaults(address(usdc)), 1e6);
+        vm.prank(usdcWhale);
+        usdc.transfer(address(payer), 1e6);
+
+        vm.startPrank(address(payer));
+        weth.approve(manager.vaults(address(weth)), 1e18);
+        usdc.approve(manager.vaults(address(usdc)), 1e6);
+        manager.repay(address(weth), 1e18, 0, address(payer));
+        manager.repay(address(usdc), 1e6, 0, address(payer));
         vm.stopPrank();
 
         // we want to test that WETH does not trigger a swap while USDC does

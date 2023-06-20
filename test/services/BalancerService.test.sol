@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -9,7 +9,7 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../src/interfaces/external/balancer/IBalancerPool.sol";
 import { BalancerService } from "../../src/services/debit/BalancerService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
@@ -101,7 +101,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         for (uint256 i = 0; i < loanLength; i++) {
             // Tokens with more than 18 decimals are not supported.
             uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
-            array[i] *= 10**decimalsDifference;
+            array[i] *= 10 ** decimalsDifference;
         }
     }
 
@@ -109,7 +109,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         for (uint256 i = 0; i < loanLength; i++) {
             // Tokens with more than 18 decimals are not supported.
             uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
-            array[i] /= 10**decimalsDifference;
+            array[i] /= 10 ** decimalsDifference;
         }
     }
 
@@ -136,15 +136,13 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             invariantBeforeJoin,
             protocolSwapFees
         );
-
         balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
     }
 
-    function _calculateExpectedBPTFromJoin(uint256[] memory balances, uint256[] memory amountsIn)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateExpectedBPTFromJoin(
+        uint256[] memory balances,
+        uint256[] memory amountsIn
+    ) internal view returns (uint256) {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsIn);
@@ -160,11 +158,10 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return amountOut;
     }
 
-    function _calculateExpectedBPTToExit(uint256[] memory balances, uint256[] memory amountsOut)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateExpectedBPTToExit(
+        uint256[] memory balances,
+        uint256[] memory amountsOut
+    ) internal view returns (uint256) {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsOut);
@@ -180,11 +177,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return expectedBpt;
     }
 
-    function _calculateExpectedTokensFromBPT(uint256[] memory balances, uint256 amount, uint256 totalSupply)
-        internal
-        view
-        returns (uint256[] memory)
-    {
+    function _calculateExpectedTokensFromBPT(
+        uint256[] memory balances,
+        uint256 amount,
+        uint256 totalSupply
+    ) internal view returns (uint256[] memory) {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);
@@ -240,9 +237,9 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
 
         (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         // this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
-        vm.assume(minAmountsOut0 <= totalBalances[0]);
-        vm.assume(minAmountsOut1 <= totalBalances[1]);
-        vm.assume(minAmountsOut2 <= totalBalances[2]);
+        minAmountsOut0 = minAmountsOut0 % (1 + totalBalances[0] / 2);
+        minAmountsOut1 = minAmountsOut1 % (1 + totalBalances[1] / 2);
+        minAmountsOut2 = minAmountsOut2 % (1 + totalBalances[2] / 2);
 
         uint256[] memory initialBalances = new uint256[](loanLength);
         for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
@@ -270,7 +267,6 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             for (uint256 i = 0; i < loanLength; i++) {
                 minAmountsOut[i] = GeneralMath.max(minAmountsOut[i], actualLoans[i].amount);
             }
-
             uint256 firstStep = _calculateExpectedBPTToExit(balances, minAmountsOut);
             if (firstStep > collaterals[0].amount) {
                 // In this case we must annihilate minAmountsOut to obtain correct assertEq at the end

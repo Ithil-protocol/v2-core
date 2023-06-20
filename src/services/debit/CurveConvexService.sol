@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
@@ -8,7 +8,6 @@ import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { CurveHelper } from "../../libraries/CurveHelper.sol";
 import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
@@ -20,7 +19,6 @@ import { Whitelisted } from "../Whitelisted.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Curve pool plus staking on Convex
 contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
 
     struct PoolData {
@@ -86,14 +84,15 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         // TODO check if they are 1:1 with base LP Curve tokens, this is the sum of all collaterals
         uint256 totalOwnership = IERC20(poolInfo.rewards).balanceOf(address(this));
 
-        for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
-            IERC20 token = IERC20(pool.rewardTokens[i]);
+        if (totalOwnership > 0)
+            for (uint8 i = 0; i < pool.rewardTokens.length; i++) {
+                IERC20 token = IERC20(pool.rewardTokens[i]);
 
-            token.safeTransfer(
-                msg.sender,
-                token.balanceOf(address(this)).safeMulDiv(agreement.collaterals[0].amount, totalOwnership)
-            );
-        }
+                token.safeTransfer(
+                    msg.sender,
+                    (token.balanceOf(address(this)) * agreement.collaterals[0].amount) / totalOwnership
+                );
+            }
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {

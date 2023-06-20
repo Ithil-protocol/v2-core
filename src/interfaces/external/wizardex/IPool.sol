@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 interface IPool {
     // We model makers as a circular doubly linked list with zero as first and last element

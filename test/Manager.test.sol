@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Test } from "forge-std/Test.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IManager, Manager } from "../src/Manager.sol";
-import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 
 /// @dev Manager native state:
 /// bytes32 public constant override salt = "ithil";
@@ -17,40 +17,46 @@ import { GeneralMath } from "../src/libraries/GeneralMath.sol";
 /// --> see Vault test
 
 contract ManagerTest is Test {
-    using GeneralMath for uint256;
+    using Math for uint256;
 
     Manager internal immutable manager;
     ERC20PresetMinterPauser internal immutable firstToken;
     ERC20PresetMinterPauser internal immutable secondToken;
     ERC20PresetMinterPauser internal immutable spuriousToken;
-    address internal immutable firstVault;
-    address internal immutable secondVault;
-    address internal immutable tokenSink;
-    address internal immutable notOwner;
-    address internal immutable anyAddress;
-    address internal immutable debitCustody;
-    address internal immutable debitServiceOne;
-    address internal immutable debitServiceTwo;
+    address internal firstVault;
+    address internal secondVault;
+    address internal tokenSink;
+    address internal notOwner;
+    address internal anyAddress;
+    address internal debitCustody;
+    address internal debitServiceOne;
+    address internal debitServiceTwo;
 
     constructor() {
         manager = new Manager();
         firstToken = new ERC20PresetMinterPauser("firstToken", "FIRSTTOKEN");
         secondToken = new ERC20PresetMinterPauser("secondToken", "SECONDTOKEN");
         spuriousToken = new ERC20PresetMinterPauser("spuriousToken", "THIRDTOKEN");
+        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
+        firstToken.mint(tokenSink, type(uint256).max);
+        secondToken.mint(tokenSink, type(uint256).max);
+        spuriousToken.mint(tokenSink, type(uint256).max);
+        vm.startPrank(tokenSink);
+        firstToken.transfer(address(this), 1);
+        secondToken.transfer(address(this), 1);
+        vm.stopPrank();
+        firstToken.approve(address(manager), 1);
+        secondToken.approve(address(manager), 1);
+    }
+
+    function setUp() public {
         firstVault = manager.create(address(firstToken));
         secondVault = manager.create(address(secondToken));
-        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
         notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
         anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
         debitCustody = address(uint160(uint(keccak256(abi.encodePacked("Debit Custody")))));
         debitServiceOne = address(uint160(uint(keccak256(abi.encodePacked("debitServiceOne")))));
         debitServiceTwo = address(uint160(uint(keccak256(abi.encodePacked("debitServiceTwo")))));
-    }
-
-    function setUp() public {
-        firstToken.mint(tokenSink, type(uint256).max);
-        secondToken.mint(tokenSink, type(uint256).max);
-        spuriousToken.mint(tokenSink, type(uint256).max);
     }
 
     function testBase() public {
@@ -71,22 +77,26 @@ contract ManagerTest is Test {
     }
 
     function testCreate() public {
+        vm.prank(tokenSink);
+        spuriousToken.transfer(address(this), 1);
+        spuriousToken.approve(address(manager), 1);
         address spuriousVault = manager.create(address(spuriousToken));
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
     function _setupArbitraryState(uint256 previousDeposit, uint256 cap) private returns (uint256) {
         address vaultAddress = manager.vaults(address(firstToken));
+        if (previousDeposit == type(uint256).max) previousDeposit--;
         vm.startPrank(tokenSink);
         firstToken.approve(vaultAddress, previousDeposit);
         IVault(vaultAddress).deposit(previousDeposit, anyAddress);
         vm.stopPrank();
 
         // Take only meaningful caps
-        cap = (cap % GeneralMath.RESOLUTION) + 1;
+        cap = (cap % 1e18) + 1;
 
         manager.setCap(debitServiceOne, address(firstToken), cap);
-        uint256 storedCap = manager.caps(debitServiceOne, address(firstToken));
+        (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
         return cap;
     }
@@ -94,13 +104,13 @@ contract ManagerTest is Test {
     function testSetCap(uint256 previousDeposit, uint256 debitCap, uint256 cap) public {
         _setupArbitraryState(previousDeposit, debitCap);
         manager.setCap(debitServiceOne, address(firstToken), cap);
-        uint256 storedCap = manager.caps(debitServiceOne, address(firstToken));
+        (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
     }
 
     function testFeeUnlockTime(uint256 previousDeposit, uint256 debitCap, uint256 feeUnlockTime) public {
         _setupArbitraryState(previousDeposit, debitCap);
-        feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
+        feeUnlockTime = Math.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
         assertTrue(IVault(manager.vaults(address(firstToken))).feeUnlockTime() == feeUnlockTime);
     }
@@ -117,31 +127,43 @@ contract ManagerTest is Test {
         assertTrue(spuriousToken.balanceOf(firstVault) == 0);
     }
 
-    function testBorrow(
-        uint256 previousDeposit,
-        uint256 debitCap,
-        uint256 currentExposure,
-        uint256 borrowed,
-        uint256 loan
-    ) public {
+    function testLockVault() public {
+        manager.toggleVaultLock(address(firstToken));
+        address vaultAddress = manager.vaults(address(firstToken));
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Locked()"))));
+        IVault(vaultAddress).deposit(1e18, anyAddress);
+
+        manager.setCap(debitServiceOne, address(firstToken), 1e18);
+        vm.startPrank(debitServiceOne);
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Locked()"))));
+        manager.borrow(address(firstToken), 1e18, 0, anyAddress);
+        vm.stopPrank();
+    }
+
+    function testBorrow(uint256 previousDeposit, uint256 debitCap, uint256 borrowed, uint256 loan) public {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
+        (, uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
+
+        // Avoid revert due to insufficient free liquidity
+        borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
+
+        // Loan must always be less than the actual borrowed quantity
+        loan = loan % (borrowed + 1);
 
         uint256 investedPortion = freeLiquidity == 0
-            ? GeneralMath.RESOLUTION
-            : GeneralMath.RESOLUTION.safeMulDiv(
-                currentExposure,
-                freeLiquidity.safeAdd(IVault(vaultAddress).netLoans())
+            ? 1e18
+            : uint256(1e18).mulDiv(
+                (currentExposure + loan),
+                (freeLiquidity - borrowed) + (IVault(vaultAddress).netLoans() + loan)
             );
         if (investedPortion > debitCap) {
             manager.setCap(debitServiceOne, address(firstToken), investedPortion);
         }
-        // Avoid revert due to insufficient free liquidity
-        borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
-            manager.borrow(address(firstToken), borrowed, loan, currentExposure, anyAddress);
+            manager.borrow(address(firstToken), borrowed, loan, anyAddress);
         }
     }
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { Test } from "forge-std/Test.sol";
 import { IVault, Vault } from "../src/Vault.sol";
-import { GeneralMath } from "../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "./helpers/GeneralMath.sol";
 import { SignUtils } from "./helpers/SignUtils.sol";
 import { PermitToken } from "./helpers/PermitToken.sol";
 
@@ -517,6 +517,7 @@ contract VaultTest is Test {
 
         vm.assume(borrowed < vault.freeLiquidity());
         uint256 initialBalance = token.balanceOf(receiver);
+        loan = borrowed == 0 ? 0 : loan % borrowed;
         vault.borrow(borrowed, loan, receiver);
 
         assertTrue(token.balanceOf(receiver) == initialBalance + borrowed);
@@ -527,8 +528,8 @@ contract VaultTest is Test {
             balanceOf - borrowed,
             netLoans.safeAdd(loan),
             latestRepay,
-            currentProfits.safeAdd(borrowed < loan ? loan - borrowed : 0),
-            currentLosses + (borrowed > loan ? borrowed - loan : 0)
+            currentProfits,
+            currentLosses + (borrowed - loan)
         );
     }
 
@@ -556,14 +557,7 @@ contract VaultTest is Test {
 
         uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
-        uint256 lockedProfits = currentProfits.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
-        uint256 lockedLosses = currentLosses.safeMulDiv(
-            feeUnlockTime.positiveSub(newTimestamp - latestRepay),
-            feeUnlockTime
-        );
+        (uint256 lockedProfits, uint256 lockedLosses, ) = vault.getFeeStatus();
 
         if (repaid > token.balanceOf(repayer)) {
             vm.assume(repaid - token.balanceOf(repayer) <= token.balanceOf(tokenSink));

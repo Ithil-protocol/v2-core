@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -10,7 +10,6 @@ import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVaul
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
-import { GeneralMath } from "../../libraries/GeneralMath.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
@@ -23,7 +22,6 @@ import { Whitelisted } from "../Whitelisted.sol";
 /// @author   Ithil
 /// @notice   A service to perform leveraged lping on any Balancer pool
 contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
-    using GeneralMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
 
@@ -198,7 +196,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
             if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
                 IERC20(poolTokens[i]).safeApprove(address(balancerVault), type(uint256).max);
             if (weights[i] > weights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
-            scalingFactors[i] = 10**(18 - IERC20Metadata(poolTokens[i]).decimals());
+            scalingFactors[i] = 10 ** (18 - IERC20Metadata(poolTokens[i]).decimals());
         }
 
         pools[poolAddress] = PoolData(
@@ -242,10 +240,11 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         // TODO add premium to the caller
     }
 
-    function _modifyBalancesWithFees(address poolAddress, uint256[] memory balances, uint256[] memory normalizedWeights)
-        internal
-        view
-    {
+    function _modifyBalancesWithFees(
+        address poolAddress,
+        uint256[] memory balances,
+        uint256[] memory normalizedWeights
+    ) internal view {
         PoolData memory pool = pools[poolAddress];
 
         for (uint256 i = 0; i < pool.length; i++) balances[i] *= pool.scalingFactors[i];
@@ -263,11 +262,11 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     // Assumes balances are already upscaled and downscales them back together with balances
-    function _calculateExpectedBPTToExit(address poolAddress, uint256[] memory balances, uint256[] memory amountsOut)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateExpectedBPTToExit(
+        address poolAddress,
+        uint256[] memory balances,
+        uint256[] memory amountsOut
+    ) internal view returns (uint256) {
         PoolData memory pool = pools[poolAddress];
         uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
         _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);

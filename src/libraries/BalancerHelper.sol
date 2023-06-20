@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { FloatingPointMath } from "./FloatingPointMath.sol";
 import { WeightedMath } from "./external/Balancer/WeightedMath.sol";
@@ -8,11 +8,11 @@ import { WeightedMath } from "./external/Balancer/WeightedMath.sol";
 /// @author   Ithil
 /// @notice   A library to perform the most common operations on Balancer
 library BalancerHelper {
-    function exitExactBPTInForTokensOut(uint256[] memory balances, uint256 bptAmountIn, uint256 totalSupply)
-        public
-        pure
-        returns (uint256[] memory)
-    {
+    function exitExactBPTInForTokensOut(
+        uint256[] memory balances,
+        uint256 bptAmountIn,
+        uint256 totalSupply
+    ) public pure returns (uint256[] memory) {
         uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalSupply);
         return amountsOut;
     }

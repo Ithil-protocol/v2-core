@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Test } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 
@@ -51,7 +51,10 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         }
         for (uint i = 0; i < loanLength; i++) {
             // Create Vault: DAI
+            vm.prank(whales[loanTokens[i]]);
+            IERC20(loanTokens[i]).transfer(admin, 1);
             vm.startPrank(admin);
+            IERC20(loanTokens[i]).approve(address(manager), 1);
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
             manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION);
@@ -64,11 +67,12 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         require(success, "toggleWhitelistFlag failed");
     }
 
-    function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
-        external
-        pure
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address /*operator*/,
+        address /*from*/,
+        uint256 /*tokenId*/,
+        bytes calldata /*data*/
+    ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -98,10 +102,12 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         assertGe(amount2 + tolerance, amount1);
     }
 
-    function _prepareVaultAndUser(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp)
-        internal
-        returns (uint256, uint256, uint256, uint64)
-    {
+    function _prepareVaultAndUser(
+        uint256 vaultAmount,
+        uint256 loan,
+        uint256 margin,
+        uint64 warp
+    ) internal returns (uint256, uint256, uint256, uint64) {
         warp = warp % (365 * 86400 * 10); // Warp 10y maximum
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         vaultAmount = whaleBalance == 0 ? 0 : vaultAmount % whaleBalance;
@@ -131,7 +137,8 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             uint256 freeLiquidity = IVault(manager.vaults(loanTokens[0])).freeLiquidity();
             // Loan cannot be more than a certain amount or it causes an InterestRateOverflow()
             (, uint256 currentBase) = service.latestAndBase(loanTokens[0]).unpackUint();
-            uint256 maxLoan = freeLiquidity.safeMulDiv(GeneralMath.RESOLUTION - currentBase, GeneralMath.RESOLUTION);
+            uint256 maxLoan = (freeLiquidity * (GeneralMath.RESOLUTION - currentBase - 5e15)) / GeneralMath.RESOLUTION;
+            maxLoan = maxLoan.min((GeneralMath.RESOLUTION * margin) / (currentBase + 5e15));
             loan = maxLoan == 0 ? 0 : loan % maxLoan;
             (uint256 baseRate, uint256 spread) = service.computeBaseRateAndSpread(
                 loanTokens[0],

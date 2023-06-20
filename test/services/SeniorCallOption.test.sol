@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { Test } from "forge-std/Test.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -10,7 +10,7 @@ import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { Ithil } from "../../src/Ithil.sol";
 import { SeniorCallOption } from "../../src/services/credit/SeniorCallOption.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
@@ -65,6 +65,10 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
     function testSCOClosePosition(uint256 daiAmount, uint256 daiLoan) public {
         testSCOOpenPosition(daiAmount, daiLoan);
         (IService.Loan[] memory loans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
-        service.close(0, abi.encode(1e17));
+        uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
+        if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
+            service.close(0, abi.encode(1e17));
+        } else service.close(0, abi.encode(1e17));
     }
 }

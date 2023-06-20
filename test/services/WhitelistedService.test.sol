@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -9,7 +9,7 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { Service, IService } from "../../src/services/Service.sol";
 import { Whitelisted } from "../../src/services/Whitelisted.sol";
 import { AuctionRateModel } from "../../src/irmodels/AuctionRateModel.sol";
-import { GeneralMath } from "../../src/libraries/GeneralMath.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
@@ -17,11 +17,11 @@ import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 contract TestService is Whitelisted, AuctionRateModel, Service {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager, 30 * 86400) {}
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
-        internal
-        virtual
-        override
-    {}
+    function _close(
+        uint256 tokenID,
+        IService.Agreement memory agreement,
+        bytes memory data
+    ) internal virtual override {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override onlyWhitelisted {}
 }
@@ -55,7 +55,10 @@ contract WhitelistedTest is Test, IERC721Receiver {
         vm.prank(whitelistedUser);
         token.approve(address(service), type(uint256).max);
 
+        vm.prank(whitelistedUser);
+        token.transfer(admin, 1);
         vm.startPrank(admin);
+        token.approve(address(manager), 1);
         manager.create(address(token));
         manager.setCap(address(service), address(token), GeneralMath.RESOLUTION);
         vm.stopPrank();
@@ -105,10 +108,12 @@ contract WhitelistedTest is Test, IERC721Receiver {
         service.open(order);
     }
 
-    function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address /*operator*/,
+        address /*from*/,
+        uint256 /*tokenId*/,
+        bytes calldata /*data*/
+    ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 }

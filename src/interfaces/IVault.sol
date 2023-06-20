@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.17;
+pragma solidity =0.8.18;
 
 import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 
@@ -28,7 +28,11 @@ interface IVault is IERC4626 {
 
     function repay(uint256 assets, uint256 debt, address repayer) external;
 
-    function getStatus() external view returns (uint256, uint256, uint256);
+    function getFeeStatus() external view returns (uint256, uint256, uint256);
+
+    function toggleLock() external;
+
+    function isLocked() external view returns (bool);
 
     // Events
     event DegradationCoefficientWasUpdated(uint256 degradationCoefficient);
@@ -44,10 +48,13 @@ interface IVault is IERC4626 {
     event Repaid(address indexed repayer, uint256 amount, uint256 debt);
     event DirectMint(address indexed receiver, uint256 shares, uint256 increasedAssets);
     event DirectBurn(address indexed receiver, uint256 shares, uint256 distributedAssets);
+    event LockToggled(bool isLocked);
 
     error InsufficientLiquidity();
     error InsufficientFreeLiquidity();
     error BurnThresholdExceeded();
     error FeeUnlockTimeOutOfRange();
     error RestrictedToOwner();
+    error LoanHigherThanAssetsInBorrow();
+    error Locked();
 }
