@@ -167,9 +167,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         // assets > 0 and supply > 0 always
         uint256 shares = assets.mulDiv(supply, freeLiq + netLoans + _calculateLockedLosses());
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
-
-        emit Withdrawn(msg.sender, receiver, owner, assets, shares);
+        _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return shares;
     }
@@ -188,9 +186,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 assets = shares.mulDiv(totalAssetsCache, supply);
         if (assets >= freeLiq) revert InsufficientLiquidity();
         // redeem, now all data have been computed
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
-
-        emit Withdrawn(msg.sender, receiver, owner, assets, shares);
+        _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return assets;
     }
