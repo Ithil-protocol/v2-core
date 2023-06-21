@@ -46,12 +46,11 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
         service.addPool(poolID, [loanTokens[0], loanTokens[1]]);
     }
 
-    function _calculateDeposit(
-        uint256 usdcLoan,
-        uint256 usdcMargin,
-        uint256 wethLoan,
-        uint256 wethMargin
-    ) internal view returns (uint256, uint256, uint256) {
+    function _calculateDeposit(uint256 usdcLoan, uint256 usdcMargin, uint256 wethLoan, uint256 wethMargin)
+        internal
+        view
+        returns (uint256, uint256, uint256)
+    {
         (, bytes memory wethQuotedData) = sushiRouter.staticcall(
             abi.encodeWithSignature(
                 "quote(uint256,uint256,uint256)",

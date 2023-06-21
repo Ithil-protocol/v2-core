@@ -17,13 +17,9 @@ contract SeniorFixedYieldService is CreditService {
     // The yield of this service, with 1e18 corresponding to 100% annually
     uint256 public immutable yield;
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address _manager,
-        uint256 _yield,
-        uint256 _deadline
-    ) Service(_name, _symbol, _manager, _deadline) {
+    constructor(string memory _name, string memory _symbol, address _manager, uint256 _yield, uint256 _deadline)
+        Service(_name, _symbol, _manager, _deadline)
+    {
         yield = _yield;
     }
 
@@ -53,10 +49,13 @@ contract SeniorFixedYieldService is CreditService {
         // We do nothing in this case, since behaviour is the one of a vanilla CreditService
     }
 
-    function dueAmount(
-        IService.Agreement memory agreement,
-        bytes memory /*data*/
-    ) public view virtual override returns (uint256) {
+    function dueAmount(IService.Agreement memory agreement, bytes memory /*data*/)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         // loan * (1 + yield * time)
         return
             agreement.loans[0].amount +

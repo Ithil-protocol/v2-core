@@ -3,6 +3,7 @@ pragma solidity =0.8.18;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Test } from "forge-std/Test.sol";
 import { IVault, Vault } from "../src/Vault.sol";
 import { GeneralMath } from "./helpers/GeneralMath.sol";
@@ -28,6 +29,7 @@ import { PermitToken } from "./helpers/PermitToken.sol";
 /// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
 
 contract VaultTest is Test {
+    using Math for uint256;
     using GeneralMath for uint256;
 
     Vault internal immutable vault;
@@ -124,7 +126,7 @@ contract VaultTest is Test {
         uint256 currentLosses
     ) internal returns (uint256, uint256) {
         // Force fee unlock time to be within range
-        feeUnlockTime = GeneralMath.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
+        feeUnlockTime = Math.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         vault.setFeeUnlockTime(feeUnlockTime);
 
         // Set totalSupply by depositing
@@ -140,7 +142,7 @@ contract VaultTest is Test {
         vault.repay(0, 0, repayer);
 
         // Set currentProfits (assume this otherwise there are no tokens available)
-        currentProfits = GeneralMath.min(currentProfits, token.totalSupply() - totalSupply);
+        currentProfits = Math.min(currentProfits, token.totalSupply() - totalSupply);
         vm.prank(tokenSink);
         token.transfer(repayer, currentProfits);
         vm.prank(repayer);
@@ -557,8 +559,17 @@ contract VaultTest is Test {
 
         uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
-        (uint256 lockedProfits, uint256 lockedLosses, ) = vault.getFeeStatus();
-
+        uint256 lockedProfits;
+        uint256 lockedLosses;
+        (lockedProfits, lockedLosses, , ) = vault.getFeeStatus();
+        lockedProfits = lockedProfits.mulDiv(
+            feeUnlockTime - Math.min(block.timestamp - latestRepay, feeUnlockTime),
+            feeUnlockTime
+        );
+        lockedLosses = lockedLosses.mulDiv(
+            feeUnlockTime - Math.min(block.timestamp - latestRepay, feeUnlockTime),
+            feeUnlockTime
+        );
         if (repaid > token.balanceOf(repayer)) {
             vm.assume(repaid - token.balanceOf(repayer) <= token.balanceOf(tokenSink));
             vm.startPrank(tokenSink);

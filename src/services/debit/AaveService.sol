@@ -23,11 +23,9 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     error ZeroCollateral();
     error ImpossibleToQuote();
 
-    constructor(
-        address _manager,
-        address _aave,
-        uint256 _deadline
-    ) Service("AaveService", "AAVE-SERVICE", _manager, _deadline) {
+    constructor(address _manager, address _aave, uint256 _deadline)
+        Service("AaveService", "AAVE-SERVICE", _manager, _deadline)
+    {
         aave = IPool(_aave);
     }
 

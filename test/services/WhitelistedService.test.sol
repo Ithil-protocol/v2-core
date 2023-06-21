@@ -17,11 +17,11 @@ import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 contract TestService is Whitelisted, AuctionRateModel, Service {
     constructor(address manager) Service("TestService", "TEST-SERVICE", manager, 30 * 86400) {}
 
-    function _close(
-        uint256 tokenID,
-        IService.Agreement memory agreement,
-        bytes memory data
-    ) internal virtual override {}
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
+        internal
+        virtual
+        override
+    {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override onlyWhitelisted {}
 }
@@ -108,12 +108,10 @@ contract WhitelistedTest is Test, IERC721Receiver {
         service.open(order);
     }
 
-    function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
-    ) external returns (bytes4) {
+    function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
+        external
+        returns (bytes4)
+    {
         return IERC721Receiver.onERC721Received.selector;
     }
 }

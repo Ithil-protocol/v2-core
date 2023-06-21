@@ -101,7 +101,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         for (uint256 i = 0; i < loanLength; i++) {
             // Tokens with more than 18 decimals are not supported.
             uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
-            array[i] *= 10 ** decimalsDifference;
+            array[i] *= 10**decimalsDifference;
         }
     }
 
@@ -109,7 +109,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         for (uint256 i = 0; i < loanLength; i++) {
             // Tokens with more than 18 decimals are not supported.
             uint256 decimalsDifference = 18 - IERC20Metadata(address(loanTokens[i])).decimals();
-            array[i] /= 10 ** decimalsDifference;
+            array[i] /= 10**decimalsDifference;
         }
     }
 
@@ -139,10 +139,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
     }
 
-    function _calculateExpectedBPTFromJoin(
-        uint256[] memory balances,
-        uint256[] memory amountsIn
-    ) internal view returns (uint256) {
+    function _calculateExpectedBPTFromJoin(uint256[] memory balances, uint256[] memory amountsIn)
+        internal
+        view
+        returns (uint256)
+    {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsIn);
@@ -158,10 +159,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return amountOut;
     }
 
-    function _calculateExpectedBPTToExit(
-        uint256[] memory balances,
-        uint256[] memory amountsOut
-    ) internal view returns (uint256) {
+    function _calculateExpectedBPTToExit(uint256[] memory balances, uint256[] memory amountsOut)
+        internal
+        view
+        returns (uint256)
+    {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsOut);
@@ -177,11 +179,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return expectedBpt;
     }
 
-    function _calculateExpectedTokensFromBPT(
-        uint256[] memory balances,
-        uint256 amount,
-        uint256 totalSupply
-    ) internal view returns (uint256[] memory) {
+    function _calculateExpectedTokensFromBPT(uint256[] memory balances, uint256 amount, uint256 totalSupply)
+        internal
+        view
+        returns (uint256[] memory)
+    {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);

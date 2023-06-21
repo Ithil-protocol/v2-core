@@ -77,7 +77,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
     error EndOfLoop();
 
     function _getDMem(uint256[2] memory balances) internal view returns (uint256) {
-        uint256[2] memory xpmem = [balances[0] * 10 ** 12, balances[1] * 10 ** 12];
+        uint256[2] memory xpmem = [balances[0] * 10**12, balances[1] * 10**12];
         uint256 s = xpmem[0] + xpmem[1];
         uint256 d = s;
         uint256 ann = _calculateA() * 2;
@@ -118,7 +118,7 @@ contract CurveConvexServiceTest is BaseIntegrationServiceTest {
             uint256 newBalance = newBalances[i];
             if (idealBalance > newBalance) difference = idealBalance - newBalance;
             else difference = newBalance - idealBalance;
-            newBalances[i] -= (fee * difference) / 10 ** 10;
+            newBalances[i] -= (fee * difference) / 10**10;
         }
         d2 = _getDMem(newBalances);
         return (IERC20(collateralTokens[0]).totalSupply() * (d2 - d0)) / d0;

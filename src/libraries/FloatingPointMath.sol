@@ -33,13 +33,13 @@ library FloatingPointMath {
 
         // First order is already quite near
         uint256 firstOrder = base > RESOLUTION ? RESOLUTION + mul(mantissa, exp) : RESOLUTION - mul(mantissa, exp);
-        uint256 den = 2 * (RESOLUTION ** 3);
+        uint256 den = 2 * (RESOLUTION**3);
 
         if (exp > RESOLUTION) {
-            uint256 num = exp * (exp - RESOLUTION) * (mantissa ** 2);
+            uint256 num = exp * (exp - RESOLUTION) * (mantissa**2);
             return firstOrder + num / den;
         } else {
-            uint256 num = exp * (RESOLUTION - exp) * (mantissa ** 2);
+            uint256 num = exp * (RESOLUTION - exp) * (mantissa**2);
             return firstOrder - num / den;
         }
     }

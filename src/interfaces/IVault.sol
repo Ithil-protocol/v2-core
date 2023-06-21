@@ -28,7 +28,7 @@ interface IVault is IERC4626 {
 
     function repay(uint256 assets, uint256 debt, address repayer) external;
 
-    function getFeeStatus() external view returns (uint256, uint256, uint256);
+    function getFeeStatus() external view returns (uint256, uint256, uint256, uint256);
 
     function toggleLock() external;
 

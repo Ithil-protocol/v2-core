@@ -43,10 +43,11 @@ library WeightedMath {
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
-    function _calculateInvariant(
-        uint256[] memory normalizedWeights,
-        uint256[] memory balances
-    ) internal pure returns (uint256 invariant) {
+    function _calculateInvariant(uint256[] memory normalizedWeights, uint256[] memory balances)
+        internal
+        pure
+        returns (uint256 invariant)
+    {
         /**********************************************************************************************
         // invariant               _____                                                             //
         // wi = weight index i      | |      wi                                                      //
@@ -294,11 +295,11 @@ library WeightedMath {
         return nonTaxableAmount.add(taxableAmount.mulDown(swapFee.complement()));
     }
 
-    function _calcTokensOutGivenExactBptIn(
-        uint256[] memory balances,
-        uint256 bptAmountIn,
-        uint256 totalBPT
-    ) internal pure returns (uint256[] memory) {
+    function _calcTokensOutGivenExactBptIn(uint256[] memory balances, uint256 bptAmountIn, uint256 totalBPT)
+        internal
+        pure
+        returns (uint256[] memory)
+    {
         /**********************************************************************************************
         // exactBPTInForTokensOut                                                                    //
         // (per token)                                                                               //

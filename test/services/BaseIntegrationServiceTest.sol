@@ -58,12 +58,10 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         (bool success, ) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
-    function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
-    ) external returns (bytes4) {
+    function onERC721Received(address /*operator*/, address /*from*/, uint256 /*tokenId*/, bytes calldata /*data*/)
+        external
+        returns (bytes4)
+    {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -161,11 +159,10 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             );
     }
 
-    function _openOrder0(
-        uint256 collateralAmount,
-        uint256 time,
-        bytes memory data
-    ) internal returns (IService.Order memory order) {
+    function _openOrder0(uint256 collateralAmount, uint256 time, bytes memory data)
+        internal
+        returns (IService.Order memory order)
+    {
         uint256[] memory amounts = new uint256[](loanLength);
         uint256[] memory loans = new uint256[](loanLength);
         uint256[] memory margins = new uint256[](loanLength);
@@ -189,12 +186,10 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 
-    function _openOrder1ForCredit(
-        uint256 loan0,
-        uint256 collateralAmount,
-        uint256 time,
-        bytes memory data
-    ) internal returns (IService.Order memory order) {
+    function _openOrder1ForCredit(uint256 loan0, uint256 collateralAmount, uint256 time, bytes memory data)
+        internal
+        returns (IService.Order memory order)
+    {
         uint256[] memory loans = new uint256[](loanLength);
         loans[0] = loan0;
         return _vectorizedOpenOrderForCredit(loans, collateralAmount, time, data);

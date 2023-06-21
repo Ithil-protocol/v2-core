@@ -46,12 +46,11 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
      * throws if spread > type(uint256).max - newBase
      */
 
-    function computeBaseRateAndSpread(
-        address token,
-        uint256 loan,
-        uint256 margin,
-        uint256 freeLiquidity
-    ) public view returns (uint256, uint256) {
+    function computeBaseRateAndSpread(address token, uint256 loan, uint256 margin, uint256 freeLiquidity)
+        public
+        view
+        returns (uint256, uint256)
+    {
         (uint256 latestBorrow, uint256 base) = (latestAndBase[token] >> 128, latestAndBase[token] % (1 << 128));
         // Increase base due to new borrow and then
         // apply time based discount: after halvingTime it is divided by 2

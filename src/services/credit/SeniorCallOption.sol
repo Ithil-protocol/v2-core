@@ -57,7 +57,7 @@ contract SeniorCallOption is CreditService {
         treasury = _treasury;
         underlying = IERC20(_underlying);
         ithil = IERC20(_ithil);
-        _precision = 10 ** IERC20Metadata(_underlying).decimals();
+        _precision = 10**IERC20Metadata(_underlying).decimals();
         halvingTime = _halvingTime;
 
         _rewards = new uint64[](12);

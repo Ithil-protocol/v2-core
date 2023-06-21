@@ -9,6 +9,6 @@ import { ERC20Votes } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20
 /// @author   Ithil
 contract Ithil is ERC20, ERC20Permit {
     constructor() ERC20("Ithil", "ITHIL") ERC20Permit("Ithil") {
-        _mint(msg.sender, 1e8 * 10 ** decimals());
+        _mint(msg.sender, 1e8 * 10**decimals());
     }
 }

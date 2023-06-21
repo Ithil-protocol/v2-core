@@ -20,11 +20,11 @@ contract Payer is Service {
     // Dummy service to produce fees
     constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
-    function _close(
-        uint256 tokenID,
-        IService.Agreement memory agreement,
-        bytes memory data
-    ) internal virtual override {}
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
+        internal
+        virtual
+        override
+    {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
 }
@@ -50,6 +50,7 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
         ithil = new Ithil();
+        // 1e17 means a fee percentage of 10%
         service = new FeeCollectorService(address(manager), address(weth), 1e17, address(oracle), address(dex));
         service.setTokenWeight(address(ithil), 1e18);
         payer = new Payer(address(manager));
@@ -133,6 +134,10 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         manager.repay(address(weth), 1e18, 0, address(payer));
         manager.repay(address(usdc), 1e6, 0, address(payer));
         vm.stopPrank();
+
+        // we should wait the fees to unlock, otherwise they cannot be harvested
+        // (actually only feePercentage of the fees must be unlocked to be able to harvest)
+        vm.warp(block.timestamp + 21600);
 
         // we want to test that WETH does not trigger a swap while USDC does
         address[] memory tokens = new address[](2);

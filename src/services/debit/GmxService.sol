@@ -31,12 +31,9 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
     error InvalidToken();
     error ZeroGlpSupply();
 
-    constructor(
-        address _manager,
-        address _router,
-        address _routerV2,
-        uint256 _deadline
-    ) Service("GmxService", "GMX-SERVICE", _manager, _deadline) {
+    constructor(address _manager, address _router, address _routerV2, uint256 _deadline)
+        Service("GmxService", "GMX-SERVICE", _manager, _deadline)
+    {
         router = IRewardRouter(_router);
         routerV2 = IRewardRouterV2(_routerV2);
         glp = IERC20(routerV2.glp());

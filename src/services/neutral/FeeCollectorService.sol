@@ -118,11 +118,11 @@ contract FeeCollectorService is Service {
         IERC20(agreement.loans[0].token).safeTransferFrom(msg.sender, address(this), agreement.loans[0].margin);
     }
 
-    function _close(
-        uint256 tokenID,
-        Agreement memory agreement,
-        bytes memory /*data*/
-    ) internal override expired(tokenID) {
+    function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/)
+        internal
+        override
+        expired(tokenID)
+    {
         uint256 totalWithdraw = (totalAssets() * agreement.loans[0].amount) / totalLoans;
         totalLoans -= agreement.loans[0].amount;
         veToken.burn(msg.sender, agreement.collaterals[0].amount);
@@ -157,7 +157,7 @@ contract FeeCollectorService is Service {
 
     function _harvestFees(address token) internal returns (uint256, address) {
         IVault vault = IVault(manager.vaults(token));
-        (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getFeeStatus();
+        (uint256 profits, uint256 losses, , uint256 latestRepay) = vault.getFeeStatus();
         if (latestRepay < latestHarvest[token]) revert Throttled();
         if (profits <= losses) revert InsufficientProfits();
         latestHarvest[token] = block.timestamp;
