@@ -18,9 +18,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     event PositionOpened(uint256 indexed id, Agreement agreement);
     event PositionClosed(uint256 indexed id, Agreement agreement);
 
-    constructor(string memory _name, string memory _symbol, address _manager, uint256 _deadline)
-        ERC721(_name, _symbol)
-    {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        address _manager,
+        uint256 _deadline
+    ) ERC721(_name, _symbol) {
         manager = IManager(_manager);
         locked = false;
         id = 0;
@@ -106,18 +109,15 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data)
-        public
-        virtual
-        unlocked
-        editable(tokenID)
-    {}
+    function edit(
+        uint256 tokenID,
+        Agreement calldata agreement,
+        bytes calldata data
+    ) public virtual unlocked editable(tokenID) {}
 
-    function getAgreement(uint256 tokenID)
-        public
-        view
-        returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status)
-    {
+    function getAgreement(
+        uint256 tokenID
+    ) public view returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status) {
         Agreement memory agreement = agreements[tokenID];
         return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
     }

@@ -7,10 +7,11 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 contract PermitToken is ERC20PresetMinterPauser, ERC20Permit {
     constructor(string memory name, string memory symbol) ERC20PresetMinterPauser(name, symbol) ERC20Permit(symbol) {}
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount)
-        internal
-        override(ERC20, ERC20PresetMinterPauser)
-    {
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override(ERC20, ERC20PresetMinterPauser) {
         ERC20PresetMinterPauser._beforeTokenTransfer(from, to, amount);
     }
 }

@@ -19,12 +19,11 @@ abstract contract DebitService is Service, BaseRiskModel {
     }
 
     /// @dev Defaults to amount + margin * (ir + riskSpread) / 1e18
-    function _liquidationThreshold(uint256 amount, uint256 margin, uint256 interestAndSpread)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _liquidationThreshold(
+        uint256 amount,
+        uint256 margin,
+        uint256 interestAndSpread
+    ) internal view virtual returns (uint256) {
         (uint256 interestRate, uint256 riskSpread) = (interestAndSpread >> 128, interestAndSpread % (1 << 128));
         // Any good interest rate model must have interestRate + riskSpread < RESOLUTION
         // otherwise a position may be instantly liquidable

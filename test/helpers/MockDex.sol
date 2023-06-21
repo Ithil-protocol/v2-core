@@ -20,23 +20,28 @@ contract MockDex is IFactory, IPool {
         return true;
     }
 
-    function createPool(address underlying, address accounting, uint16 tickSpacing)
-        external
-        returns (address, address)
-    {
+    function createPool(
+        address underlying,
+        address accounting,
+        uint16 tickSpacing
+    ) external returns (address, address) {
         revert("not implemented");
     }
 
-    function createOrder(uint256 amount, uint256 price, address recipient, uint256 deadline)
-        external
-        payable
-        override
-    {}
+    function createOrder(
+        uint256 amount,
+        uint256 price,
+        address recipient,
+        uint256 deadline
+    ) external payable override {}
 
     function cancelOrder(uint256 index, uint256 price) external {}
 
-    function fulfillOrder(uint256 amount, address receiver, uint256 minReceived, uint256 maxPaid, uint256 deadline)
-        external
-        returns (uint256, uint256)
-    {}
+    function fulfillOrder(
+        uint256 amount,
+        address receiver,
+        uint256 minReceived,
+        uint256 maxPaid,
+        uint256 deadline
+    ) external returns (uint256, uint256) {}
 }
