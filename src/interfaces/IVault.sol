@@ -36,23 +36,12 @@ interface IVault is IERC4626 {
 
     // Events
     event DegradationCoefficientWasUpdated(uint256 degradationCoefficient);
-    event Deposited(address indexed user, address indexed receiver, uint256 assets, uint256 shares);
-    event Withdrawn(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
     event Borrowed(address indexed receiver, uint256 assets);
     event Repaid(address indexed repayer, uint256 amount, uint256 debt);
-    event DirectMint(address indexed receiver, uint256 shares, uint256 increasedAssets);
-    event DirectBurn(address indexed receiver, uint256 shares, uint256 distributedAssets);
     event LockToggled(bool isLocked);
 
     error InsufficientLiquidity();
     error InsufficientFreeLiquidity();
-    error BurnThresholdExceeded();
     error FeeUnlockTimeOutOfRange();
     error RestrictedToOwner();
     error LoanHigherThanAssetsInBorrow();
