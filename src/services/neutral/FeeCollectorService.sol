@@ -5,6 +5,9 @@ import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IVault } from "../../interfaces/IVault.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
+import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { Whitelisted } from "../Whitelisted.sol";
 import { Service } from "../Service.sol";
 import { VeIthil } from "../../VeIthil.sol";
@@ -19,6 +22,8 @@ contract FeeCollectorService is Service {
     uint256 public immutable feePercentage;
     IERC20 public immutable weth;
     VeIthil public immutable veToken;
+    IOracle public immutable oracle;
+    IFactory public immutable dex;
 
     // weights for different tokens, 0 => not supported
     // assumes 18 digit fixed point math
@@ -45,10 +50,15 @@ contract FeeCollectorService is Service {
     constructor(
         address _manager,
         address _weth,
-        uint256 _feePercentage
+        uint256 _feePercentage,
+        address _oracle,
+        address _dex
     ) Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max) {
-        weth = IERC20(_weth);
         veToken = new VeIthil();
+
+        weth = IERC20(_weth);
+        oracle = IOracle(_oracle);
+        dex = IFactory(_dex);
 
         feePercentage = _feePercentage;
         _rewards = new uint64[](12);
@@ -149,9 +159,9 @@ contract FeeCollectorService is Service {
         return toTransfer;
     }
 
-    function _harvestFees(address token) internal {
+    function _harvestFees(address token) internal returns (uint256, address) {
         IVault vault = IVault(manager.vaults(token));
-        (uint256 profits, uint256 losses, uint256 latestRepay) = vault.getFeeStatus();
+        (uint256 profits, uint256 losses, , uint256 latestRepay) = vault.getFeeStatus();
         if (latestRepay < latestHarvest[token]) revert Throttled();
         if (profits <= losses) revert InsufficientProfits();
         latestHarvest[token] = block.timestamp;
@@ -159,13 +169,26 @@ contract FeeCollectorService is Service {
         uint256 feesToHarvest = ((profits - losses) * feePercentage) / 1e18;
         manager.borrow(token, feesToHarvest, 0, address(this));
         // todo: reward harvester
+
+        return (feesToHarvest, address(vault));
     }
 
     function harvestAndSwap(address[] calldata tokens) external {
         uint256 length = tokens.length;
         for (uint256 i = 0; i < length; i++) {
-            _harvestFees(tokens[i]);
-            // TODO swap if not WETH for WETH
+            (uint256 amount, address vault) = _harvestFees(tokens[i]);
+
+            // Swap if not WETH
+            if (tokens[i] != address(weth)) {
+                // TODO check assumption: all pools will have same the tick
+                IPool pool = IPool(dex.pools(tokens[i], address(weth), 5));
+
+                // TODO check oracle
+                uint256 price = oracle.getPrice(tokens[i], address(weth), 1);
+
+                // TODO add discount to price
+                pool.createOrder(amount, price, vault, block.timestamp + 1 weeks);
+            }
         }
     }
 }

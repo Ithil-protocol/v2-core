@@ -3,8 +3,8 @@ pragma solidity =0.8.18;
 
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
-import { IPool } from "../../interfaces/external/dex/IPool.sol";
+import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
+import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { ICurvePool } from "../../interfaces/external/curve/ICurvePool.sol";
 import { IConvexBooster } from "../../interfaces/external/convex/IConvexBooster.sol";
 import { IBaseRewardPool } from "../../interfaces/external/convex/IBaseRewardPool.sol";
@@ -41,7 +41,7 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
     address internal immutable crv;
     address internal immutable cvx;
     IOracle public immutable oracle;
-    IFactory public immutable factory;
+    IFactory public immutable dex;
 
     constructor(
         address _manager,
@@ -53,7 +53,7 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
         uint256 _deadline
     ) Service("CurveConvexService", "CURVECONVEX-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
-        factory = IFactory(_factory);
+        dex = IFactory(_factory);
         booster = IConvexBooster(_booster);
         cvx = _cvx;
         crv = _crv;
@@ -168,15 +168,15 @@ contract CurveConvexService is Whitelisted, ConstantRateModel, DebitService {
 
         // TODO check oracle
         uint256 price = oracle.getPrice(crv, token, 1);
-        address dexPool = factory.pools(crv, token);
+        address dexPool = dex.pools(crv, token, 10); // TODO hardcoded tick
         // TODO add discount
-        IPool(dexPool).createOrder(IERC20(crv).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+        IPool(dexPool).createOrder(IERC20(crv).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
 
         // TODO check oracle
         price = oracle.getPrice(cvx, token, 1);
-        dexPool = factory.pools(cvx, token);
+        dexPool = dex.pools(cvx, token, 10); // TODO hardcoded tick
         // TODO add discount
-        IPool(dexPool).createOrder(IERC20(cvx).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+        IPool(dexPool).createOrder(IERC20(cvx).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
 
         // TODO add premium to the caller
     }

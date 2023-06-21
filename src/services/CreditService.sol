@@ -55,8 +55,8 @@ abstract contract CreditService is Service {
             // otherwise transfer redeemed and do nothing
             if (toTransfer < redeemed) {
                 manager.repay(agreement.loans[index].token, redeemed - toTransfer, 0, address(this));
-                IERC20(agreement.loans[index].token).transfer(owner, toTransfer);
-            } else IERC20(agreement.loans[index].token).transfer(owner, redeemed);
+                IERC20(agreement.loans[index].token).safeTransfer(owner, toTransfer);
+            } else IERC20(agreement.loans[index].token).safeTransfer(owner, redeemed);
         }
     }
 

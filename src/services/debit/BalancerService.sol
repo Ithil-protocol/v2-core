@@ -4,8 +4,8 @@ pragma solidity =0.8.18;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { IFactory } from "../../interfaces/external/dex/IFactory.sol";
-import { IPool } from "../../interfaces/external/dex/IPool.sol";
+import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
+import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
 import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
@@ -49,7 +49,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     uint256 public rewardRate;
     address public immutable bal;
     IOracle public immutable oracle;
-    IFactory public immutable factory;
+    IFactory public immutable dex;
 
     constructor(
         address _manager,
@@ -60,7 +60,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         uint256 _deadline
     ) Service("BalancerService", "BALANCER-SERVICE", _manager, _deadline) {
         oracle = IOracle(_oracle);
-        factory = IFactory(_factory);
+        dex = IFactory(_factory);
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
     }
@@ -233,9 +233,9 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         (address token, address vault) = VaultHelper.getBestVault(pool.tokens, manager);
         // TODO check oracle
         uint256 price = oracle.getPrice(bal, token, 1);
-        address dexPool = factory.pools(bal, token);
+        address dexPool = dex.pools(bal, token, 10); // TODO hardcoded tick
         // TODO add discount
-        IPool(dexPool).createOrder(IERC20(bal).balanceOf(address(this)), price, vault, block.timestamp + 30 days);
+        IPool(dexPool).createOrder(IERC20(bal).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
 
         // TODO add premium to the caller
     }

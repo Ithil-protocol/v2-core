@@ -73,8 +73,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
     }
 
-    function getFeeStatus() external view override returns (uint256, uint256, uint256) {
-        return (_calculateLockedProfits(), _calculateLockedLosses(), latestRepay);
+    function getFeeStatus() external view override returns (uint256, uint256, uint256, uint256) {
+        return (currentProfits, currentLosses, feeUnlockTime, latestRepay);
     }
 
     // Total assets are used to calculate shares to mint and redeem
