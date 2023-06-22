@@ -4,6 +4,7 @@ pragma solidity =0.8.18;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+import { IBalancerPoolManager } from "../../interfaces/IBalancerPoolManager.sol";
 import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
 import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
@@ -14,6 +15,7 @@ import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
+import { BalancerPoolManager } from "./utils/BalancerPoolManager.sol";
 import { Service } from "../Service.sol";
 import { DebitService } from "../DebitService.sol";
 import { Whitelisted } from "../Whitelisted.sol";
@@ -25,31 +27,17 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;
 
-    struct PoolData {
-        bytes32 balancerPoolID;
-        address[] tokens;
-        uint256[] weights;
-        uint256[] scalingFactors;
-        uint256 maximumWeightIndex;
-        uint8 length;
-        uint256 swapFee;
-        address gauge;
-        address protocolFeeCollector;
-    }
-
-    event PoolWasAdded(address indexed balancerPool);
-    event PoolWasRemoved(address indexed balancerPool);
-
     error InexistentPool();
     error TokenIndexMismatch();
     error SlippageError();
 
-    mapping(address => PoolData) public pools;
+    IBalancerPoolManager internal immutable poolManager;
     IBalancerVault internal immutable balancerVault;
     uint256 public rewardRate;
     address public immutable bal;
     IOracle public immutable oracle;
     IFactory public immutable dex;
+    mapping(address => IBalancerPoolManager.PoolData) public pools;
 
     constructor(
         address _manager,
@@ -63,11 +51,12 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         dex = IFactory(_factory);
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
+
+        poolManager = new BalancerPoolManager(_balancerVault);
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        PoolData memory pool = pools[agreement.collaterals[0].token];
-        if (pool.length == 0) revert InexistentPool();
+        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(agreement.collaterals[0].token);
 
         uint256[] memory amountsIn = new uint256[](agreement.loans.length);
         address[] memory tokens = new address[](agreement.loans.length);
@@ -97,7 +86,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
-        PoolData memory pool = pools[agreement.collaterals[0].token];
+        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(agreement.collaterals[0].token);
 
         // TODO: add check on fees to be sure amountOut is not too little
         if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
@@ -144,8 +133,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
-        PoolData memory pool = pools[agreement.collaterals[0].token];
-        if (pool.length == 0) revert InexistentPool();
+        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(agreement.collaterals[0].token);
 
         (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
         uint256[] memory amountsOut = new uint256[](agreement.loans.length);
@@ -154,7 +142,15 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
             amountsOut[index] = agreement.loans[index].amount;
         }
         // Calculate needed BPT to repay loan + fees
-        uint256 bptAmountOut = _calculateExpectedBPTToExit(agreement.collaterals[0].token, totalBalances, amountsOut);
+        uint256 bptAmountOut = BalancerHelper.calculateExpectedBPTToExit(
+            agreement.collaterals[0].token,
+            totalBalances,
+            amountsOut,
+            pool.scalingFactors,
+            pool.protocolFeeCollector,
+            pool.maximumWeightIndex
+        );
+
         // The remaining BPT is swapped to obtain profit
         // We need to update the balances since we virtually took tokens out of the pool
         // We also need to update the total supply since the bptOut were burned
@@ -162,9 +158,13 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
             totalBalances[index] -= amountsOut[index];
         }
         if (bptAmountOut < agreement.collaterals[0].amount) {
-            profits = _calculateExpectedTokensFromBPT(
+            profits = BalancerHelper.calculateExpectedTokensFromBPT(
                 agreement.collaterals[0].token,
+                pool.protocolFeeCollector,
                 totalBalances,
+                pool.scalingFactors,
+                pool.weights,
+                pool.maximumWeightIndex,
                 agreement.collaterals[0].amount - bptAmountOut,
                 IERC20(agreement.collaterals[0].token).totalSupply() - bptAmountOut
             );
@@ -177,55 +177,8 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         return profits;
     }
 
-    function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
-        assert(poolAddress != address(0));
-
-        (address[] memory poolTokens, , ) = balancerVault.getPoolTokens(balancerPoolID);
-        uint256 length = poolTokens.length;
-        assert(length > 0);
-
-        IBalancerPool bpool = IBalancerPool(poolAddress);
-        bpool.safeApprove(gauge, type(uint256).max);
-
-        uint256 fee = bpool.getSwapFeePercentage();
-        uint256[] memory weights = bpool.getNormalizedWeights();
-        uint256 maxWeightTokenIndex = 0;
-        uint256[] memory scalingFactors = new uint256[](length);
-
-        for (uint8 i = 0; i < length; i++) {
-            if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
-                IERC20(poolTokens[i]).safeApprove(address(balancerVault), type(uint256).max);
-            if (weights[i] > weights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
-            scalingFactors[i] = 10 ** (18 - IERC20Metadata(poolTokens[i]).decimals());
-        }
-
-        pools[poolAddress] = PoolData(
-            balancerPoolID,
-            poolTokens,
-            weights,
-            scalingFactors,
-            maxWeightTokenIndex,
-            uint8(length),
-            fee,
-            gauge,
-            balancerVault.getProtocolFeesCollector()
-        );
-
-        emit PoolWasAdded(poolAddress);
-    }
-
-    function removePool(address poolAddress) external onlyOwner {
-        PoolData memory pool = pools[poolAddress];
-        assert(pools[poolAddress].length != 0);
-
-        IERC20(poolAddress).approve(pool.gauge, 0);
-        delete pools[poolAddress];
-
-        emit PoolWasRemoved(poolAddress);
-    }
-
     function harvest(address poolAddress) external {
-        PoolData memory pool = pools[poolAddress];
+        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(poolAddress);
         if (pool.length == 0) revert InexistentPool();
 
         IGauge(pool.gauge).claim_rewards(address(this));
@@ -240,70 +193,16 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         // TODO add premium to the caller
     }
 
-    function _modifyBalancesWithFees(
-        address poolAddress,
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights
-    ) internal view {
-        PoolData memory pool = pools[poolAddress];
-
-        for (uint256 i = 0; i < pool.length; i++) balances[i] *= pool.scalingFactors[i];
-
-        uint256[] memory dueProtocolFeeAmounts = new uint256[](pool.length);
-        dueProtocolFeeAmounts[pool.maximumWeightIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
-            balances[pool.maximumWeightIndex],
-            normalizedWeights[pool.maximumWeightIndex],
-            IBalancerPool(poolAddress).getLastInvariant(),
-            WeightedMath._calculateInvariant(normalizedWeights, balances),
-            IProtocolFeesCollector(pool.protocolFeeCollector).getSwapFeePercentage()
+    function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
+        // We need a delegate call as we are giving tokens approvals
+        address(poolManager).delegatecall(
+            abi.encodeWithSelector(IBalancerPoolManager.addPool.selector, poolAddress, balancerPoolID, gauge)
         );
-
-        balances[pool.maximumWeightIndex] -= dueProtocolFeeAmounts[pool.maximumWeightIndex];
     }
 
-    // Assumes balances are already upscaled and downscales them back together with balances
-    function _calculateExpectedBPTToExit(
-        address poolAddress,
-        uint256[] memory balances,
-        uint256[] memory amountsOut
-    ) internal view returns (uint256) {
-        PoolData memory pool = pools[poolAddress];
-        uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
-        _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);
-
-        for (uint256 i = 0; i < pool.length; i++) amountsOut[i] *= pool.scalingFactors[i];
-
-        uint256 expectedBpt = WeightedMath._calcBptInGivenExactTokensOut(
-            balances,
-            normalizedWeights,
-            amountsOut,
-            IERC20(poolAddress).totalSupply(),
-            IBalancerPool(poolAddress).getSwapFeePercentage()
+    function removePool(address poolAddress) external onlyOwner {
+        address(poolManager).delegatecall(
+            abi.encodeWithSelector(IBalancerPoolManager.removePool.selector, poolAddress)
         );
-        for (uint256 i = 0; i < pool.length; i++) {
-            amountsOut[i] /= pool.scalingFactors[i];
-            balances[i] /= pool.scalingFactors[i];
-        }
-        return expectedBpt;
-    }
-
-    // Assumes balances are already upscaled and downscales them back together with balances
-    function _calculateExpectedTokensFromBPT(
-        address poolAddress,
-        uint256[] memory balances,
-        uint256 amount,
-        uint256 totalSupply
-    ) internal view returns (uint256[] memory) {
-        PoolData memory pool = pools[poolAddress];
-        uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
-        _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);
-        uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);
-
-        for (uint256 i = 0; i < pool.length; i++) {
-            expectedTokens[i] /= pool.scalingFactors[i];
-            balances[i] /= pool.scalingFactors[i];
-        }
-
-        return expectedTokens;
     }
 }
