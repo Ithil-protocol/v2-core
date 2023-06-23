@@ -13,8 +13,7 @@ import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
-import { IBalancerPoolManager, BalancerPoolManager } from "./utils/BalancerPoolManager.sol";
-import { IBalancerHarvester, BalancerHarvester } from "./utils/BalancerHarvester.sol";
+import { IBalancerManager, BalancerManager } from "./utils/BalancerManager.sol";
 import { Service } from "../Service.sol";
 import { DebitService } from "../DebitService.sol";
 import { Whitelisted } from "../Whitelisted.sol";
@@ -31,13 +30,12 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     error SlippageError();
 
     address internal immutable poolManager;
-    address internal immutable harvester;
     IBalancerVault internal immutable balancerVault;
     uint256 public rewardRate;
     address public immutable bal;
     address public immutable oracle;
     address public immutable dex;
-    mapping(address => IBalancerPoolManager.PoolData) public pools;
+    mapping(address => IBalancerManager.PoolData) public pools;
 
     constructor(
         address _manager,
@@ -52,13 +50,15 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
 
-        poolManager = address(new BalancerPoolManager(_balancerVault));
-        harvester = address(new BalancerHarvester(_oracle, _factory, manager, bal));
+        poolManager = address(new BalancerManager(_balancerVault, _oracle, _factory, manager, bal));
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        IBalancerPoolManager.PoolData memory pool = pools[agreement.collaterals[0].token];
-        if (pool.length == 0) revert InexistentPool();
+        (bool success, bytes memory data) = poolManager.delegatecall(
+            abi.encodeWithSelector(IBalancerManager.getPool.selector, agreement.collaterals[0].token)
+        );
+        IBalancerManager.PoolData memory pool = abi.decode(data, (IBalancerManager.PoolData));
+        if (success == false || pool.length == 0) revert InexistentPool();
 
         uint256[] memory amountsIn = new uint256[](agreement.loans.length);
         address[] memory tokens = new address[](agreement.loans.length);
@@ -88,7 +88,11 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
-        IBalancerPoolManager.PoolData memory pool = pools[agreement.collaterals[0].token];
+        (bool success, bytes memory data) = poolManager.delegatecall(
+            abi.encodeWithSelector(IBalancerManager.getPool.selector, agreement.collaterals[0].token)
+        );
+        assert(success);
+        IBalancerManager.PoolData memory pool = abi.decode(data, (IBalancerManager.PoolData));
 
         // TODO: add check on fees to be sure amountOut is not too little
         if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
@@ -135,70 +139,33 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
-        IBalancerPoolManager.PoolData memory pool = pools[agreement.collaterals[0].token];
+        IBalancerManager.PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
-        (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
-        uint256[] memory amountsOut = new uint256[](agreement.loans.length);
-        uint256[] memory profits;
-        for (uint256 index = 0; index < agreement.loans.length; index++) {
-            amountsOut[index] = agreement.loans[index].amount;
-        }
-        // Calculate needed BPT to repay loan + fees
-        uint256 bptAmountOut = BalancerHelper.calculateExpectedBPTToExit(
-            agreement.collaterals[0].token,
-            totalBalances,
-            amountsOut,
-            pool.scalingFactors,
-            pool.protocolFeeCollector,
-            pool.maximumWeightIndex
-        );
-
-        // The remaining BPT is swapped to obtain profit
-        // We need to update the balances since we virtually took tokens out of the pool
-        // We also need to update the total supply since the bptOut were burned
-        for (uint256 index = 0; index < agreement.loans.length; index++) {
-            totalBalances[index] -= amountsOut[index];
-        }
-        if (bptAmountOut < agreement.collaterals[0].amount) {
-            profits = BalancerHelper.calculateExpectedTokensFromBPT(
-                agreement.collaterals[0].token,
-                pool.protocolFeeCollector,
-                totalBalances,
-                pool.scalingFactors,
-                pool.weights,
-                pool.maximumWeightIndex,
-                agreement.collaterals[0].amount - bptAmountOut,
-                IERC20(agreement.collaterals[0].token).totalSupply() - bptAmountOut
-            );
-            // Besides spurious tokens, also amountsOut had been obtained at the first exit
-            for (uint256 index = 0; index < agreement.loans.length; index++) {
-                profits[index] += amountsOut[index];
-            }
-        }
+        uint256[] memory profits = IBalancerManager(poolManager).quote(agreement, pool);
 
         return profits;
     }
 
     function harvest(address poolAddress) external {
-        (bool success, bytes memory data) = harvester.delegatecall(
-            abi.encodeWithSelector(IBalancerHarvester.harvest.selector, poolAddress)
+        (bool success, bytes memory data) = poolManager.delegatecall(
+            abi.encodeWithSelector(IBalancerManager.harvest.selector, poolAddress)
         );
-        require(success, string(data));
+        assert(success);
     }
 
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
         // We need a delegate call as we are giving tokens approvals
         (bool success, bytes memory data) = poolManager.delegatecall(
-            abi.encodeWithSelector(IBalancerPoolManager.addPool.selector, poolAddress, balancerPoolID, gauge)
+            abi.encodeWithSelector(IBalancerManager.addPool.selector, poolAddress, balancerPoolID, gauge)
         );
-        require(success, string(data));
+        assert(success);
     }
 
     function removePool(address poolAddress) external onlyOwner {
         (bool success, bytes memory data) = poolManager.delegatecall(
-            abi.encodeWithSelector(IBalancerPoolManager.removePool.selector, poolAddress)
+            abi.encodeWithSelector(IBalancerManager.removePool.selector, poolAddress)
         );
-        require(success, string(data));
+        assert(success);
     }
 }

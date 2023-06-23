@@ -6,6 +6,7 @@
 **/out
 **/node_modules
 **/venv
+**/artifacts
 
 # files
 *.env

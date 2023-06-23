@@ -213,6 +213,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         for (uint256 i = 0; i < loanLength; i++)
             amountsIn[i] = order.agreement.loans[i].amount + order.agreement.loans[i].margin;
         (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+
         uint256 expectedTokens = _calculateExpectedBPTFromJoin(balances, amountsIn);
         service.open(order);
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);

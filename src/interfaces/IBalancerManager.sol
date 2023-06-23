@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-interface IBalancerPoolManager {
+import { IService } from "./IService.sol";
+
+interface IBalancerManager {
     struct PoolData {
         bytes32 balancerPoolID;
         address[] tokens;
@@ -20,4 +22,10 @@ interface IBalancerPoolManager {
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external;
 
     function removePool(address poolAddress) external;
+
+    function harvest(address gauge, address[] memory tokens) external;
+
+    function quote(IService.Agreement memory agreement, PoolData memory pool) external view returns (uint256[] memory);
+
+    function getPool(address) external view returns (PoolData memory);
 }
