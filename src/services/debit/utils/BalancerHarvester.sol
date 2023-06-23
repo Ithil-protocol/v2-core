@@ -11,6 +11,7 @@ import { VaultHelper } from "../../../libraries/VaultHelper.sol";
 import { IBalancerHarvester } from "../../../interfaces/IBalancerHarvester.sol";
 
 contract BalancerHarvester is IBalancerHarvester {
+    address public immutable owner;
     IOracle public immutable oracle;
     IFactory public immutable dex;
     IManager public immutable manager;
@@ -21,9 +22,15 @@ contract BalancerHarvester is IBalancerHarvester {
         dex = IFactory(_dex);
         manager = _manager;
         bal = _bal;
+        owner = msg.sender;
     }
 
-    function harvest(address gauge, address[] memory tokens) external override {
+    modifier onlyOwner() {
+        assert(msg.sender == owner);
+        _;
+    }
+
+    function harvest(address gauge, address[] memory tokens) external override onlyOwner {
         IGauge(gauge).claim_rewards(address(this));
 
         (address token, address vault) = VaultHelper.getBestVault(tokens, manager);
