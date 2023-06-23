@@ -24,11 +24,6 @@ contract BalancerPoolManager is IBalancerPoolManager {
         _;
     }
 
-    function getPool(address poolAddress) external view override returns (PoolData memory) {
-        if (pools[poolAddress].length == 0) revert InexistentPool();
-        return pools[poolAddress];
-    }
-
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external override onlyOwner {
         assert(poolAddress != address(0));
 

@@ -31,7 +31,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     error TokenIndexMismatch();
     error SlippageError();
 
-    IBalancerPoolManager internal immutable poolManager;
+    address internal immutable poolManager;
     IBalancerVault internal immutable balancerVault;
     uint256 public rewardRate;
     address public immutable bal;
@@ -52,11 +52,12 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
 
-        poolManager = new BalancerPoolManager(_balancerVault);
+        poolManager = address(new BalancerPoolManager(_balancerVault));
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(agreement.collaterals[0].token);
+        IBalancerPoolManager.PoolData memory pool = pools[agreement.collaterals[0].token];
+        if (pool.length == 0) revert InexistentPool();
 
         uint256[] memory amountsIn = new uint256[](agreement.loans.length);
         address[] memory tokens = new address[](agreement.loans.length);
@@ -86,7 +87,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
-        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(agreement.collaterals[0].token);
+        IBalancerPoolManager.PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little
         if (pool.gauge != address(0)) IGauge(pool.gauge).withdraw(agreement.collaterals[0].amount, true);
@@ -133,7 +134,8 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
-        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(agreement.collaterals[0].token);
+        IBalancerPoolManager.PoolData memory pool = pools[agreement.collaterals[0].token];
+        if (pool.length == 0) revert InexistentPool();
 
         (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
         uint256[] memory amountsOut = new uint256[](agreement.loans.length);
@@ -178,7 +180,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function harvest(address poolAddress) external {
-        IBalancerPoolManager.PoolData memory pool = poolManager.getPool(poolAddress);
+        IBalancerPoolManager.PoolData memory pool = pools[poolAddress];
         if (pool.length == 0) revert InexistentPool();
 
         IGauge(pool.gauge).claim_rewards(address(this));
@@ -195,13 +197,13 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
 
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
         // We need a delegate call as we are giving tokens approvals
-        address(poolManager).delegatecall(
+        poolManager.delegatecall(
             abi.encodeWithSelector(IBalancerPoolManager.addPool.selector, poolAddress, balancerPoolID, gauge)
         );
     }
 
     function removePool(address poolAddress) external onlyOwner {
-        address(poolManager).delegatecall(
+        poolManager.delegatecall(
             abi.encodeWithSelector(IBalancerPoolManager.removePool.selector, poolAddress)
         );
     }

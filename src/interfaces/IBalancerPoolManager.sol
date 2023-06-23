@@ -16,9 +16,6 @@ interface IBalancerPoolManager {
 
     event PoolWasAdded(address indexed balancerPool);
     event PoolWasRemoved(address indexed balancerPool);
-    error InexistentPool();
-
-    function getPool(address pool) external view returns (PoolData memory);
 
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external;
 
