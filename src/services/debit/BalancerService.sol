@@ -4,7 +4,6 @@ pragma solidity =0.8.18;
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { IBalancerPoolManager } from "../../interfaces/IBalancerPoolManager.sol";
 import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
 import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
 import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
@@ -12,10 +11,10 @@ import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.
 import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
 import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
 import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
-import { VaultHelper } from "../../libraries/VaultHelper.sol";
 import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
-import { BalancerPoolManager } from "./utils/BalancerPoolManager.sol";
+import { IBalancerPoolManager, BalancerPoolManager } from "./utils/BalancerPoolManager.sol";
+import { IBalancerHarvester, BalancerHarvester } from "./utils/BalancerHarvester.sol";
 import { Service } from "../Service.sol";
 import { DebitService } from "../DebitService.sol";
 import { Whitelisted } from "../Whitelisted.sol";
@@ -32,11 +31,12 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     error SlippageError();
 
     address internal immutable poolManager;
+    address internal immutable harvester;
     IBalancerVault internal immutable balancerVault;
     uint256 public rewardRate;
     address public immutable bal;
-    IOracle public immutable oracle;
-    IFactory public immutable dex;
+    address public immutable oracle;
+    address public immutable dex;
     mapping(address => IBalancerPoolManager.PoolData) public pools;
 
     constructor(
@@ -47,12 +47,13 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         address _bal,
         uint256 _deadline
     ) Service("BalancerService", "BALANCER-SERVICE", _manager, _deadline) {
-        oracle = IOracle(_oracle);
-        dex = IFactory(_factory);
+        oracle = _oracle;
+        dex = _factory;
         balancerVault = IBalancerVault(_balancerVault);
         bal = _bal;
 
         poolManager = address(new BalancerPoolManager(_balancerVault));
+        harvester = address(new BalancerHarvester(_oracle, _factory, manager, bal));
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
@@ -180,31 +181,24 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function harvest(address poolAddress) external {
-        IBalancerPoolManager.PoolData memory pool = pools[poolAddress];
-        if (pool.length == 0) revert InexistentPool();
-
-        IGauge(pool.gauge).claim_rewards(address(this));
-
-        (address token, address vault) = VaultHelper.getBestVault(pool.tokens, manager);
-        // TODO check oracle
-        uint256 price = oracle.getPrice(bal, token, 1);
-        address dexPool = dex.pools(bal, token, 10); // TODO hardcoded tick
-        // TODO add discount
-        IPool(dexPool).createOrder(IERC20(bal).balanceOf(address(this)), price, vault, block.timestamp + 1 weeks);
-
-        // TODO add premium to the caller
+        (bool success, bytes memory data) = harvester.delegatecall(
+            abi.encodeWithSelector(IBalancerHarvester.harvest.selector, poolAddress)
+        );
+        require(success, string(data));
     }
 
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
         // We need a delegate call as we are giving tokens approvals
-        poolManager.delegatecall(
+        (bool success, bytes memory data) = poolManager.delegatecall(
             abi.encodeWithSelector(IBalancerPoolManager.addPool.selector, poolAddress, balancerPoolID, gauge)
         );
+        require(success, string(data));
     }
 
     function removePool(address poolAddress) external onlyOwner {
-        poolManager.delegatecall(
+        (bool success, bytes memory data) = poolManager.delegatecall(
             abi.encodeWithSelector(IBalancerPoolManager.removePool.selector, poolAddress)
         );
+        require(success, string(data));
     }
 }
