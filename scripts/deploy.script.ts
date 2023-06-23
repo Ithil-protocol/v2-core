@@ -1,5 +1,6 @@
 import { config as dotenvConfig } from 'dotenv'
 import { statSync, writeFileSync } from 'fs'
+import { ethers } from 'hardhat'
 import { resolve } from 'path'
 
 import { getFrontendDir } from './command-helpers'
@@ -26,6 +27,9 @@ const main = async () => {
 
   const vaults = await Promise.all(
     tokens.map(async (token): Promise<LendingToken> => {
+      const contract = await ethers.getContractAt('IERC20', token.tokenAddress)
+      await contract.approve(manager.address, 100)
+
       const vaultAddress = await createVault(manager, token.tokenAddress)
       return { ...token, vaultAddress }
     }),
