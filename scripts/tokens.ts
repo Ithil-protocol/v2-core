@@ -16,13 +16,6 @@ export const tokens: MinimalToken[] = [
     tokenAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
   },
   {
-    name: 'DAI',
-    coingeckoId: 'dai',
-    iconName: 'dai',
-    decimals: 18,
-    tokenAddress: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
-  },
-  {
     name: 'WETH',
     coingeckoId: 'ethereum',
     iconName: 'eth',
