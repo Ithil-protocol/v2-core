@@ -33,7 +33,6 @@ const main = async () => {
     manager.vaults(tokenMap.WETH.tokenAddress),
     manager.vaults(tokenMap.WBTC.tokenAddress),
   ])
-
   const [usdcVault, usdtVault, wethVault, btcVault] = await Promise.all([
     ethers.getContractAt('Vault', usdcVaultAddress),
     ethers.getContractAt('Vault', usdtVaultAddress),
@@ -76,10 +75,10 @@ const main = async () => {
       ])
 
       await Promise.all([
-        usdcVaultConnected.deposit(usdcAmount, address),
-        usdtVaultConnected.deposit(usdtAmount, address),
-        wethVaultConnected.deposit(wethAmount, address),
-        btcVaultConnected.deposit(wbtcAmount, address),
+        usdcVaultConnected.deposit(usdcAmount, address,{gasLimit:2000000}),
+        usdtVaultConnected.deposit(usdtAmount, address,{gasLimit:2000000}),
+        wethVaultConnected.deposit(wethAmount, address,{gasLimit:2000000}),
+        btcVaultConnected.deposit(wbtcAmount, address,{gasLimit:2000000}),
       ])
     }),
   )
