@@ -30,9 +30,15 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         ithil = new Ithil();
         loanLength = 1;
         loanTokens = new address[](loanLength);
-        collateralTokens = new address[](1);
+        collateralTokens = new address[](2);
         loanTokens[0] = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1; // DAI
         whales[loanTokens[0]] = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
+        vm.stopPrank();
+        vm.prank(whales[loanTokens[0]]);
+        IERC20(loanTokens[0]).transfer(admin, 1);
+        vm.startPrank(admin);
+        IERC20(loanTokens[0]).approve(address(manager), 1);
+        manager.create(loanTokens[0]);
         service = new SeniorCallOption(
             address(manager),
             address(this),
@@ -51,6 +57,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
 
     function testSCOOpenPosition(uint256 daiAmount, uint256 daiLoan) public {
         collateralTokens[0] = manager.vaults(loanTokens[0]);
+        collateralTokens[1] = address(ithil);
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = daiAmount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;

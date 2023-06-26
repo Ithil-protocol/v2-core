@@ -34,6 +34,7 @@ contract SeniorCallOption is CreditService {
 
     // 2^((n+1)/12) with 18 digit fixed point
     uint64[] internal _rewards;
+    address internal immutable _vaultAddress;
 
     uint256 internal immutable _precision;
 
@@ -41,6 +42,8 @@ contract SeniorCallOption is CreditService {
     error ZeroCollateral();
     error MaxLockExceeded();
     error MaxPurchaseExceeded();
+    error InvalidIthilToken();
+    error InvalidUnderlyingToken();
     error InvalidCalledPortion();
 
     constructor(
@@ -60,6 +63,12 @@ contract SeniorCallOption is CreditService {
         _precision = 10 ** IERC20Metadata(_underlying).decimals();
         halvingTime = _halvingTime;
 
+        _vaultAddress = manager.vaults(_underlying);
+        // approve vault to spend underlying token for deposits
+        // technically, it should be re-approved if the total volume exceeds 2^256
+        // in practice, this event never happens, and in case just redeploy the service
+        underlying.approve(_vaultAddress, type(uint256).max);
+
         _rewards = new uint64[](12);
         _rewards[0] = 1059463094359295265;
         _rewards[1] = 1122462048309372981;
@@ -76,7 +85,16 @@ contract SeniorCallOption is CreditService {
     }
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
+        // This is a credit service with one extra token, Ithil
+        // therefore, the collateral length is 2
+
+        if (agreement.loans[0].token != address(underlying)) revert InvalidUnderlyingToken();
+        if (agreement.collaterals[1].token != address(ithil)) revert InvalidIthilToken();
         if (agreement.loans[0].amount == 0) revert ZeroAmount();
+
+        // Deposit tokens to the relevant vault and register obtained amount
+        agreement.collaterals[0].amount = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
+
         uint256 currentPrice = _currentPrice();
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
@@ -99,15 +117,15 @@ contract SeniorCallOption is CreditService {
 
         // We register the amount of ITHIL to be redeemed as collateral
         // The user obtains a discount based on how many months the position is locked
-        agreement.collaterals[0].amount =
+        agreement.collaterals[1].amount =
             (((agreement.loans[0].amount * _precision) / (initialPrice + latestSpread)) * _rewards[monthsLocked]) /
             1e18;
 
-        if (agreement.collaterals[0].amount == 0) revert ZeroCollateral();
+        if (agreement.collaterals[1].amount == 0) revert ZeroCollateral();
 
         // update allocation: since we cannot know how much will be called, we subtract max
         // since collateral <= totalAllocation, this subtraction does not underflow
-        totalAllocation -= agreement.collaterals[0].amount;
+        totalAllocation -= agreement.collaterals[1].amount;
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
@@ -117,11 +135,11 @@ contract SeniorCallOption is CreditService {
 
         // gas savings
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
-        uint256 redeemable = vault.convertToAssets(agreement.collaterals[0].amount);
+        uint256 redeemable = vault.convertToAssets(agreement.collaterals[1].amount);
         uint256 toTransfer = dueAmount(agreement, data);
-        uint256 toCall = (agreement.collaterals[0].amount * calledPortion) / 1e18;
+        uint256 toCall = (agreement.collaterals[1].amount * calledPortion) / 1e18;
         // The amount of ithil not called can be added back to the total allocation
-        totalAllocation += (agreement.collaterals[0].amount - toCall);
+        totalAllocation += (agreement.collaterals[1].amount - toCall);
         if (toTransfer > redeemable) {
             // Since this service is senior, we need to pay the user even if redeemable is too low
             // To do this, we take liquidity from the vault and register the loss (no loan)

@@ -27,8 +27,12 @@ contract SeniorFixedYieldService is CreditService {
         yield = _yield;
     }
 
-    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {
-        // TODO: insert checks
+    function _open(IService.Agreement memory agreement, bytes memory /*data*/) internal virtual override {
+        address vaultAddress = manager.vaults(agreement.loans[0].token);
+        if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount)
+            IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
+        // Deposit tokens to the relevant vault and register obtained amount
+        agreement.collaterals[0].amount = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
