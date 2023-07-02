@@ -43,6 +43,18 @@ interface IService is IERC721Enumerable {
         bytes data;
     }
 
+    function open(Order calldata order) external;
+
+    function close(uint256 tokenID, bytes calldata data) external returns (uint256[] memory);
+
+    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) external;
+
+    function getAgreement(
+        uint256 tokenID
+    ) external view returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status);
+
+    function getUserAgreements() external view returns (Agreement[] memory);
+
     event BaseRiskSpreadWasUpdated(address indexed asset, uint256 indexed id, uint256 newValue);
     event LockWasToggled(bool status);
     event GuardianWasUpdated(address indexed newGuardian);
