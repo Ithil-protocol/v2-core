@@ -6,7 +6,6 @@ import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/e
 import { IService } from "../interfaces/IService.sol";
 import { IManager } from "../interfaces/IManager.sol";
 import { Vault } from "../Vault.sol";
-import { console2 } from "forge-std/console2.sol";
 
 abstract contract Service is IService, ERC721Enumerable, Ownable {
     IManager public immutable manager;
