@@ -13,6 +13,8 @@ abstract contract CreditService is Service {
     function open(Order calldata order) public virtual override unlocked {
         Agreement memory agreement = order.agreement;
         // Transfers deposit the loan to the relevant vault
+        // every token corresponds to a collateral token (the vault's address)
+        // therefore, the length of the collateral array must be at least the length of the loan array
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             address vaultAddress = manager.vaults(agreement.loans[index].token);
             if (
@@ -25,17 +27,8 @@ abstract contract CreditService is Service {
                 address(this),
                 agreement.loans[index].amount
             );
-
-            // Deposit tokens to the relevant vault
-            if (
-                IERC20(agreement.loans[index].token).allowance(address(this), vaultAddress) <
-                agreement.loans[index].amount
-            ) IERC20(agreement.loans[index].token).approve(vaultAddress, type(uint256).max);
-            uint256 shares = IVault(vaultAddress).deposit(agreement.loans[index].amount, address(this));
-
-            // Register obtained shares
-            agreement.collaterals[index].amount = shares;
         }
+
         Service.open(order);
     }
 
@@ -44,20 +37,8 @@ abstract contract CreditService is Service {
         address owner = ownerOf(tokenID);
         if (owner != msg.sender && agreement.createdAt + deadline > block.timestamp) revert RestrictedToOwner();
         Service.close(tokenID, data);
-
-        for (uint256 index = 0; index < agreement.loans.length; index++) {
-            IVault vault = IVault(manager.vaults(agreement.loans[index].token));
-            uint256 toTransfer = dueAmount(agreement, data);
-
-            // we allow the closure to fail if there is not enough liquidity: we always redeem the maximum amount
-            uint256 redeemed = vault.redeem(agreement.collaterals[index].amount, address(this), address(this));
-            // give toTransfer to the user and pay the vault if toTransfer < redeemed
-            // otherwise transfer redeemed and do nothing
-            if (toTransfer < redeemed) {
-                manager.repay(agreement.loans[index].token, redeemed - toTransfer, 0, address(this));
-                IERC20(agreement.loans[index].token).safeTransfer(owner, toTransfer);
-            } else IERC20(agreement.loans[index].token).safeTransfer(owner, redeemed);
-        }
+        // Due to the wide variety of cases we can consider for a credit service,
+        // the redeem mechanism is left to the particular service implementation
     }
 
     // dueAmount must be implemented otherwise the credit service is worthless

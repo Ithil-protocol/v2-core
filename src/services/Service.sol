@@ -63,7 +63,8 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     function _saveAgreement(Agreement memory agreement) internal {
         Agreement storage newAgreement = agreements.push();
         newAgreement.status = Status.OPEN;
-        newAgreement.createdAt = block.timestamp;
+        // we might want to change the createdAt to deal with locks without the need of an extra datum
+        newAgreement.createdAt = agreement.createdAt == 0 ? block.timestamp : agreement.createdAt;
 
         for (uint256 loansIndex = 0; loansIndex < agreement.loans.length; loansIndex++) {
             newAgreement.loans.push(agreement.loans[loansIndex]);
