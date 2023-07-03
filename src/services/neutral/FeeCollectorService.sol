@@ -46,14 +46,17 @@ contract FeeCollectorService is Service {
     error ZeroAmount();
     error UnsupportedToken();
     error MaxLockExceeded();
+    error LockPeriodStillActive();
 
+    // Since the maximum lock is 1 year, the deadline is 1 year + one month
+    // (By convention, a month is 30 days, therefore the actual deadline is 5 or 6 days less)
     constructor(
         address _manager,
         address _weth,
         uint256 _feePercentage,
         address _oracle,
         address _dex
-    ) Service("FeeCollector", "FEE-COLLECTOR", _manager, type(uint256).max) {
+    ) Service("FeeCollector", "FEE-COLLECTOR", _manager, 13 * 30 * 86400) {
         veToken = new VeIthil();
 
         weth = IERC20(_weth);
@@ -104,6 +107,7 @@ contract FeeCollectorService is Service {
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
         if (monthsLocked > 11) revert MaxLockExceeded();
+
         agreement.loans[0].amount =
             (agreement.loans[0].amount * (_rewards[monthsLocked] * weights[agreement.loans[0].token])) /
             1e36;
@@ -162,7 +166,7 @@ contract FeeCollectorService is Service {
     function _harvestFees(address token) internal returns (uint256, address) {
         IVault vault = IVault(manager.vaults(token));
         (uint256 profits, uint256 losses, , uint256 latestRepay) = vault.getFeeStatus();
-        if (latestRepay < latestHarvest[token]) revert Throttled();
+        if (latestRepay <= latestHarvest[token]) revert Throttled();
         if (profits <= losses) revert InsufficientProfits();
         latestHarvest[token] = block.timestamp;
 
@@ -173,22 +177,27 @@ contract FeeCollectorService is Service {
         return (feesToHarvest, address(vault));
     }
 
-    function harvestAndSwap(address[] calldata tokens) external {
+    function harvestAndSwap(address[] calldata tokens) external returns (uint256[] memory, uint256[] memory) {
         uint256 length = tokens.length;
+        uint256[] memory amounts = new uint256[](length);
+        uint256[] memory prices = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
-            (uint256 amount, address vault) = _harvestFees(tokens[i]);
+            (uint256 amount, ) = _harvestFees(tokens[i]);
+            amounts[i] = amount;
 
             // Swap if not WETH
             if (tokens[i] != address(weth)) {
                 // TODO check assumption: all pools will have same the tick
                 IPool pool = IPool(dex.pools(tokens[i], address(weth), 5));
+                uint8 decimals = IERC20Metadata(tokens[i]).decimals();
 
-                // TODO check oracle
-                uint256 price = oracle.getPrice(tokens[i], address(weth), 1);
-
-                // TODO add discount to price
-                pool.createOrder(amount, price, vault, block.timestamp + 1 weeks);
+                // We allow for a 10% discount in the price
+                uint256 price = (oracle.getPrice(address(weth), tokens[i], decimals) * 9) / 10;
+                prices[i] = price;
+                IERC20(tokens[i]).approve(address(pool), amount);
+                pool.createOrder(amount, price, address(this), block.timestamp + 3600);
             }
         }
+        return (amounts, prices);
     }
 }

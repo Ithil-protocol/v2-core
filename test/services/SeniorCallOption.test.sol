@@ -43,7 +43,6 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
             address(manager),
             address(this),
             address(ithil),
-            86400 * 30 * 13,
             4e17,
             86400 * 30,
             loanTokens[0]
@@ -73,6 +72,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         testSCOOpenPosition(daiAmount, daiLoan);
         (IService.Loan[] memory loans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
+        vm.warp(block.timestamp + 8 * 30 * 86500);
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(1e17));
