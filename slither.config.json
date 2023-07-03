@@ -1,5 +1,5 @@
 {
-  "filter_paths": "lib",
+  "filter_paths": "(lib/|test/)",
   "exclude_informational": false,
   "solc_remaps": [
     "ds-test/=lib/ds-test/src/",
