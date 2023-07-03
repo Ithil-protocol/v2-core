@@ -44,13 +44,16 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             vm.deal(whales[loanTokens[i]], 1 ether);
         }
         for (uint i = 0; i < loanLength; i++) {
-            // Create Vault: DAI
-            vm.prank(whales[loanTokens[i]]);
-            IERC20(loanTokens[i]).transfer(admin, 1);
-            vm.startPrank(admin);
-            IERC20(loanTokens[i]).approve(address(manager), 1);
-            manager.create(loanTokens[i]);
+            if (manager.vaults(loanTokens[i]) == address(0)) {
+                vm.prank(whales[loanTokens[i]]);
+                IERC20(loanTokens[i]).transfer(admin, 1);
+                vm.startPrank(admin);
+                IERC20(loanTokens[i]).approve(address(manager), 1);
+                manager.create(loanTokens[i]);
+                vm.stopPrank();
+            }
             // No caps for this service -> 100% of the liquidity can be used initially
+            vm.startPrank(admin);
             manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
             vm.stopPrank();
         }
@@ -143,10 +146,13 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         for (uint i = 0; i < loanLength; i++) {
             loans[i] = _giveMarginToUser(loanTokens[i], loans[i], true);
         }
-        IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
-        itemTypes[0] = IService.ItemType.ERC20;
 
-        uint256[] memory collateralAmounts = new uint256[](1);
+        // allow for 2 slots to cover the case of the call option
+        IService.ItemType[] memory itemTypes = new IService.ItemType[](2);
+        itemTypes[0] = IService.ItemType.ERC20;
+        itemTypes[1] = IService.ItemType.ERC20;
+
+        uint256[] memory collateralAmounts = new uint256[](2);
         collateralAmounts[0] = collateralAmount;
         return
             OrderHelper.createAdvancedOrder(
