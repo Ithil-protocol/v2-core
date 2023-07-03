@@ -18,8 +18,6 @@ import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
 import { GmxService } from "../../src/services/debit/GmxService.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract DebitCreditTest is Test, IERC721Receiver {
     // test in which we add Aave, feeCollector and call option
     // due to the complexity of the setup, fuzzy testing is limited
@@ -74,26 +72,6 @@ contract DebitCreditTest is Test, IERC721Receiver {
     uint64[] internal _rewards;
 
     constructor() {
-        uint256 forkId = vm.createFork(vm.envString(rpcUrl), blockNumber);
-        vm.selectFork(forkId);
-        vm.deal(admin, 1 ether);
-        vm.prank(usdcWhale);
-        IERC20(usdc).transfer(address(admin), 1);
-        vm.startPrank(admin);
-        manager = IManager(new Manager());
-        ithil = new Ithil();
-        oracle = new Oracle();
-        aaveService = new AaveService(address(manager), aavePool, 30 * 86400);
-        feeCollectorService = new FeeCollectorService(address(manager), weth, 1e17, address(oracle), dexFactory);
-        // Create a vault for USDC
-        // recall that the admin needs 1e-6 USDC to create the vault
-        IERC20(usdc).approve(address(manager), 1);
-        manager.create(usdc);
-
-        // first price is 0.2 USDC: we need to double it in the constructor
-        // because the smallest price can only be achieved by maximum lock time
-        callOptionService = new SeniorCallOption(address(manager), treasury, address(ithil), 4e5, 86400 * 30, usdc);
-        vm.stopPrank();
         _rewards = new uint64[](12);
         _rewards[0] = 1059463094359295265;
         _rewards[1] = 1122462048309372981;
@@ -107,6 +85,29 @@ contract DebitCreditTest is Test, IERC721Receiver {
         _rewards[9] = 1781797436280678609;
         _rewards[10] = 1887748625363386993;
         _rewards[11] = 2000000000000000000;
+        uint256 forkId = vm.createFork(vm.envString(rpcUrl), blockNumber);
+        vm.selectFork(forkId);
+        vm.deal(admin, 1 ether);
+        vm.startPrank(admin);
+        manager = IManager(new Manager());
+        ithil = new Ithil();
+        oracle = new Oracle();
+        aaveService = new AaveService(address(manager), aavePool, 30 * 86400);
+        feeCollectorService = new FeeCollectorService(address(manager), weth, 1e17, address(oracle), dexFactory);
+        // Create a vault for USDC
+        // recall that the admin needs 1e-6 USDC to create the vault
+        vm.stopPrank();
+        vm.prank(usdcWhale);
+        IERC20(usdc).transfer(address(admin), 1);
+        vm.startPrank(admin);
+        IERC20(usdc).approve(address(manager), 1);
+        manager.create(usdc);
+
+        // first price is 0.2 USDC: we need to double it in the constructor
+        // because the smallest price can only be achieved by maximum lock time
+        //slither-disable-next-line reentrancy-module
+        callOptionService = new SeniorCallOption(address(manager), treasury, address(ithil), 4e5, 86400 * 30, usdc);
+        vm.stopPrank();
     }
 
     function setUp() public {

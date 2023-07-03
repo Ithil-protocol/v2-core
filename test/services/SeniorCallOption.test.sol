@@ -39,6 +39,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         vm.startPrank(admin);
         IERC20(loanTokens[0]).approve(address(manager), 1);
         manager.create(loanTokens[0]);
+        //slither-disable-next-line reentrancy-module
         service = new SeniorCallOption(
             address(manager),
             address(this),
@@ -47,6 +48,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
             86400 * 30,
             loanTokens[0]
         );
+        //slither-disable-next-line reentrancy-module
         serviceAddress = address(service);
         ithil.approve(serviceAddress, 1e25);
         service.allocateIthil(1e25);

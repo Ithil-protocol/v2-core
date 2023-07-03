@@ -48,13 +48,13 @@ contract SeniorFixedYieldService is CreditService {
         if (toTransfer > transfered) {
             // Since this service is senior, we need to pay the user even if redeemable is too low
             // To do this, we take liquidity from the vault and register the loss (no loan)
-            uint256 freeLiquidity = vault.freeLiquidity();
+            uint256 freeLiquidity = vault.freeLiquidity() - 1;
             if (freeLiquidity > 0) {
                 manager.borrow(
                     agreement.loans[0].token,
-                    toTransfer - transfered > freeLiquidity - 1 ? freeLiquidity - 1 : toTransfer - transfered,
+                    toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered,
                     0,
-                    ownerOf(tokenID)
+                    owner
                 );
             }
         } else {

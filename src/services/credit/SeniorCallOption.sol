@@ -46,14 +46,6 @@ contract SeniorCallOption is CreditService {
     error InvalidUnderlyingToken();
     error InvalidCalledPortion();
 
-    event TestOpen(
-        uint256 latestSpread,
-        uint256 initialPrice,
-        uint256 finalPrice,
-        uint256 totalAllocation,
-        uint256 virtualBoughtAmount
-    );
-
     // Since the maximum lock is 1 year, the deadline is 1 year + one month
     // (By convention, a month is 30 days, therefore the actual deadline is 5 or 6 days less)
     constructor(
@@ -138,7 +130,6 @@ contract SeniorCallOption is CreditService {
         // update allocation: since we cannot know how much will be called, we subtract max
         // since collateral <= totalAllocation, this subtraction does not underflow
         totalAllocation -= agreement.collaterals[1].amount;
-        emit TestOpen(latestSpread, currentPrice, _currentPrice(), totalAllocation, virtualBoughtAmount);
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
