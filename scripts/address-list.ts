@@ -13,6 +13,7 @@ export const faucetList: Address[] = [
   '0x7Ce7DdE0b26a4ABe2fBBCF5c0ff9785dbFB9A72c',
   // aly address
   '0xed7E824e52858de72208c5b9834c18273Ebb9D3b',
+  '0x7Ce7DdE0b26a4ABe2fBBCF5c0ff9785dbFB9A72c',
   // 0xGidone wallets
   // '0x424bdddAb2DF3215640782D9D68b709721C6fB33',
 ]
