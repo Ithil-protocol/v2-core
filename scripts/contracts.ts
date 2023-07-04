@@ -12,9 +12,7 @@ export const deployManager = async () => {
 }
 
 export const createVault = async (manager: Manager, token: Address) => {
-  await manager.create(token, {
-    gasLimit: 2_000_000,
-  })
+  await manager.create(token)
   const address = await manager.vaults(token)
   return address as Address
 }
