@@ -126,15 +126,17 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
     }
 
-    function getUserAgreements() public view override returns (Agreement[] memory) {
+    function getUserAgreements() public view override returns (Agreement[] memory, uint256[] memory) {
         uint256 balance = balanceOf(msg.sender);
         Agreement[] memory userAgreements = new Agreement[](balance);
+        uint256[] memory ids = new uint256[](balance);
 
         for (uint256 i = 0; i < balance; i++) {
-            userAgreements[i] = agreements[tokenOfOwnerByIndex(msg.sender, i)];
+            ids[i] = tokenOfOwnerByIndex(msg.sender, i);
+            userAgreements[i] = agreements[ids[i]];
         }
 
-        return userAgreements;
+        return (userAgreements, ids);
     }
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual;

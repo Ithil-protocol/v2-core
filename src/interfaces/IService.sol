@@ -53,7 +53,7 @@ interface IService is IERC721Enumerable {
         uint256 tokenID
     ) external view returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status);
 
-    function getUserAgreements() external view returns (Agreement[] memory);
+    function getUserAgreements() external view returns (Agreement[] memory, uint256[] memory);
 
     event BaseRiskSpreadWasUpdated(address indexed asset, uint256 indexed id, uint256 newValue);
     event LockWasToggled(bool status);
