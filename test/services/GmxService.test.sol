@@ -39,7 +39,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         vm.startPrank(admin);
         weth.approve(address(manager), 1);
         manager.create(address(weth));
-        manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION);
+        manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION, type(uint256).max);
         vm.stopPrank();
 
         vm.startPrank(whale);

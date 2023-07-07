@@ -69,7 +69,7 @@ contract ManagerTest is Test {
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.create(address(spuriousToken));
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
-        manager.setCap(debitServiceOne, address(firstToken), cap);
+        manager.setCap(debitServiceOne, address(firstToken), cap, type(uint256).max);
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
         manager.setFeeUnlockTime(address(firstToken), feeUnlockTime);
         vm.expectRevert(abi.encodePacked("Ownable: caller is not the owner"));
@@ -95,16 +95,16 @@ contract ManagerTest is Test {
         // Take only meaningful caps
         cap = (cap % 1e18) + 1;
 
-        manager.setCap(debitServiceOne, address(firstToken), cap);
-        (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
+        manager.setCap(debitServiceOne, address(firstToken), cap, type(uint256).max);
+        (uint256 storedCap, , ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
         return cap;
     }
 
     function testSetCap(uint256 previousDeposit, uint256 debitCap, uint256 cap) public {
         _setupArbitraryState(previousDeposit, debitCap);
-        manager.setCap(debitServiceOne, address(firstToken), cap);
-        (uint256 storedCap, ) = manager.caps(debitServiceOne, address(firstToken));
+        manager.setCap(debitServiceOne, address(firstToken), cap, type(uint256).max);
+        (uint256 storedCap, , ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
     }
 
@@ -133,7 +133,7 @@ contract ManagerTest is Test {
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("Locked()"))));
         IVault(vaultAddress).deposit(1e18, anyAddress);
 
-        manager.setCap(debitServiceOne, address(firstToken), 1e18);
+        manager.setCap(debitServiceOne, address(firstToken), 1e18, type(uint256).max);
         vm.startPrank(debitServiceOne);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("Locked()"))));
         manager.borrow(address(firstToken), 1e18, 0, anyAddress);
@@ -144,7 +144,7 @@ contract ManagerTest is Test {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
-        (, uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
+        (, , uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
 
         // Avoid revert due to insufficient free liquidity
         borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
@@ -159,7 +159,7 @@ contract ManagerTest is Test {
                 (freeLiquidity - borrowed) + (IVault(vaultAddress).netLoans() + loan)
             );
         if (investedPortion > debitCap) {
-            manager.setCap(debitServiceOne, address(firstToken), investedPortion);
+            manager.setCap(debitServiceOne, address(firstToken), investedPortion, type(uint256).max);
         }
         if (borrowed > 0) {
             vm.prank(debitServiceOne);
