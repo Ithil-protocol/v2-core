@@ -8,11 +8,11 @@
   amount, of assets.
 - In the _Manager_, the calculation of currentExposure adopts OpenZeppelin's _mulDiv_ function, which carries the same
   issues as seen above, a hacker wanting to manipulate the denominator (freeLiquidity - amount) + netLoans thus
-  eliminating the enforcing of caps. To mitigate the risk, we introduce both absolute caps and relative caps checks 
-  when borrowing. Since there is no way to overcome an absolute cap, it is impossible to manipulate the relative caps
-  by depositing a massive amount of liquidity in the Vault, while relative caps are still necessary in the case
-  a lot of liquidity is withdrawn from the Vault. Absolute caps should be changed only in periods in which the Vault's
-  total assets are relatively stable.
+  eliminating the enforcing of caps. To mitigate the risk, we introduce both absolute caps and relative caps checks when
+  borrowing. Since there is no way to overcome an absolute cap, it is impossible to manipulate the relative caps by
+  depositing a massive amount of liquidity in the Vault, while relative caps are still necessary in the case a lot of
+  liquidity is withdrawn from the Vault. Absolute caps should be changed only in periods in which the Vault's total
+  assets are relatively stable.
 - Lack of liquidator reward is a vulnerability, since losing positions would not be liquidated. This has been fixed by
   adding a reward proportional to the liquidation score, from 0 to the position's margin. In this way, the flux margin -
   reward is always positive and liquidating one's own position is always a losing cycle (see Euler's hack).
