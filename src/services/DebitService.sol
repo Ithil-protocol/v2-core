@@ -53,7 +53,8 @@ abstract contract DebitService is Service, BaseRiskModel {
                 : score;
         }
 
-        return score;
+        // cap to 100% of the margin
+        return score < RESOLUTION ? score : RESOLUTION;
     }
 
     function open(Order calldata order) public virtual override unlocked {
