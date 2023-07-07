@@ -47,7 +47,7 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
         usdgVault = IUsdgVault(glpManager.vault());
 
         if (weth.allowance(address(this), address(glpManager)) == 0)
-            weth.safeApprove(address(glpManager), type(uint256).max);
+            weth.approve(address(glpManager), type(uint256).max);
     }
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
