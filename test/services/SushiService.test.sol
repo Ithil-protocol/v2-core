@@ -156,7 +156,13 @@ contract SushiServiceTest is BaseIntegrationServiceTest {
             ) {
                 vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
                 service.close(0, data);
-            } else service.close(0, data);
+            } else {
+                // TODO: refine this to prank ONLY if bad liquidation occurs
+                // TODO: add expected reversal codes
+                uint256 liquidationScore = service.liquidationScore(0);
+                if (liquidationScore > 0) vm.prank(admin);
+                service.close(0, data);
+            }
         }
     }
 

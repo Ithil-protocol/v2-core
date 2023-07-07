@@ -13,6 +13,7 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();
+    error LossByArbitraryAddress();
 
     function setMinMargin(address token, uint256 margin) external onlyOwner {
         minMargin[token] = margin;
@@ -52,7 +53,8 @@ abstract contract DebitService is Service, BaseRiskModel {
                 : score;
         }
 
-        return score;
+        // cap to 100% of the margin
+        return score < RESOLUTION ? score : RESOLUTION;
     }
 
     function open(Order calldata order) public virtual override unlocked {
@@ -81,9 +83,9 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory amountsOut) {
         Agreement memory agreement = agreements[tokenID];
-        address owner = ownerOf(tokenID);
+        address agreementOwner = ownerOf(tokenID);
         uint256 score = liquidationScore(tokenID);
-        if (owner != msg.sender && score == 0 && agreement.createdAt + deadline > block.timestamp)
+        if (agreementOwner != msg.sender && score == 0 && agreement.createdAt + deadline > block.timestamp)
             revert RestrictedToOwner();
 
         uint256[] memory obtained = new uint256[](agreement.loans.length);
@@ -98,7 +100,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             // first repay the liquidator
             // the liquidation reward can never be higher than the margin
             // if the liquidable position is closed by its owner, it is *not* considered a liquidation event
-            if (owner != msg.sender) {
+            if (agreementOwner != msg.sender) {
                 // This can either due to score > 0 or deadline exceeded
                 // In the latter case, the fee is linear with time until reacing 5% in one month (31 days)
                 // If a position is both liquidable and expired, liquidation has the priority
@@ -120,7 +122,14 @@ abstract contract DebitService is Service, BaseRiskModel {
                 emit LiquidationTriggered(tokenID, agreement.loans[index].token, msg.sender, liquidatorReward);
             }
 
-            // secondly repay the vault
+            // If the obtained amount (net of liquidator reward) is less than the loan, closing would produce a loss
+            // Only the owner of the contract can produce a loss via a liquidation
+            // This protects the vault from virtually any attack coming from quoter manipulations
+            // and/or hacks on the target protocol which cause a temporary state change
+            if (obtained[index] < agreement.loans[index].amount && msg.sender != owner())
+                revert LossByArbitraryAddress();
+
+            // repay the vault
             uint256 repaidAmount = obtained[index] > dueFees[index] + agreement.loans[index].amount
                 ? dueFees[index] + agreement.loans[index].amount
                 : obtained[index];
@@ -128,8 +137,8 @@ abstract contract DebitService is Service, BaseRiskModel {
             IERC20(agreement.loans[index].token).approve(manager.vaults(agreement.loans[index].token), repaidAmount);
             manager.repay(agreement.loans[index].token, repaidAmount, agreement.loans[index].amount, address(this));
 
-            // finally repay the owner
-            IERC20(agreement.loans[index].token).safeTransfer(owner, obtained[index] - repaidAmount);
+            // repay the owner
+            IERC20(agreement.loans[index].token).safeTransfer(agreementOwner, obtained[index] - repaidAmount);
         }
 
         return obtained;
