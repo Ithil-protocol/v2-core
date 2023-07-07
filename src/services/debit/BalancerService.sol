@@ -186,7 +186,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         assert(length > 0);
 
         IBalancerPool bpool = IBalancerPool(poolAddress);
-        bpool.safeApprove(gauge, type(uint256).max);
+        bpool.approve(gauge, type(uint256).max);
 
         uint256 fee = bpool.getSwapFeePercentage();
         uint256[] memory weights = bpool.getNormalizedWeights();
@@ -195,7 +195,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
 
         for (uint8 i = 0; i < length; i++) {
             if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
-                IERC20(poolTokens[i]).safeApprove(address(balancerVault), type(uint256).max);
+                IERC20(poolTokens[i]).approve(address(balancerVault), type(uint256).max);
             if (weights[i] > weights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
             scalingFactors[i] = 10 ** (18 - IERC20Metadata(poolTokens[i]).decimals());
         }

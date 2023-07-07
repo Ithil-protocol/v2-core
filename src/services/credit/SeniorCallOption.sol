@@ -14,6 +14,8 @@ import { Service } from "../Service.sol";
 /// @notice   A service to obtain a call option on ITHIL by boosting
 contract SeniorCallOption is CreditService {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IVault;
+
     // It would be very hard to make a multi-token call option and ensuring consistency between prices
     // Therefore we make a single-token call option with a dutch auction price scheme
     // Price has precision of the underlying token
@@ -95,7 +97,7 @@ contract SeniorCallOption is CreditService {
         // Deposit tokens to the relevant vault and register obtained amount
         agreement.collaterals[0].amount = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
 
-        uint256 currentPrice = _currentPrice();
+        uint256 price = _currentPrice();
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
         if (monthsLocked > 11) revert MaxLockExceeded();
@@ -107,7 +109,7 @@ contract SeniorCallOption is CreditService {
         agreement.createdAt = block.timestamp + (monthsLocked + 2) * 30 * 86400 - deadline;
 
         // The amount bought if no price update were applied
-        uint256 virtualBoughtAmount = (agreement.loans[0].amount * _rewards[monthsLocked]) / currentPrice;
+        uint256 virtualBoughtAmount = (agreement.loans[0].amount * _rewards[monthsLocked]) / price;
         // Update current price based on the current balance and the collateral amount
         // One cannot purchase more than the total allocation
         if (totalAllocation <= virtualBoughtAmount) revert MaxPurchaseExceeded();
@@ -118,7 +120,7 @@ contract SeniorCallOption is CreditService {
         // E.g. if 50% of the entire allocation is bought, the current price gets multiplied by 2
         // if 10% of the allocation is bought, remaining is 9/10 so price gets multiplied by 10/9, etc...
         // notice that the denominator is positive since totalAllocation > virtualBoughtAmount
-        latestSpread = (currentPrice * totalAllocation) / (totalAllocation - virtualBoughtAmount) - initialPrice;
+        latestSpread = (price * totalAllocation) / (totalAllocation - virtualBoughtAmount) - initialPrice;
 
         // We register the amount of ITHIL to be redeemed as collateral
         // The user obtains a discount based on how many months the position is locked
@@ -170,7 +172,7 @@ contract SeniorCallOption is CreditService {
         }
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount)
-            vault.transfer(treasury, agreement.collaterals[0].amount - toRedeem);
+            vault.safeTransfer(treasury, agreement.collaterals[0].amount - toRedeem);
 
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
         ithil.safeTransfer(owner, toCall);
