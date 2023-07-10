@@ -42,12 +42,12 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         uint256 transformedMargin = (daiMargin % (whaleBalance - transformedAmount));
         if (transformedMargin == 0) transformedMargin++;
         IService.Order memory order = _openOrder1(daiAmount, daiLoan, daiMargin, 1, block.timestamp, "");
-        uint256 initialAllowance = service.totalAllowance();
+        uint256 initialAllowance = service.totalAllowance(collateralTokens[0]);
         uint256 initialBalance = IAToken(collateralTokens[0]).balanceOf(address(service));
         service.open(order);
 
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
-        assertEq(service.totalAllowance(), initialAllowance + collaterals[0].amount);
+        assertEq(service.totalAllowance(collateralTokens[0]), initialAllowance + collaterals[0].amount);
         assertEq(IAToken(collateralTokens[0]).balanceOf(address(service)), initialBalance + collaterals[0].amount);
         // In AaveV3 it's not 1:1, but it has at most a single unit of error
         assertGe(
@@ -118,14 +118,14 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         } else {
             uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(this));
             uint256 initialServiceBalance = IERC20(collateralTokens[0]).balanceOf(address(service));
-            uint256 initialAllowance = service.totalAllowance();
+            uint256 initialAllowance = service.totalAllowance(collateralTokens[0]);
             uint256 toRedeem = IERC20(collateralTokens[0]).balanceOf(address(service)).safeMulDiv(
                 collaterals[0].amount,
                 initialAllowance
             );
             service.close(0, data);
             assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
-            assertEq(service.totalAllowance(), initialAllowance - collaterals[0].amount);
+            assertEq(service.totalAllowance(collateralTokens[0]), initialAllowance - collaterals[0].amount);
             assertEq(
                 IERC20(collateralTokens[0]).balanceOf(address(service)),
                 initialServiceBalance - collaterals[0].amount
