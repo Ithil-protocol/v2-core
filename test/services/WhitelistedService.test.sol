@@ -60,7 +60,7 @@ contract WhitelistedTest is Test, IERC721Receiver {
         vm.startPrank(admin);
         token.approve(address(manager), 1);
         manager.create(address(token));
-        manager.setCap(address(service), address(token), GeneralMath.RESOLUTION);
+        manager.setCap(address(service), address(token), GeneralMath.RESOLUTION, type(uint256).max);
         vm.stopPrank();
     }
 

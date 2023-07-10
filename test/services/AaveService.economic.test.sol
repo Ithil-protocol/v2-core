@@ -57,7 +57,7 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             IERC20(loanTokens[i]).approve(address(manager), 1);
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
-            manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION);
+            manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION, type(uint256).max);
             // Set risk spread at 0.5%, 1% base rate, halving time one month
             service.setRiskParams(loanTokens[0], 5e15, 1e16, 365 * 30);
             vm.stopPrank();

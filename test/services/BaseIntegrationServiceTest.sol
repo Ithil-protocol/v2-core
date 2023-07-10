@@ -54,7 +54,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             }
             // No caps for this service -> 100% of the liquidity can be used initially
             vm.startPrank(admin);
-            manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION);
+            manager.setCap(serviceAddress, loanTokens[i], GeneralMath.RESOLUTION, type(uint256).max);
             vm.stopPrank();
         }
         vm.prank(admin);
