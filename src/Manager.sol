@@ -20,7 +20,7 @@ contract Manager is IManager, Ownable {
     mapping(address => mapping(address => CapsAndExposures)) public override caps;
 
     modifier supported(address token) {
-        if (caps[msg.sender][token].cap == 0) revert RestrictedToWhitelisted();
+        if (caps[msg.sender][token].percentageCap == 0) revert RestrictedToWhitelisted();
         _;
     }
 
@@ -49,10 +49,16 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function setCap(address service, address token, uint256 cap) external override onlyOwner {
-        caps[service][token].cap = cap;
+    function setCap(
+        address service,
+        address token,
+        uint256 percentageCap,
+        uint256 absoluteCap
+    ) external override onlyOwner {
+        caps[service][token].percentageCap = percentageCap;
+        caps[service][token].absoluteCap = absoluteCap;
 
-        emit CapWasUpdated(service, token, cap);
+        emit CapWasUpdated(service, token, percentageCap, absoluteCap);
     }
 
     function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override onlyOwner {
@@ -79,18 +85,16 @@ contract Manager is IManager, Ownable {
         // we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
         // assume currentExposure = 1.1e12 (1.1 million USDC) coming also from last 100k
         // finally investedPortion = 1e18 * 1.1e12 / (9.9e12 + 3.1e12) = 85271317829457364 or about 8.53%
-        uint256 investmentCap = caps[msg.sender][token].cap;
+        uint256 exposure = caps[msg.sender][token].exposure;
+        if (exposure + loan > caps[msg.sender][token].absoluteCap) revert AbsoluteCapExceeded(exposure);
         caps[msg.sender][token].exposure += loan;
         (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
         // recall that freeLiquidity is before the loan, while netLoans is after
         // therefore, the quantity freeLiquidity + netLoans - loan is invariant during the borrow
         // notice that since amount >= loan in general, we cannot make (freeLiquidity - amount)
         // otherwise credit services could be unclosable when experiencing a loss at high liquidity pressure
-        uint256 investedPortion = RESOLUTION.mulDiv(
-            caps[msg.sender][token].exposure,
-            freeLiquidity + (netLoans - loan)
-        );
-        if (investedPortion > investmentCap) revert InvestmentCapExceeded(investedPortion, investmentCap);
+        uint256 investedPortion = RESOLUTION.mulDiv(exposure + loan, freeLiquidity + (netLoans - loan));
+        if (investedPortion > caps[msg.sender][token].percentageCap) revert InvestmentCapExceeded(investedPortion);
         return (freeLiquidity, netLoans);
     }
 

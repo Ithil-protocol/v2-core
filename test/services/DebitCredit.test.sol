@@ -123,11 +123,11 @@ contract DebitCreditTest is Test, IERC721Receiver {
         aaveService.addToWhitelist(whitelistedUsers);
 
         // whitelist Aave strategy for 20% exposure in USDC
-        manager.setCap(address(aaveService), address(usdc), 2e17);
+        manager.setCap(address(aaveService), address(usdc), 2e17, type(uint256).max);
         // we also need to whitelist call option and fee collector
         // since they generate no loan, even 1 is enough
-        manager.setCap(address(feeCollectorService), address(usdc), 1);
-        manager.setCap(address(callOptionService), address(usdc), 1);
+        manager.setCap(address(feeCollectorService), address(usdc), 1, type(uint256).max);
+        manager.setCap(address(callOptionService), address(usdc), 1, type(uint256).max);
 
         // give 1m Ithil to fee depositor
         ithil.transfer(feeCollectorDepositor, 1e6 * 1e18);
