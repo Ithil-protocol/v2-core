@@ -60,8 +60,9 @@ export const setCapacity = async (
   address: string,
   token: Address,
   capacity: bigint = 10n ** 18n,
+  cap: bigint = 10n ** 36n,
 ) => {
-  await manager.setCap(address, token, capacity)
+  await manager.setCap(address, token, capacity, cap)
 }
 
 export const serviceToggleWhitelist = async (service: any, value: boolean) => {
