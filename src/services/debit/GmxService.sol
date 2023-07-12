@@ -9,7 +9,7 @@ import {
     IUsdgVault,
     IRewardTracker
 } from "../../interfaces/external/gmx/IGmx.sol";
-import { ConstantRateModel } from "../../irmodels/ConstantRateModel.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
 import { Whitelisted } from "../Whitelisted.sol";
@@ -17,7 +17,7 @@ import { Whitelisted } from "../Whitelisted.sol";
 /// @title    GmxService contract
 /// @author   Ithil
 /// @notice   A service to perform margin trading on the GLP token
-contract GmxService is Whitelisted, ConstantRateModel, DebitService {
+contract GmxService is Whitelisted, AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 
     IRewardRouter public immutable router;
@@ -50,16 +50,15 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
             weth.approve(address(glpManager), type(uint256).max);
     }
 
-    function _open(Agreement memory agreement, bytes memory data) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         if (agreement.loans[0].token != address(weth)) revert InvalidToken();
 
-        uint256 minGlpOut = abi.decode(data, (uint256));
         agreement.collaterals[0].token = address(glp);
         agreement.collaterals[0].amount = routerV2.mintAndStakeGlp(
             address(weth),
             agreement.loans[0].amount + agreement.loans[0].margin,
             0,
-            minGlpOut
+            agreement.collaterals[0].amount
         );
     }
 
@@ -80,7 +79,7 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
         uint256[] memory results = new uint256[](1);
         uint256 aumInUsdg = glpManager.getAumInUsdg(false);
         uint256 glpSupply = glp.totalSupply();
-        // agreement.collaterals[0].amount == GLP amount
+
         if (glpSupply == 0) revert ZeroGlpSupply();
         uint256 usdgAmount = (agreement.collaterals[0].amount * aumInUsdg) / glpSupply;
 
@@ -97,6 +96,5 @@ contract GmxService is Whitelisted, ConstantRateModel, DebitService {
         results[0] = (usdgDelta * (10000 - feeBasisPoints)) / 10000;
 
         return results;
-        // TODO multiply per weight and add existing balance
     }
 }

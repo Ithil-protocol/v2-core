@@ -18,10 +18,10 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
     address internal constant gmxRouterV2 = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     address internal constant whale = 0x8b8149Dd385955DC1cE77a4bE7700CCD6a212e65;
-    uint256 internal constant amount = 100 * 1e18;
+    uint256 internal constant amount = 1 * 1e18; // 1 WETH
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 76395332;
+    uint256 internal constant blockNumber = 110400753;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.deal(admin, 1 ether);
@@ -50,15 +50,15 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         vm.stopPrank();
     }
 
-    function testGmxIntegration() public {
+    function testGmxIntegration(uint256 loanAmount, uint256 margin) public {
         address[] memory tokens = new address[](1);
         tokens[0] = address(weth);
 
         uint256[] memory loans = new uint256[](1);
-        loans[0] = 10 * 1e18;
+        loans[0] = loanAmount % 1e18;
 
         uint256[] memory margins = new uint256[](1);
-        margins[0] = 1e18;
+        margins[0] = (margin % 9e17) + 1e17;
 
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
@@ -69,7 +69,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = 0;
 
-        //uint256 initial = weth.balanceOf(address(this));
+        uint256 initial = weth.balanceOf(address(this)) - margins[0];
 
         IService.Order memory order = OrderHelper.createAdvancedOrder(
             tokens,
@@ -79,23 +79,17 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
             collateralTokens,
             collateralAmounts,
             block.timestamp,
-            abi.encode(uint256(1))
+            ""
         );
 
         service.open(order);
 
-        (
-            IService.Loan[] memory loan,
-            IService.Collateral[] memory collaterals,
-            uint256 createdAt,
-            IService.Status status
-        ) = service.getAgreement(0);
+        (IService.Loan[] memory loan, IService.Collateral[] memory collaterals, uint256 createdAt, ) = service
+            .getAgreement(0);
 
-        IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, status);
-        uint256[] memory results = service.quote(agreement);
-        //vm.warp(block.timestamp + 30 days);
+        IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, IService.Status.OPEN);
+
         service.close(0, abi.encode(uint256(1)));
-
-        //assertTrue(weth.balanceOf(address(this)) > initial);
+        assertEq(weth.balanceOf(address(this)), initial + service.quote(agreement)[0] - loans[0]);
     }
 }
