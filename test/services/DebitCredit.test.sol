@@ -67,7 +67,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
     address internal constant ethChainlinkFeed = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 106469840;
+    uint256 internal constant blockNumber = 110027886;
 
     uint64[] internal _rewards;
 
@@ -163,6 +163,11 @@ contract DebitCreditTest is Test, IERC721Receiver {
         bytes calldata /*data*/
     ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
+    }
+
+    function _equalWithTolerance(uint256 a, uint256 b, uint256 tol) internal {
+        assertGe(a + tol, b);
+        assertGe(b + tol, a);
     }
 
     function _openAavePosition(uint256 margin, uint256 loan, uint256 minCollateral) internal {
@@ -321,14 +326,13 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // Before closing, we open a fee collector position
         // so that we can withdraw the fees later
 
-        // TODO: debug fee collector and restore
-        // vm.startPrank(feeCollectorDepositor);
-        // // 100k Ithil locked for 6 months
-        // ithil.approve(address(feeCollectorService), 1e5 * 1e18);
-        // _openFeeCollectorPosition(1e5 * 1e18, 5);
-        // (, collaterals, , ) = feeCollectorService.getAgreement(0);
-        // assertEq(collaterals[0].amount, (1e5 * 1e18 * (_rewards[5] * uint256(1.1e18))) / 1e36);
-        // vm.stopPrank();
+        vm.startPrank(feeCollectorDepositor);
+        // 100k Ithil locked for 6 months
+        ithil.approve(address(feeCollectorService), 1e5 * 1e18);
+        _openFeeCollectorPosition(1e5 * 1e18, 5);
+        (, collaterals, , ) = feeCollectorService.getAgreement(0);
+        assertEq(collaterals[0].amount, (1e5 * 1e18 * (_rewards[5] * uint256(1.1e18))) / 1e36);
+        vm.stopPrank();
 
         // Now, liquidity is given by an Aave position which closes
         vm.startPrank(aaveUser);
@@ -337,68 +341,86 @@ contract DebitCreditTest is Test, IERC721Receiver {
         assertEq(vault.freeLiquidity(), 6.2e8 + 1);
         vm.stopPrank();
 
-        // TODO: debug fee collector and restore
         // At this point, fees are harvested
-        // vm.startPrank(automator);
-        // address[] memory tokens = new address[](1);
-        // tokens[0] = usdc;
-        // (uint256[] memory amounts, uint256[] memory prices) = feeCollectorService.harvestAndSwap(tokens);
-        // // the harvest is registered as a loss in the vault
-        // assertEq(vault.currentLosses(), amounts[0]);
-        // // This does not actually perform the swap: it justs places an order on the dex
-        // // Let the automator fulfill it
-        // IPool pool = IPool(IFactory(dexFactory).pools(usdc, weth, 5));
-        // IERC20(weth).approve(address(pool), type(uint256).max);
-        // pool.fulfillOrder(type(uint256).max, automator, amounts[0], type(uint256).max, block.timestamp + 3600);
-        // // the automator has successfully extracted the fees (more orders could be filled before the collector's)
-        // assertGe(IERC20(usdc).balanceOf(automator), amounts[0]);
-        // // and the resulting weth are introduced into the feeCollector contract
-        // assertEq(
-        //     IERC20(weth).balanceOf(address(feeCollectorService)),
-        //     amounts[0].mulDiv(1e18, prices[0], Math.Rounding.Up)
-        // );
-        // // if we try to harvest fees again, we would fail (we must wait for another repay)
-        // vm.expectRevert(bytes4(keccak256(abi.encodePacked("Throttled()"))));
-        // feeCollectorService.harvestAndSwap(tokens);
-        // // we delay the fee collection to be able to test better when another fee collector tries to deposit
-        // vm.stopPrank();
+        vm.startPrank(automator);
+        address[] memory tokens = new address[](1);
+        tokens[0] = usdc;
+        (uint256[] memory amounts, uint256[] memory prices) = feeCollectorService.harvestAndSwap(tokens);
+        // the harvest is registered as a loss in the vault
+        assertEq(vault.currentLosses(), amounts[0]);
+        // This does not actually perform the swap: it justs places an order on the dex
+        // Let the automator fulfill it
+        IPool pool = IPool(IFactory(dexFactory).pools(usdc, weth, 5));
+        IERC20(weth).approve(address(pool), type(uint256).max);
+        pool.fulfillOrder(type(uint256).max, automator, amounts[0], type(uint256).max, block.timestamp + 3600);
+        // the automator has successfully extracted the fees (more orders could be filled before the collector's)
+        assertGe(IERC20(usdc).balanceOf(automator), amounts[0]);
+        // and the resulting weth are introduced into the feeCollector contract
+        assertEq(
+            IERC20(weth).balanceOf(address(feeCollectorService)),
+            amounts[0].mulDiv(1e18, prices[0], Math.Rounding.Up)
+        );
+        // if we try to harvest fees again, we would fail (we must wait for another repay)
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("Throttled()"))));
+        feeCollectorService.harvestAndSwap(tokens);
+        // we delay the fee collection to be able to test better when another fee collector tries to deposit
+        vm.stopPrank();
 
-        // vm.startPrank(feeCollectorDepositor2);
-        // // 100k Ithil locked for 8 months
-        // ithil.approve(address(feeCollectorService), 1e5 * 1e18);
-        // _openFeeCollectorPosition(1e5 * 1e18, 7);
-        // (, collaterals, , ) = feeCollectorService.getAgreement(1);
-        // assertEq(collaterals[0].amount, (1e5 * 1e18 * (_rewards[7] * uint256(1.1e18))) / 1e36);
+        vm.startPrank(feeCollectorDepositor2);
+        uint256 initialWithdrawable = feeCollectorService.withdrawable(0);
+        // 100k Ithil locked for 8 months
+        ithil.approve(address(feeCollectorService), 1e5 * 1e18);
+        _openFeeCollectorPosition(1e5 * 1e18, 7);
+        // new deposit does not affect withdrawable of the other user (beyond rounding error)
+        _equalWithTolerance(feeCollectorService.withdrawable(0), initialWithdrawable, 1);
+        (, collaterals, , ) = feeCollectorService.getAgreement(1);
+        assertEq(collaterals[0].amount, (1e5 * 1e18 * (_rewards[7] * uint256(1.1e18))) / 1e36);
 
-        // // Although there are weth in the service, the new depositor can only withdraw 0
-        // vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedAccess()"))));
-        // feeCollectorService.withdrawFees(0);
-        // uint256 toWithdraw = feeCollectorService.withdrawFees(1);
-        // assertEq(toWithdraw, 0);
-        // vm.stopPrank();
+        // Although there are weth in the service, the new depositor can only withdraw 0
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedAccess()"))));
+        feeCollectorService.withdrawFees(0);
+        uint256 toWithdraw = feeCollectorService.withdrawFees(1);
+        assertEq(toWithdraw, 0);
+        vm.stopPrank();
 
         // let us now close the call option with all liquidity withdrawn
         vm.startPrank(callOptionSigner);
         callOptionService.close(1, abi.encode(0));
         vm.stopPrank();
 
-        // TODO: debug fee collector and restore
         // and let us withdraw fees and close the position
-        // vm.startPrank(feeCollectorDepositor);
-        // toWithdraw = feeCollectorService.withdrawFees(0);
-        // assertEq(toWithdraw, amounts[0].mulDiv(1e18, prices[0], Math.Rounding.Up));
-        // assertEq(IERC20(weth).balanceOf(feeCollectorDepositor), toWithdraw);
+        vm.startPrank(feeCollectorDepositor);
+        initialWithdrawable = feeCollectorService.withdrawable(1);
+        toWithdraw = feeCollectorService.withdrawFees(0);
+        // withdraw fees does not affect withdrawable of the other user (beyond rounding error)
+        _equalWithTolerance(feeCollectorService.withdrawable(1), initialWithdrawable, 1);
+        assertEq(toWithdraw, amounts[0].mulDiv(1e18, prices[0], Math.Rounding.Down));
+        assertEq(IERC20(weth).balanceOf(feeCollectorDepositor), toWithdraw);
 
         // launching again, immediately, withdrawFees should give a zero amount
-        // toWithdraw = feeCollectorService.withdrawFees(0);
-        // assertEq(toWithdraw, 0);
+        toWithdraw = feeCollectorService.withdrawFees(0);
+        assertEq(toWithdraw, 0);
 
-        // vm.expectRevert(bytes4(keccak256(abi.encodePacked("BeforeExpiry()"))));
-        // feeCollectorService.close(0, "");
-        // // recall it was six months
-        // vm.warp(block.timestamp + 6 * 30 * 86400);
-        // // feeCollectorService.close(0, "");
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("BeforeExpiry()"))));
+        feeCollectorService.close(0, "");
+        // recall it was six months
+        vm.warp(block.timestamp + 6 * 30 * 86400);
+        // and even more fees are introduced (mock transfer)
+        vm.stopPrank();
+        vm.prank(wethWhale);
+        IERC20(weth).transfer(address(feeCollectorService), 1e18);
+        initialWithdrawable = feeCollectorService.withdrawable(1);
+        vm.prank(feeCollectorDepositor);
+        feeCollectorService.close(0, "");
+        // closing does not affect withdrawable of the other user (beyond rounding error)
+        _equalWithTolerance(feeCollectorService.withdrawable(1), initialWithdrawable, 1);
 
-        // vm.stopPrank();
+        // now also the second depositor closes its position
+
+        vm.startPrank(feeCollectorDepositor2);
+        // two more months
+        vm.warp(block.timestamp + 2 * 30 * 86400);
+        feeCollectorService.close(1, "");
+        vm.stopPrank();
     }
 }

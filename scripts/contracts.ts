@@ -32,9 +32,10 @@ export const aaveSetCapacity = async (
   manager: Manager,
   aaveService: AaveService,
   token: Address,
-  capacity: bigint = 10n ** 18n,
+  percentageCap: bigint = 10n ** 18n,
+  absoluteCap: bigint = 10n ** 36n,
 ) => {
-  await manager.setCap(aaveService.address, token, capacity)
+  await manager.setCap(aaveService.address, token, percentageCap, absoluteCap)
 }
 
 export const aaveToggleWhitelist = async (aaveService: AaveService, value: boolean) => {

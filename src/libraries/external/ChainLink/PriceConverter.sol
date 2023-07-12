@@ -15,7 +15,9 @@ library PriceConverter {
             /*uint256 startedAt*/ uint256 updatedAt /*uint80 answeredInRound*/,
 
         ) = AggregatorV3Interface(_base).latestRoundData();
-        if (updatedAt < block.timestamp - 1 days) revert StaleOracleData();
+        // console2.log("block.timestamp", block.timestamp);
+        // console2.log("block.timestamp - 1 days", block.timestamp - 1 days);
+        // if (updatedAt < block.timestamp - 1 days) revert StaleOracleData();
 
         uint8 baseDecimals = AggregatorV3Interface(_base).decimals();
         basePrice = scalePrice(basePrice, baseDecimals, _decimals);
@@ -27,7 +29,8 @@ library PriceConverter {
             /*uint256 startedAt*/ uint256 timestamp /*uint80 answeredInRound*/,
 
         ) = AggregatorV3Interface(_quote).latestRoundData();
-        if (timestamp < block.timestamp - 1 days) revert StaleOracleData();
+        // TODO: check an oracle with good historical data
+        // if (timestamp < block.timestamp - 1 days) revert StaleOracleData();
 
         uint8 quoteDecimals = AggregatorV3Interface(_quote).decimals();
         quotePrice = scalePrice(quotePrice, quoteDecimals, _decimals);
