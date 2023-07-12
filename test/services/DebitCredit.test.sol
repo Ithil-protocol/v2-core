@@ -10,6 +10,7 @@ import { IPool } from "../../src/interfaces/external/wizardex/IPool.sol";
 import { IFactory } from "../../src/interfaces/external/wizardex/IFactory.sol";
 import { IOracle } from "../../src/interfaces/IOracle.sol";
 import { Oracle } from "../../src/Oracle.sol";
+import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { Ithil } from "../../src/Ithil.sol";
 import { SeniorCallOption } from "../../src/services/credit/SeniorCallOption.sol";
@@ -63,8 +64,8 @@ contract DebitCreditTest is Test, IERC721Receiver {
     address internal constant aavePool = 0x794a61358D6845594F94dc1DB02A252b5b4814aD;
     address internal constant aUsdc = 0x625E7708f30cA75bfd92586e17077590C60eb4cD;
     address internal constant dexFactory = 0xa05B704E88D43260F71861BB69C1851Fe77b63fD;
-    address internal constant usdcChainlinkFeed = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3;
-    address internal constant ethChainlinkFeed = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
+    address internal immutable usdcChainlinkFeed; /* = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3*/
+    address internal immutable ethChainlinkFeed; /* = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612*/
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
     uint256 internal constant blockNumber = 110027886;
@@ -89,6 +90,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.selectFork(forkId);
         vm.deal(admin, 1 ether);
         vm.startPrank(admin);
+        // The true chainlink oracle will throw a stalePrice exception after warping
+        // therefore we use mock oracle
+        usdcChainlinkFeed = address(new MockChainLinkOracle(6));
+        ethChainlinkFeed = address(new MockChainLinkOracle(18));
+        usdcChainlinkFeed.call(abi.encodeWithSignature("setPrice(int256)", int256(1e6)));
+        ethChainlinkFeed.call(abi.encodeWithSignature("setPrice(int256)", int256(1.8e18)));
         manager = IManager(new Manager());
         ithil = new Ithil();
         oracle = new Oracle();

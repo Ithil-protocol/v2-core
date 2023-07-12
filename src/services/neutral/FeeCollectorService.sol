@@ -183,10 +183,9 @@ contract FeeCollectorService is Service {
     }
 
     function harvestAndSwap(address[] calldata tokens) external returns (uint256[] memory, uint256[] memory) {
-        uint256 length = tokens.length;
-        uint256[] memory amounts = new uint256[](length);
-        uint256[] memory prices = new uint256[](length);
-        for (uint256 i = 0; i < length; i++) {
+        uint256[] memory amounts = new uint256[](tokens.length);
+        uint256[] memory prices = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
             (uint256 amount, ) = _harvestFees(tokens[i]);
             amounts[i] = amount;
 
@@ -194,11 +193,11 @@ contract FeeCollectorService is Service {
             if (tokens[i] != address(weth)) {
                 // TODO check assumption: all pools will have same the tick
                 IPool pool = IPool(dex.pools(tokens[i], address(weth), 5));
-                IERC20Metadata token = IERC20Metadata(tokens[i]);
                 // We allow for a 10% discount in the price
-                uint256 price = (oracle.getPrice(address(weth), tokens[i], token.decimals()) * 9) / 10;
+                uint256 price = (oracle.getPrice(address(weth), tokens[i], IERC20Metadata(tokens[i]).decimals()) * 9) /
+                    10;
                 prices[i] = price;
-                token.approve(address(pool), amount);
+                IERC20(tokens[i]).approve(address(pool), amount);
                 pool.createOrder(amount, price, address(this), block.timestamp + 3600);
             }
         }
