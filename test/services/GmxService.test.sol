@@ -11,8 +11,6 @@ import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract GmxServiceTest is BaseIntegrationServiceTest {
     GmxService internal immutable service;
 
