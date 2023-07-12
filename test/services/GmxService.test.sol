@@ -81,7 +81,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
             collateralTokens,
             collateralAmounts,
             block.timestamp,
-            abi.encode(uint256(1))
+            ""
         );
 
         service.open(order);
