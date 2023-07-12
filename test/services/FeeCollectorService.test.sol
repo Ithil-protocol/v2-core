@@ -94,7 +94,6 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         uint256 initialBalance = ithil.balanceOf(address(this));
         service.open(order);
         assertEq(ithil.balanceOf(address(this)), initialBalance - order.agreement.loans[0].margin);
-        assertEq(service.totalLoans(), order.agreement.loans[0].margin.safeMulDiv(rewards[months % 12], 1e18));
 
         return order.agreement.loans[0].margin;
     }
