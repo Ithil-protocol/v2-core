@@ -49,7 +49,7 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-        ithil = new Ithil();
+        ithil = new Ithil(admin);
         // 1e17 means a fee percentage of 10%
         service = new FeeCollectorService(address(manager), address(weth), 1e17, address(oracle), address(dex));
         service.setTokenWeight(address(ithil), 1e18);

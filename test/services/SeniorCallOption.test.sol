@@ -26,20 +26,21 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-
-        ithil = new Ithil();
+        ithil = new Ithil(admin);
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](2);
         loanTokens[0] = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1; // DAI
         whales[loanTokens[0]] = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
         vm.stopPrank();
+
         vm.prank(whales[loanTokens[0]]);
         IERC20(loanTokens[0]).transfer(admin, 1);
+
         vm.startPrank(admin);
         IERC20(loanTokens[0]).approve(address(manager), 1);
         manager.create(loanTokens[0]);
-        //slither-disable-next-line reentrancy
+
         service = new SeniorCallOption(
             address(manager),
             address(this),
@@ -48,7 +49,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
             86400 * 30,
             loanTokens[0]
         );
-        //slither-disable-next-line reentrancy
+
         serviceAddress = address(service);
         ithil.approve(serviceAddress, 1e25);
         service.allocateIthil(1e25);
