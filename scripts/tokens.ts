@@ -2,14 +2,6 @@ import { type AcceptedAsset, type MinimalToken } from './types'
 
 export const tokens: MinimalToken[] = [
   {
-    name: 'WETH',
-    coingeckoId: 'ethereum',
-    iconName: 'eth',
-    decimals: 18,
-    tokenAddress: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-    oracleAddress: '0x639fe6ab55c921f74e7fac1ee960c0b6293ba612',
-  },
-  {
     name: 'USDC',
     coingeckoId: 'usd-coin',
     iconName: 'usdc',
@@ -24,6 +16,14 @@ export const tokens: MinimalToken[] = [
     decimals: 6,
     tokenAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
     oracleAddress: '0x3f3f5df88dc9f13eac63df89ec16ef6e7e25dde7',
+  },
+  {
+    name: 'WETH',
+    coingeckoId: 'ethereum',
+    iconName: 'eth',
+    decimals: 18,
+    tokenAddress: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    oracleAddress: '0x639fe6ab55c921f74e7fac1ee960c0b6293ba612',
   },
   {
     name: 'WBTC',
