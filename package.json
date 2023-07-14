@@ -74,7 +74,12 @@
     "hardhat:deploy:localhost": "hardhat --network localhost run scripts/deploy.script.ts",
     "hardhat:faucet:localhost": "hardhat --network localhost run scripts/faucet.hardhat.script.ts",
     "hardhat:deploy:tenderly": "hardhat --network tenderly run scripts/deploy.script.ts",
+    "hardhat:fork:tenderly": "hardhat --network tenderly run scripts/fork.script.ts",
     "hardhat:faucet:tenderly": "hardhat --network tenderly run scripts/faucet.script.ts",
     "hardhat:vaults:tenderly": "hardhat --network tenderly run scripts/fill-vaults.script.ts"
+  },
+  "dependencies": {
+    "@tenderly/hardhat-tenderly": "^1.7.7",
+    "axios": "^1.4.0"
   }
 }
