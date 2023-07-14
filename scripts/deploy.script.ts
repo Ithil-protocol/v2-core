@@ -34,7 +34,7 @@ const AAVE_POOL_ON_ARBITRUM = '0x794a61358D6845594F94dc1DB02A252b5b4814aD'
 const GMX_ROUTER = '0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1'
 const GMX_ROUTER_V2 = '0xB95DB5B167D75e6d04227CfFFA61069348d271F5'
 const WIZARDEX = '0xa05B704E88D43260F71861BB69C1851Fe77b63fD'
-const GOVERNANCE = ''
+const GOVERNANCE = '0x7778f7b568023379697451da178326D27682ADb8'
 
 const main = async () => {
   const ithil = await deployIthil(GOVERNANCE)
@@ -49,7 +49,14 @@ const main = async () => {
   console.log(`GmxService contract deployed to ${gmxService.address}`)
   const feeCollectorService = await deployFeeCollectorService(manager, WETH, 10n ** 17n, oracle.address, WIZARDEX)
   console.log(`FeeCollectorService contract deployed to ${feeCollectorService.address}`)
-  const callOptionService = await deployCallOptionService(manager, GOVERNANCE, ithil.address, 4e17, 86400 * 30, WETH)
+  const callOptionService = await deployCallOptionService(
+    manager,
+    GOVERNANCE,
+    ithil.address,
+    BigInt(4e17),
+    86400 * 30,
+    WETH,
+  )
   console.log(`CallOptionService contract deployed to ${callOptionService.address}`)
   const fixedYieldService = await deploySeniorFixedYieldService(
     'Fixed yield 1m 1%',

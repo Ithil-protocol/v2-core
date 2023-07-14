@@ -12,7 +12,14 @@ export const deployIthil = async (governance: Address) => {
 }
 
 export const deployOracle = async () => {
-  const Oracle = await ethers.getContractFactory('Oracle')
+  const PriceConverter = await ethers.getContractFactory('PriceConverter')
+
+  const priceConverter = await PriceConverter.deploy()
+
+  await priceConverter.deployed()
+  const Oracle = await ethers.getContractFactory('Oracle', {
+    libraries: { PriceConverter: priceConverter.address },
+  })
   const oracle = await Oracle.deploy()
 
   await oracle.deployed()
