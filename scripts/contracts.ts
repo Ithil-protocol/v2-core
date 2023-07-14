@@ -81,6 +81,7 @@ export const deployCallOptionService = async (
   underlying: Address,
 ) => {
   const SeniorCallOption = await ethers.getContractFactory('SeniorCallOption')
+
   const seniorCallOption = await SeniorCallOption.deploy(
     manager.address,
     treasury,
@@ -88,6 +89,7 @@ export const deployCallOptionService = async (
     initialPrice,
     halvingTime,
     underlying,
+    { gasLimit: 50_000_000 },
   )
 
   await seniorCallOption.deployed()

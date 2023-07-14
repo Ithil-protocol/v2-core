@@ -37,18 +37,31 @@ const WIZARDEX = '0xa05B704E88D43260F71861BB69C1851Fe77b63fD'
 const GOVERNANCE = '0x7778f7b568023379697451da178326D27682ADb8'
 
 const main = async () => {
+  const manager = await deployManager()
+  console.log(`Manager contract deployed to ${manager.address}`)
+
+  // Deploy Vaults
+  const vaults = await Promise.all(
+    tokens.map(async (token): Promise<LendingToken> => {
+      const contract = await ethers.getContractAt('IERC20', token.tokenAddress)
+      await contract.approve(manager.address, 100)
+
+      const vaultAddress = await createVault(manager, token.tokenAddress)
+      return { ...token, vaultAddress }
+    }),
+  )
+
   const ithil = await deployIthil(GOVERNANCE)
   console.log(`ITHIL contract deployed to ${ithil.address}`)
   const oracle = await deployOracle()
   console.log(`Oracle contract deployed to ${oracle.address}`)
-  const manager = await deployManager()
-  console.log(`Manager contract deployed to ${manager.address}`)
   const aaveService = await deployAave(manager, AAVE_POOL_ON_ARBITRUM)
   console.log(`AaveService contract deployed to ${aaveService.address}`)
   const gmxService = await deployGmx(manager, GMX_ROUTER, GMX_ROUTER_V2)
   console.log(`GmxService contract deployed to ${gmxService.address}`)
   const feeCollectorService = await deployFeeCollectorService(manager, WETH, 10n ** 17n, oracle.address, WIZARDEX)
   console.log(`FeeCollectorService contract deployed to ${feeCollectorService.address}`)
+
   const callOptionService = await deployCallOptionService(
     manager,
     GOVERNANCE,
@@ -66,17 +79,6 @@ const main = async () => {
     86400 * 30,
   )
   console.log(`SeniorFixedYieldService contract deployed to ${fixedYieldService.address}`)
-
-  // Deploy Vaults
-  const vaults = await Promise.all(
-    tokens.map(async (token): Promise<LendingToken> => {
-      const contract = await ethers.getContractAt('IERC20', token.tokenAddress)
-      await contract.approve(manager.address, 100)
-
-      const vaultAddress = await createVault(manager, token.tokenAddress)
-      return { ...token, vaultAddress }
-    }),
-  )
 
   // Configure Oracle
   await Promise.all(tokens.map(async (token) => await oracle.setPriceFeed(token.tokenAddress, token.oracleAddress)))
