@@ -19,7 +19,7 @@ const tenderlyNetwork = {} as NetworkUserConfig & { url?: string }
 if (TENDERLY_URL != null && TENDERLY_URL.length > 10) {
   tenderlyNetwork.url = TENDERLY_URL
   tenderlyNetwork.accounts = accountsPrivates
-  tenderlyNetwork.chainId = 424242
+  tenderlyNetwork.chainId = 98745
 }
 tdly.setup()
 const config: HardhatUserConfig = {
