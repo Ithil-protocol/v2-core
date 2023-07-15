@@ -34,7 +34,7 @@ In the context of a debit service, a hacker may syphon out funds from Ithil's va
 - Set up it's place in the target protocol in some way (we are agnostic on how).
 - Open an agreement on Ithil, thus transferring liquidity to the target protocol.
 - Manipulate the quoter via a flashloan which triggers a bad liquidation.
-- After liquidtaion, Ithil has no entitlement anymore on the funds, which would be lost in the target protocol.
+- After liquidation, Ithil has no entitlement anymore on the funds, which would be lost in the target protocol.
 
 The hacker could profit from this (we are still agnostic on how), thus it could repay its flashloan and start again to
 drain funds out of Ithil vaults. In order to avoid this, _we exclude non-owner addresses to generate losses on the
