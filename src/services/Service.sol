@@ -63,7 +63,8 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     function _saveAgreement(Agreement memory agreement) internal {
         Agreement storage newAgreement = agreements.push();
         newAgreement.status = Status.OPEN;
-        newAgreement.createdAt = block.timestamp;
+        // we might want to change the createdAt to deal with locks without the need of an extra datum
+        newAgreement.createdAt = agreement.createdAt == 0 ? block.timestamp : agreement.createdAt;
 
         for (uint256 loansIndex = 0; loansIndex < agreement.loans.length; loansIndex++) {
             newAgreement.loans.push(agreement.loans[loansIndex]);
@@ -76,7 +77,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     /// @notice creates a new service agreement
     /// @param order a struct containing data on the agreement and extra params
-    function open(Order calldata order) public virtual unlocked {
+    function open(Order calldata order) public virtual override unlocked {
         // Save agreement in memory to allow editing
         Agreement memory agreement = order.agreement;
 
@@ -92,7 +93,10 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @notice closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param data extra custom data required by the specific service
-    function close(uint256 tokenID, bytes calldata data) public virtual editable(tokenID) returns (uint256[] memory) {
+    function close(
+        uint256 tokenID,
+        bytes calldata data
+    ) public virtual override editable(tokenID) returns (uint256[] memory) {
         Agreement memory agreement = agreements[tokenID];
 
         // Body
@@ -113,13 +117,26 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         uint256 tokenID,
         Agreement calldata agreement,
         bytes calldata data
-    ) public virtual unlocked editable(tokenID) {}
+    ) public virtual override unlocked editable(tokenID) {}
 
     function getAgreement(
         uint256 tokenID
-    ) public view returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status) {
+    ) public view override returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status) {
         Agreement memory agreement = agreements[tokenID];
         return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
+    }
+
+    function getUserAgreements() public view override returns (Agreement[] memory, uint256[] memory) {
+        uint256 balance = balanceOf(msg.sender);
+        Agreement[] memory userAgreements = new Agreement[](balance);
+        uint256[] memory ids = new uint256[](balance);
+
+        for (uint256 i = 0; i < balance; i++) {
+            ids[i] = tokenOfOwnerByIndex(msg.sender, i);
+            userAgreements[i] = agreements[ids[i]];
+        }
+
+        return (userAgreements, ids);
     }
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual;

@@ -138,6 +138,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         balancerVault.exitPool(pool.balancerPoolID, address(this), payable(address(this)), request);
     }
 
+    // bug: this quote has a branch which always returns zero
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         IBalancerManager.PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();

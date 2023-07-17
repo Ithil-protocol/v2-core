@@ -57,7 +57,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
             IERC20(loanTokens[i]).approve(address(manager), 1);
             manager.create(loanTokens[i]);
             // No caps for this service -> 100% of the liquidity can be used initially
-            manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION);
+            manager.setCap(address(service), loanTokens[i], GeneralMath.RESOLUTION, type(uint256).max);
             // Set risk spread at 0.5%, 1% base rate, halving time one month
             service.setRiskParams(loanTokens[0], 5e15, 1e16, 365 * 30);
             service.setMinMargin(loanTokens[0], 1e6); // Minimum 1 DAI
@@ -165,24 +165,30 @@ contract AaveGeneralTest is Test, IERC721Receiver {
                 uint256 initialVaultBalance = IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0]));
                 uint256 initialUserBalance = IERC20(loanTokens[0]).balanceOf(address(this));
                 uint256[] memory dueFees = service.computeDueFees(agreement);
-                uint256[] memory obtained = service.close(index, abi.encode(minimumAmountOut));
-                if (obtained[0] > actualLoans[0].amount + dueFees[0]) {
-                    // Good repay
-                    assertEq(
-                        IERC20(loanTokens[0]).balanceOf(address(this)),
-                        initialUserBalance + obtained[0] - (actualLoans[0].amount + dueFees[0])
-                    );
-                    assertEq(
-                        IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
-                        initialVaultBalance + actualLoans[0].amount + dueFees[0]
-                    );
+                uint256[] memory quoted = service.quote(agreement);
+                if (quoted[0] < actualLoans[0].amount) {
+                    vm.expectRevert(bytes4(keccak256(abi.encodePacked("LossByArbitraryAddress()"))));
+                    service.close(index, abi.encode(minimumAmountOut));
                 } else {
-                    // Bad repay
-                    assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialUserBalance);
-                    assertEq(
-                        IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
-                        initialVaultBalance + obtained[0]
-                    );
+                    uint256[] memory obtained = service.close(index, abi.encode(minimumAmountOut));
+                    if (obtained[0] > actualLoans[0].amount + dueFees[0]) {
+                        // Good repay
+                        assertEq(
+                            IERC20(loanTokens[0]).balanceOf(address(this)),
+                            initialUserBalance + obtained[0] - (actualLoans[0].amount + dueFees[0])
+                        );
+                        assertEq(
+                            IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
+                            initialVaultBalance + actualLoans[0].amount + dueFees[0]
+                        );
+                    } else {
+                        // Bad repay
+                        assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialUserBalance);
+                        assertEq(
+                            IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0])),
+                            initialVaultBalance + obtained[0]
+                        );
+                    }
                 }
             }
         }

@@ -27,13 +27,13 @@ const contracts = JSON.parse(contractsString)
 const main = async () => {
   // load liquidity to vaults
   const manager = await ethers.getContractAt('Manager', contracts.manager)
+
   const [usdcVaultAddress, usdtVaultAddress, wethVaultAddress, btcVaultAddress] = await Promise.all([
     manager.vaults(tokenMap.USDC.tokenAddress),
     manager.vaults(tokenMap.USDT.tokenAddress),
     manager.vaults(tokenMap.WETH.tokenAddress),
     manager.vaults(tokenMap.WBTC.tokenAddress),
   ])
-
   const [usdcVault, usdtVault, wethVault, btcVault] = await Promise.all([
     ethers.getContractAt('Vault', usdcVaultAddress),
     ethers.getContractAt('Vault', usdtVaultAddress),
@@ -68,18 +68,22 @@ const main = async () => {
       const wethAmount = BigNumber.from(9n * wethOneUnit)
       const wbtcAmount = BigNumber.from(4n * wbtcOneUnit)
 
+      const overrides = {
+        gasLimit: 2_000_000,
+      }
+
       await Promise.all([
-        usdc.approve(usdcVault.address, usdcAmount),
-        usdt.approve(usdtVault.address, usdtAmount),
-        weth.approve(wethVault.address, 9n * wethOneUnit),
-        wbtc.approve(btcVault.address, 4n * wbtcOneUnit),
+        usdc.approve(usdcVault.address, usdcAmount, overrides),
+        usdt.approve(usdtVault.address, usdtAmount, overrides),
+        weth.approve(wethVault.address, 9n * wethOneUnit, overrides),
+        wbtc.approve(btcVault.address, 4n * wbtcOneUnit, overrides),
       ])
 
       await Promise.all([
-        usdcVaultConnected.deposit(usdcAmount, address),
-        usdtVaultConnected.deposit(usdtAmount, address),
-        wethVaultConnected.deposit(wethAmount, address),
-        btcVaultConnected.deposit(wbtcAmount, address),
+        usdcVaultConnected.deposit(usdcAmount, address, overrides),
+        usdtVaultConnected.deposit(usdtAmount, address, overrides),
+        wethVaultConnected.deposit(wethAmount, address, overrides),
+        btcVaultConnected.deposit(wbtcAmount, address, overrides),
       ])
     }),
   )

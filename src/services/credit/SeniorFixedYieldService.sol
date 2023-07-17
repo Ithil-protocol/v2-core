@@ -15,6 +15,7 @@ import { Service } from "../Service.sol";
 /// @notice   In this implementation, fixed yield creditors are senior than vanilla LPs
 contract SeniorFixedYieldService is CreditService {
     // The yield of this service, with 1e18 corresponding to 100% annually
+    // Here 1 year is defined as to be 365 * 86400 seconds
     uint256 public immutable yield;
 
     constructor(
@@ -27,30 +28,40 @@ contract SeniorFixedYieldService is CreditService {
         yield = _yield;
     }
 
-    function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {
-        // TODO: insert checks
+    function _open(IService.Agreement memory agreement, bytes memory /*data*/) internal virtual override {
+        address vaultAddress = manager.vaults(agreement.loans[0].token);
+        if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount)
+            IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
+        // Deposit tokens to the relevant vault and register obtained amount
+        agreement.collaterals[0].amount = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
         // gas savings
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
-        uint256 redeemable = vault.convertToAssets(agreement.collaterals[0].amount);
+        address owner = ownerOf(tokenID);
+
+        // redeem mechanism: we first redeem everything
+        uint256 transfered = vault.redeem(agreement.collaterals[0].amount, owner, address(this));
         uint256 toTransfer = dueAmount(agreement, data);
-        if (toTransfer > redeemable) {
+
+        if (toTransfer > transfered) {
             // Since this service is senior, we need to pay the user even if redeemable is too low
             // To do this, we take liquidity from the vault and register the loss (no loan)
-            uint256 freeLiquidity = vault.freeLiquidity();
+            uint256 freeLiquidity = vault.freeLiquidity() - 1;
             if (freeLiquidity > 0) {
                 manager.borrow(
                     agreement.loans[0].token,
-                    toTransfer - redeemable > freeLiquidity - 1 ? freeLiquidity - 1 : toTransfer - redeemable,
+                    toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered,
                     0,
-                    ownerOf(tokenID)
+                    owner
                 );
             }
+        } else {
+            // In the ideal case when the amount to transfer is less than the maximum redeemable
+            // we generate a profit by repaying the Vault of the difference, thus creating a "boost"
+            manager.repay(agreement.loans[0].token, transfered - toTransfer, 0, address(this));
         }
-        // In the ideal case when the amount to transfer is less than the maximum redeemable
-        // We do nothing in this case, since behaviour is the one of a vanilla CreditService
     }
 
     function dueAmount(

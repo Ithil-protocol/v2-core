@@ -17,6 +17,8 @@ export const createVault = async (manager: Manager, token: Address) => {
   return address as Address
 }
 
+// Aave
+
 export const deployAave = async (manager: Manager, aavePool: Address) => {
   const AaveService = await ethers.getContractFactory('AaveService')
   const oneMonth = 3600n * 24n * 30n // 30 days expressed in seconds
@@ -30,9 +32,10 @@ export const aaveSetCapacity = async (
   manager: Manager,
   aaveService: AaveService,
   token: Address,
-  capacity: bigint = 10n ** 18n,
+  percentageCap: bigint = 10n ** 18n,
+  absoluteCap: bigint = 10n ** 36n,
 ) => {
-  await manager.setCap(aaveService.address, token, capacity)
+  await manager.setCap(aaveService.address, token, percentageCap, absoluteCap)
 }
 
 export const aaveToggleWhitelist = async (aaveService: AaveService, value: boolean) => {
@@ -40,4 +43,32 @@ export const aaveToggleWhitelist = async (aaveService: AaveService, value: boole
 
   if (isWhitelistEnabled === value) return
   await aaveService.toggleWhitelistFlag()
+}
+
+// GMX
+
+export const deployGmx = async (manager: Manager, gmxRouter: Address, gmxRouterV2: Address) => {
+  const GmxService = await ethers.getContractFactory('GmxService')
+  const oneMonth = 3600n * 24n * 30n // 30 days expressed in seconds
+  const gmxService = await GmxService.deploy(manager.address, gmxRouter, gmxRouterV2, oneMonth)
+
+  await gmxService.deployed()
+  return gmxService
+}
+
+export const setCapacity = async (
+  manager: Manager,
+  address: string,
+  token: Address,
+  capacity: bigint = 10n ** 18n,
+  cap: bigint = 10n ** 36n,
+) => {
+  await manager.setCap(address, token, capacity, cap)
+}
+
+export const serviceToggleWhitelist = async (service: any, value: boolean) => {
+  const isWhitelistEnabled = await service.enabled()
+
+  if (isWhitelistEnabled === value) return
+  await service.toggleWhitelistFlag()
 }

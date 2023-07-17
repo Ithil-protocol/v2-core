@@ -4,13 +4,31 @@ pragma solidity =0.8.18;
 import { AggregatorV3Interface } from "../../../interfaces/external/chainlink/AggregatorV3Interface.sol";
 
 library PriceConverter {
+    error StaleOracleData();
+
     function getDerivedPrice(address _base, address _quote, uint8 _decimals) public view returns (int256) {
         int256 decimals = int256(10 ** uint256(_decimals));
-        (, int256 basePrice, , , ) = AggregatorV3Interface(_base).latestRoundData();
+        (
+            ,
+            /*uint80 roundId*/ int256 basePrice,
+            ,
+            /*uint256 startedAt*/ uint256 updatedAt /*uint80 answeredInRound*/,
+
+        ) = AggregatorV3Interface(_base).latestRoundData();
+        if (updatedAt < block.timestamp - 1 days) revert StaleOracleData();
+
         uint8 baseDecimals = AggregatorV3Interface(_base).decimals();
         basePrice = scalePrice(basePrice, baseDecimals, _decimals);
 
-        (, int256 quotePrice, , , ) = AggregatorV3Interface(_quote).latestRoundData();
+        (
+            ,
+            /*uint80 roundId*/ int256 quotePrice,
+            ,
+            /*uint256 startedAt*/ uint256 timestamp /*uint80 answeredInRound*/,
+
+        ) = AggregatorV3Interface(_quote).latestRoundData();
+        if (timestamp < block.timestamp - 1 days) revert StaleOracleData();
+
         uint8 quoteDecimals = AggregatorV3Interface(_quote).decimals();
         quotePrice = scalePrice(quotePrice, quoteDecimals, _decimals);
 

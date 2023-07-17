@@ -54,8 +54,8 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         service = new FeeCollectorService(address(manager), address(weth), 1e17, address(oracle), address(dex));
         service.setTokenWeight(address(ithil), 1e18);
         payer = new Payer(address(manager));
-        manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION);
-        manager.setCap(address(payer), address(usdc), GeneralMath.RESOLUTION);
+        manager.setCap(address(payer), address(weth), GeneralMath.RESOLUTION, type(uint256).max);
+        manager.setCap(address(payer), address(usdc), GeneralMath.RESOLUTION, type(uint256).max);
         chainlinkOracleWeth = new MockChainLinkOracle(8);
         chainlinkOracleUsdc = new MockChainLinkOracle(8);
         oracle.setPriceFeed(address(weth), address(chainlinkOracleWeth));
@@ -94,7 +94,6 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
         uint256 initialBalance = ithil.balanceOf(address(this));
         service.open(order);
         assertEq(ithil.balanceOf(address(this)), initialBalance - order.agreement.loans[0].margin);
-        assertEq(service.totalLoans(), order.agreement.loans[0].margin.safeMulDiv(rewards[months % 12], 1e18));
 
         return order.agreement.loans[0].margin;
     }

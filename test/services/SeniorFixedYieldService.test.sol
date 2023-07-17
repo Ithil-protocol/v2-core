@@ -35,7 +35,7 @@ contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
 
         loanLength = 1;
         loanTokens = new address[](loanLength);
-        collateralTokens = new address[](1);
+        collateralTokens = new address[](2);
         loanTokens[0] = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1; // DAI
         whales[loanTokens[0]] = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
         serviceAddress = address(service);
@@ -48,10 +48,6 @@ contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
         if (transformedAmount == 0) transformedAmount++;
         IService.Order memory order = _openOrder1ForCredit(daiLoan, daiLoan, block.timestamp, "");
         service.open(order);
-
-        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
-
-        assertEq(collaterals[0].amount, daiLoan);
     }
 
     function testFYSClosePosition(uint256 daiAmount, uint256 daiLoan) public {

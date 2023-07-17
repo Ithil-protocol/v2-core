@@ -14,12 +14,11 @@ if (!statSync('.env.hardhat').isFile()) {
 }
 
 const { TENDERLY_URL } = process.env
-const tenderlyNetwork = {} as any
+const tenderlyNetwork = {} as NetworkUserConfig & { url?: string }
 if (TENDERLY_URL != null && TENDERLY_URL.length > 10) {
-  tenderlyNetwork.tenderly = {
-    url: TENDERLY_URL,
-    accounts: accountsPrivates,
-  } as NetworkUserConfig
+  tenderlyNetwork.url = TENDERLY_URL
+  tenderlyNetwork.accounts = accountsPrivates
+  tenderlyNetwork.chainId = 42161
 }
 
 const config: HardhatUserConfig = {
@@ -30,6 +29,11 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 1000,
       },
+      outputSelection: {
+        '*': {
+          '*': ['abi'],
+        },
+      },
     },
   },
   networks: {
@@ -39,11 +43,7 @@ const config: HardhatUserConfig = {
         url: 'https://arb1.arbitrum.io/rpc',
       },
     },
-    tenderly: {
-      url: TENDERLY_URL,
-      accounts: ['0x'],
-    },
-    ...tenderlyNetwork,
+    tenderly: tenderlyNetwork,
   },
 }
 
