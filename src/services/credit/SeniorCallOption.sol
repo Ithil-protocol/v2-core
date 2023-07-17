@@ -60,7 +60,7 @@ contract SeniorCallOption is CreditService {
     )
         Service(
             string(abi.encodePacked("Ithil Senior Call Option - ", IERC20Metadata(_underlying).name())),
-            string(abi.encodePacked("SCALL-", IERC20Metadata(_underlying).symbol())),
+            string(abi.encodePacked("SENIOR-CALL-OPTION-", IERC20Metadata(_underlying).symbol())),
             _manager,
             13 * 30 * 86400
         )
