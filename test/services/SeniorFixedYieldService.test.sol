@@ -25,13 +25,7 @@ contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new SeniorFixedYieldService(
-            "Fixed yield 1m 1%",
-            "FIXED-YIELD-1M1P",
-            address(manager),
-            1e16,
-            86400 * 30
-        );
+        service = new SeniorFixedYieldService(address(manager), 1e16, 86400 * 30);
 
         loanLength = 1;
         loanTokens = new address[](loanLength);

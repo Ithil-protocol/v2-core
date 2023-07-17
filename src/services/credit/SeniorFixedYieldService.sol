@@ -19,12 +19,17 @@ contract SeniorFixedYieldService is CreditService {
     uint256 public immutable yield;
 
     constructor(
-        string memory _name,
-        string memory _symbol,
         address _manager,
         uint256 _yield,
         uint256 _deadline
-    ) Service(_name, _symbol, _manager, _deadline) {
+    )
+        Service(
+            string(abi.encodePacked("Fixed Yield Service at ", ((_yield / 1e18) * 100), " maturity ", _deadline)),
+            string(abi.encodePacked("FIXED-YIELD-SERVICE-", _yield)),
+            _manager,
+            _deadline
+        )
+    {
         yield = _yield;
     }
 
