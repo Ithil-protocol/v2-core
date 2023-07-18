@@ -113,7 +113,16 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // first price is 0.2 USDC: we need to double it in the constructor
         // because the smallest price can only be achieved by maximum lock time
         //slither-disable-next-line reentrancy
-        callOptionService = new SeniorCallOption(address(manager), treasury, address(ithil), 4e5, 86400 * 30, usdc);
+        callOptionService = new SeniorCallOption(
+            address(manager),
+            treasury,
+            address(ithil),
+            4e5,
+            86400 * 30,
+            86400 * 30,
+            0,
+            usdc
+        );
         vm.stopPrank();
     }
 

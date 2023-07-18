@@ -47,6 +47,8 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
             address(ithil),
             4e17,
             86400 * 30,
+            86400 * 30,
+            0,
             loanTokens[0]
         );
 
