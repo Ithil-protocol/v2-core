@@ -15,8 +15,8 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     uint256 public id;
     uint256 public immutable deadline;
 
-    event PositionOpened(uint256 indexed id, Agreement agreement);
-    event PositionClosed(uint256 indexed id, Agreement agreement);
+    event PositionOpened(uint256 indexed id, address indexed user, Agreement agreement);
+    event PositionClosed(uint256 indexed id, address indexed user, Agreement agreement);
 
     constructor(
         string memory _name,
@@ -87,7 +87,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
         _saveAgreement(agreement);
 
-        emit PositionOpened(id, agreement);
+        emit PositionOpened(id, msg.sender, agreement);
     }
 
     /// @notice closes an existing service agreement
@@ -103,10 +103,11 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         // The following, with the editable modifier, avoids reentrancy
         agreements[tokenID].status = Status.CLOSED;
         _close(tokenID, agreement, data);
+
+        emit PositionClosed(tokenID, ownerOf(tokenID), agreement);
+
         // Burning after closing since owner may be needed during closure
         _burn(tokenID);
-
-        emit PositionClosed(tokenID, agreement);
     }
 
     /// @notice modifies an existing service agreement
