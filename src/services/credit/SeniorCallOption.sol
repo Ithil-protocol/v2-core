@@ -103,7 +103,7 @@ contract SeniorCallOption is CreditService {
         if (agreement.loans[0].amount == 0) revert ZeroAmount();
 
         // Deposit tokens to the relevant vault and register obtained amount
-        agreement.collaterals[0].amount = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
+        uint256 shares = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
 
         uint256 price = _currentPrice();
         // Apply reward based on lock
@@ -136,8 +136,10 @@ contract SeniorCallOption is CreditService {
         // The user obtains a discount based on how many months the position is locked
         uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
-        if (collateral < agreement.collaterals[1].amount) revert SlippageExceeded();
+        if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount)
+            revert SlippageExceeded();
 
+        agreement.collaterals[0].amount = shares;
         agreement.collaterals[1].amount = collateral;
         // update allocation: since we cannot know how much will be called, we subtract max
         // since collateral <= totalAllocation, this subtraction does not underflow
