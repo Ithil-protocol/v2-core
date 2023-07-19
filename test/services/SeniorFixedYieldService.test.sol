@@ -46,7 +46,7 @@ contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = daiAmount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;
-        IService.Order memory order = _openOrder1ForCredit(daiLoan, daiLoan, block.timestamp, "");
+        IService.Order memory order = _openOrder1ForCredit(daiLoan, 0, block.timestamp, "");
         service.open(order);
     }
 
