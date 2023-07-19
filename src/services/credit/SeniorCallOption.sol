@@ -49,6 +49,7 @@ contract SeniorCallOption is CreditService {
     error InvalidIthilToken();
     error InvalidUnderlyingToken();
     error InvalidCalledPortion();
+    error SlippageExceeded();
     error StillVested();
 
     // Since the maximum lock is 1 year, the deadline is 1 year + one month
@@ -134,14 +135,15 @@ contract SeniorCallOption is CreditService {
 
         // We register the amount of ITHIL to be redeemed as collateral
         // The user obtains a discount based on how many months the position is locked
-        agreement.collaterals[1].amount = ((agreement.loans[0].amount * _rewards[durationsLocked]) /
-            (initialPrice + latestSpread));
+        uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
-        if (agreement.collaterals[1].amount == 0) revert ZeroCollateral();
+        if (collateral == 0) revert ZeroCollateral();
+        if (collateral < agreement.collaterals[1].amount) revert SlippageExceeded();
 
+        agreement.collaterals[1].amount = collateral;
         // update allocation: since we cannot know how much will be called, we subtract max
         // since collateral <= totalAllocation, this subtraction does not underflow
-        totalAllocation -= agreement.collaterals[1].amount;
+        totalAllocation -= collateral;
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
