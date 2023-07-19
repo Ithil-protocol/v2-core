@@ -42,7 +42,6 @@ contract SeniorCallOption is CreditService {
     address internal immutable _vaultAddress;
 
     error ZeroAmount();
-    error ZeroCollateral();
     error LockPeriodStillActive();
     error MaxLockExceeded();
     error MaxPurchaseExceeded();
@@ -137,7 +136,6 @@ contract SeniorCallOption is CreditService {
         // The user obtains a discount based on how many months the position is locked
         uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
-        if (collateral == 0) revert ZeroCollateral();
         if (collateral < agreement.collaterals[1].amount) revert SlippageExceeded();
 
         agreement.collaterals[1].amount = collateral;
