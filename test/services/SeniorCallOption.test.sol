@@ -47,6 +47,8 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
             address(ithil),
             4e17,
             86400 * 30,
+            86400 * 30,
+            0,
             loanTokens[0]
         );
 
@@ -63,7 +65,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = daiAmount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;
-        IService.Order memory order = _openOrder1ForCredit(daiLoan, daiLoan, block.timestamp, abi.encode(7));
+        IService.Order memory order = _openOrder1ForCredit(daiLoan, 0, block.timestamp, abi.encode(7));
         service.open(order);
 
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);

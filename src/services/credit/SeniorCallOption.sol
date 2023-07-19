@@ -30,6 +30,8 @@ contract SeniorCallOption is CreditService {
     // Beware that the actual minimum price is HALF the initial price
     // This is because locking liquidity for 1y will give a 50% discount
     uint256 public immutable initialPrice;
+    uint256 public immutable tenorDuration;
+    uint256 public immutable vestingTime;
     IERC20 public immutable underlying;
     IERC20 public immutable ithil;
     address public immutable treasury;
@@ -40,22 +42,26 @@ contract SeniorCallOption is CreditService {
     address internal immutable _vaultAddress;
 
     error ZeroAmount();
-    error ZeroCollateral();
     error LockPeriodStillActive();
     error MaxLockExceeded();
     error MaxPurchaseExceeded();
     error InvalidIthilToken();
     error InvalidUnderlyingToken();
     error InvalidCalledPortion();
+    error SlippageExceeded();
+    error StillVested();
 
     // Since the maximum lock is 1 year, the deadline is 1 year + one month
-    // (By convention, a month is 30 days, therefore the actual deadline is 5 or 6 days less)
+    // (By convention, a month is 30 days, therefore the actual deadline is 5 to 7 days less)
+    // This means that the tenor duration must be at most one month or the contract would break
     constructor(
         address _manager,
         address _treasury,
         address _ithil,
         uint256 _initialPrice,
         uint256 _halvingTime,
+        uint256 _tenorDuration,
+        uint256 _initialVesting,
         address _underlying
     ) Service("Ithil Senior Call Option", "SCALL", _manager, 13 * 30 * 86400) {
         require(_initialPrice > 0, "Zero initial price");
@@ -64,6 +70,8 @@ contract SeniorCallOption is CreditService {
         underlying = IERC20(_underlying);
         ithil = IERC20(_ithil);
         halvingTime = _halvingTime;
+        tenorDuration = _tenorDuration;
+        vestingTime = _initialVesting + block.timestamp;
 
         _vaultAddress = manager.vaults(_underlying);
         // approve vault to spend underlying token for deposits
@@ -95,21 +103,23 @@ contract SeniorCallOption is CreditService {
         if (agreement.loans[0].amount == 0) revert ZeroAmount();
 
         // Deposit tokens to the relevant vault and register obtained amount
-        agreement.collaterals[0].amount = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
+        uint256 shares = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
 
         uint256 price = _currentPrice();
         // Apply reward based on lock
-        uint256 monthsLocked = abi.decode(data, (uint256));
-        if (monthsLocked > 11) revert MaxLockExceeded();
+        uint256 durationsLocked = abi.decode(data, (uint256));
+        if (durationsLocked > 11) revert MaxLockExceeded();
+        // unlock must occur after vesting
+        if (block.timestamp + (durationsLocked + 1) * tenorDuration < vestingTime) revert StillVested();
 
-        // we conventionally put the agreement's creation date as t0 - deadline + months + 1
+        // we conventionally put the agreement's creation date as t0 - deadline + locking + 1
         // in this way, the expiry day is equal to the maturity of the option plus one month
         // therefore, the user will have 1 month to autonomously exercise or withdraw the option after expiry
         // after that, the position will be liquidated
-        agreement.createdAt = block.timestamp + (monthsLocked + 2) * 30 * 86400 - deadline;
+        agreement.createdAt = block.timestamp + (durationsLocked + 2) * tenorDuration - deadline;
 
         // The amount bought if no price update were applied
-        uint256 virtualBoughtAmount = (agreement.loans[0].amount * _rewards[monthsLocked]) / price;
+        uint256 virtualBoughtAmount = (agreement.loans[0].amount * _rewards[durationsLocked]) / price;
         // Update current price based on the current balance and the collateral amount
         // One cannot purchase more than the total allocation
         if (totalAllocation <= virtualBoughtAmount) revert MaxPurchaseExceeded();
@@ -124,19 +134,21 @@ contract SeniorCallOption is CreditService {
 
         // We register the amount of ITHIL to be redeemed as collateral
         // The user obtains a discount based on how many months the position is locked
-        agreement.collaterals[1].amount = ((agreement.loans[0].amount * _rewards[monthsLocked]) /
-            (initialPrice + latestSpread));
+        uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
-        if (agreement.collaterals[1].amount == 0) revert ZeroCollateral();
+        if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount)
+            revert SlippageExceeded();
 
+        agreement.collaterals[0].amount = shares;
+        agreement.collaterals[1].amount = collateral;
         // update allocation: since we cannot know how much will be called, we subtract max
         // since collateral <= totalAllocation, this subtraction does not underflow
-        totalAllocation -= agreement.collaterals[1].amount;
+        totalAllocation -= collateral;
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
         // The position can be closed only after the locking period
-        if (block.timestamp < agreement.createdAt + deadline - 30 * 86400) revert LockPeriodStillActive();
+        if (block.timestamp < agreement.createdAt + deadline - tenorDuration) revert LockPeriodStillActive();
         // The portion of the loan amount we want to call
         // If the position is liquidable, we enforce the option not to be exercised
         uint256 calledPortion = abi.decode(data, (uint256));
