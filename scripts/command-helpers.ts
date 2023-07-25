@@ -1,17 +1,16 @@
 import { readFileSync, writeFileSync } from 'fs'
 import path, { resolve } from 'path'
 
-export const getFrontendDir = () => {
+export const getFrontendDir = (fileName: string) => {
   const { FRONTEND_PATH } = process.env
-  const projectDir = resolve(__dirname, '..')
-  let frontendDir: null | string = null
+  const projectDir = process.cwd()
   if (FRONTEND_PATH == null || FRONTEND_PATH.length === 0) {
     console.warn('No FRONTEND_PATH found in .env.hardhat, will not produce JSON files')
+    return ''
   } else {
-    frontendDir = resolve(projectDir, FRONTEND_PATH)
+    const frontendProjectDir = resolve(projectDir, FRONTEND_PATH)
+    return resolve(frontendProjectDir, `src/deploy/${fileName}`)
   }
-
-  return frontendDir
 }
 
 export const promiseDelay = async (ms: number) => await new Promise((resolve) => setTimeout(resolve, ms))

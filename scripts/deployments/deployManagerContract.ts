@@ -15,3 +15,4 @@ if (require.main === module) {
 }
 
 export { deployManagerContract }
+// updateJsonProperty('contracts.json', 'networkUrl', 'https://hello?')

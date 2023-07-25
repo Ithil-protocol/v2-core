@@ -1,7 +1,6 @@
 import { config as dotenvConfig } from 'dotenv'
 import { statSync, writeFileSync } from 'fs'
 import { ethers } from 'hardhat'
-import { resolve } from 'path'
 
 import { getFrontendDir } from './command-helpers'
 import {
@@ -26,8 +25,6 @@ if (!statSync('.env.hardhat').isFile()) {
   console.warn('No .env.hardhat file found, required to use tenderly')
   console.warn('Please check .env.hardhat.example for an example')
 }
-
-const frontendDir = getFrontendDir()
 
 const WETH = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
 const AAVE_POOL_ON_ARBITRUM = '0x794a61358D6845594F94dc1DB02A252b5b4814aD'
@@ -116,9 +113,9 @@ const main = async () => {
     fixedYieldService: fixedYieldService.address,
   }
 
-  if (frontendDir != null) {
-    const contractsPath = resolve(frontendDir, 'src/deploy/contracts.json')
-    const vaultsPath = resolve(frontendDir, 'src/deploy/vaults.json')
+  if (getFrontendDir('') != null) {
+    const contractsPath = getFrontendDir('contracts.json')
+    const vaultsPath = getFrontendDir('vaults.json')
     writeFileSync(contractsPath, JSON.stringify(contracts, null, 2))
     writeFileSync(vaultsPath, JSON.stringify(vaults, null, 2))
 
