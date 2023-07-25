@@ -23,11 +23,12 @@ async function deployManagerContract({ isNewDeploy }: DeployManagerContractProps
     const Manager = await ethers.getContractFactory('Manager')
     manager = await Manager.deploy()
     await manager.deployed()
+    console.log(`Manager contract deployed to ${manager.address}`)
   } else {
     manager = (await getContractInstance('Manager', currentManagerAddress)) as Manager
+    console.log(`Manager contract instance created with this address: ${manager.address}`)
   }
 
-  console.log(`Manager contract deployed to ${manager.address}`)
   updateJsonProperty(contractJsonDir, 'manager', manager.address)
   updateJsonProperty(frontendContractJsonDir, 'manager', manager.address)
   return manager
