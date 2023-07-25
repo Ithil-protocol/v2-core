@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import path, { resolve } from 'path'
 
 export const getFrontendDir = () => {
   const { FRONTEND_PATH } = process.env
@@ -14,3 +14,7 @@ export const getFrontendDir = () => {
 }
 
 export const promiseDelay = async (ms: number) => await new Promise((resolve) => setTimeout(resolve, ms))
+
+export const getDataDir = (fileName: string) => {
+  return path.resolve(process.cwd(), `scripts/data/${fileName}`)
+}
