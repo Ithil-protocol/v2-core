@@ -1,0 +1,11 @@
+{
+  "networkUrl": "https://rpc.tenderly.co/fork/0ed39173-cd71-46d9-bf31-e09411bf54d4",
+  "ithil": "0x0f9685427ce2De35154864592bc21FD72680B380",
+  "manager": "0xC5d740C60A357e69EFfE2449FEe7acff616A6Bfb",
+  "aaveService": "0xDB338034fE951cDFEdd0A1abAab43e5C1Efd0bCd",
+  "gmxService": "0x6387b63a95A39341f9f1e16Df93893330E7240DB",
+  "feeCollectorService": "0x7329c0a6F1ded9860bF7B3046e63136ec1FbbC85",
+  "callOptionService": "0xCcDf09d5C8AD392549F8AB5C2948b9007F9C2d6B",
+  "fixedYieldService": "0x42767fe00c3283553cC42D0609BF56b3A5a5b63e"
+}
+
