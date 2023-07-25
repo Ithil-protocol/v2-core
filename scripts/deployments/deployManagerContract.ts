@@ -1,18 +1,45 @@
-import { deployManager } from '../contracts'
+import { ethers } from 'hardhat'
 
-async function deployManagerContract() {
-  const manager = await deployManager()
+import type { Manager } from '../../typechain-types'
+import {
+  getContractInstance,
+  getDataDir,
+  getFrontendDir,
+  getJsonProperty,
+  updateJsonProperty,
+} from '../command-helpers'
+
+const contractJsonDir = getDataDir('contracts.json')
+const frontendContractJsonDir = getFrontendDir('contracts.json')
+
+const currentManagerAddress = getJsonProperty(contractJsonDir, 'manager')
+
+interface DeployManagerContractProps {
+  isNewDeploy?: boolean
+}
+async function deployManagerContract({ isNewDeploy }: DeployManagerContractProps) {
+  let manager: Manager
+  if (isNewDeploy === true) {
+    const Manager = await ethers.getContractFactory('Manager')
+    manager = await Manager.deploy()
+    await manager.deployed()
+  } else {
+    manager = (await getContractInstance('Manager', currentManagerAddress)) as Manager
+  }
+
   console.log(`Manager contract deployed to ${manager.address}`)
+  updateJsonProperty(contractJsonDir, 'manager', manager.address)
+  updateJsonProperty(frontendContractJsonDir, 'manager', manager.address)
+  return manager
 }
 
 // Use if (require.main === module) to check if the file is the main entry point
 if (require.main === module) {
   // If it's the main entry point, execute the deployManagerContract function
-  void deployManagerContract().catch((error) => {
+  void deployManagerContract({ isNewDeploy: true }).catch((error) => {
     console.error(error)
     process.exitCode = 1
   })
 }
 
 export { deployManagerContract }
-// updateJsonProperty('contracts.json', 'networkUrl', 'https://hello?')

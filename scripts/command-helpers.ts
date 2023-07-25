@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'fs'
+import { artifacts, ethers } from 'hardhat'
 import path, { resolve } from 'path'
 
 export const getFrontendDir = (fileName: string) => {
@@ -21,9 +22,8 @@ export const getDataDir = (fileName: string) => {
 
 type JsonObject = Record<string, any>
 
-export const updateJsonProperty = (fileName: string, propertyToUpdate: string, newValue: string): void => {
+export const updateJsonProperty = (filePath: string, propertyToUpdate: string, newValue: string): void => {
   try {
-    const filePath = getDataDir(fileName)
     // Read the JSON file and parse it into a JavaScript object
     const data = readFileSync(filePath, 'utf8')
     const jsonObject: JsonObject = JSON.parse(data)
@@ -42,4 +42,39 @@ export const updateJsonProperty = (fileName: string, propertyToUpdate: string, n
   } catch (error) {
     console.error('Error updating JSON property:', error)
   }
+}
+
+export const getJsonProperty = (filePath: string, propertyToGet: string): any => {
+  try {
+    // Read the JSON file and parse it into a JavaScript object
+    const data = readFileSync(filePath, 'utf8')
+    const jsonObject = JSON.parse(data)
+
+    // Check if the selected property exists in the JSON object
+    if (propertyToGet in jsonObject) {
+      const propertyValue = jsonObject[propertyToGet]
+      return propertyValue
+    } else {
+      console.error(`Property "${propertyToGet}" not found in the JSON file.`)
+      return null
+    }
+  } catch (error) {
+    console.error('Error reading JSON file:', error)
+    return null
+  }
+}
+
+export const getContractInstance = async (contractName: string, contractAddress: string) => {
+  // Get the contract's ABI (you need to replace `MyContract` with your actual contract name)
+  const contractArtifact = await artifacts.readArtifact(contractName)
+  const contractABI = contractArtifact.abi
+
+  // Get the contract instance using the ABI and the contract address
+  // const contractInstance = new ethers.Contract(contractAddress, contractABI, ethers.provider)
+
+  // Optionally, you can specify a signer to interact with the contract, if needed
+  const signer = ethers.provider.getSigner()
+  const contractInstance = new ethers.Contract(contractAddress, contractABI, signer)
+
+  return contractInstance
 }
