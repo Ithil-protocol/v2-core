@@ -37,13 +37,15 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  defaultNetwork: 'tenderly',
+
   networks: {
-    hardhat: {
-      chainId: 1337,
-      forking: {
-        url: 'https://arb1.arbitrum.io/rpc',
-      },
-    },
+    // hardhat: {
+    //   chainId: 1337,
+    //   forking: {
+    //     url: 'https://arb1.arbitrum.io/rpc',
+    //   },
+    // },
     tenderly: tenderlyNetwork,
   },
   tenderly: {

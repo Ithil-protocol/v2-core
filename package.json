@@ -77,6 +77,7 @@
     "hardhat:faucet:localhost": "hardhat --network localhost run scripts/faucet.hardhat.script.ts",
     "hardhat:deploy:tenderly": "hardhat --network tenderly run scripts/deploy.script.ts",
     "hardhat:deploy:tenderly:manager": "hardhat --network tenderly run scripts/deployments/deployManagerContract.ts",
+    "hardhat:deploy:tenderly:vaults": "hardhat --network tenderly run scripts/deployments/deployVaultsContracts.ts",
     "hardhat:fork:tenderly": "hardhat --network tenderly run scripts/fork.script.ts",
     "hardhat:faucet:tenderly": "hardhat --network tenderly run scripts/faucet.script.ts",
     "hardhat:vaults:tenderly": "hardhat --network tenderly run scripts/fill-vaults.script.ts"

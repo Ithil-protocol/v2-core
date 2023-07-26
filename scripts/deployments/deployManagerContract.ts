@@ -1,14 +1,8 @@
 import { ethers } from 'hardhat'
 
 import type { Manager } from '../../typechain-types'
-import {
-  getContractInstance,
-  getDataDir,
-  getFrontendDir,
-  getJsonProperty,
-  updateJsonProperty,
-  useHardhatENV,
-} from '../command-helpers'
+import { deployerAddress } from '../address-list'
+import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
 
 useHardhatENV()
 const contractJsonDir = getDataDir('contracts.json')
@@ -21,13 +15,15 @@ interface DeployManagerContractProps {
 }
 async function deployManagerContract({ isNewDeploy }: DeployManagerContractProps) {
   let manager: Manager
+  const Manager = await ethers.getContractFactory('Manager')
   if (isNewDeploy) {
-    const Manager = await ethers.getContractFactory('Manager')
     manager = await Manager.deploy()
     await manager.deployed()
     console.log(`Manager contract deployed to ${manager.address}`)
   } else {
-    manager = (await getContractInstance('Manager', currentManagerAddress)) as Manager
+    manager = Manager.attach(currentManagerAddress)
+    manager.connect(await ethers.getSigner(deployerAddress))
+
     console.log(`Manager contract instance created with this address: ${manager.address}`)
   }
 

@@ -3,6 +3,7 @@ import fs, { readFileSync, statSync, writeFileSync } from 'fs'
 import { artifacts, ethers } from 'hardhat'
 import path, { resolve } from 'path'
 
+import { deployerAddress } from './address-list'
 import { type JsonObject } from './types'
 
 export const getFrontendDir = (fileName: string) => {
@@ -89,20 +90,20 @@ export const getJsonProperty = (filePath: string, propertyToGet: string): any =>
   }
 }
 
-export const getContractInstance = async (contractName: string, contractAddress: string) => {
-  // Get the contract's ABI (you need to replace `MyContract` with your actual contract name)
-  const contractArtifact = await artifacts.readArtifact(contractName)
-  const contractABI = contractArtifact.abi
+// export const getContractInstance = async (contractName: string, contractAddress: string) => {
+//   // Get the contract's ABI (you need to replace `MyContract` with your actual contract name)
+//   const contractArtifact = await artifacts.readArtifact(contractName)
+//   const contractABI = contractArtifact.abi
 
-  // Get the contract instance using the ABI and the contract address
-  // const contractInstance = new ethers.Contract(contractAddress, contractABI, ethers.provider)
+//   // Get the contract instance using the ABI and the contract address
+//   // const contractInstance = new ethers.Contract(contractAddress, contractABI, ethers.provider)
 
-  // Optionally, you can specify a signer to interact with the contract, if needed
-  const signer = ethers.provider.getSigner()
-  const contractInstance = new ethers.Contract(contractAddress, contractABI, signer)
+//   // Optionally, you can specify a signer to interact with the contract, if needed
+//   const signer = await ethers.getSigner(deployerAddress)
+//   const contractInstance = new ethers.Contract(contractAddress, contractABI, signer)
 
-  return contractInstance
-}
+//   return contractInstance
+// }
 
 export const useHardhatENV = () => {
   dotenvConfig({ path: '.env.hardhat' })
