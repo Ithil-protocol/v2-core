@@ -3,6 +3,7 @@ import '@nomicfoundation/hardhat-toolbox'
 import { config as dotenvConfig } from 'dotenv'
 import { statSync } from 'fs'
 import { type HardhatUserConfig, type NetworkUserConfig } from 'hardhat/types'
+import * as tdly from '@tenderly/hardhat-tenderly'
 
 import { accountsPrivates } from './scripts/address-list'
 
@@ -20,6 +21,9 @@ if (TENDERLY_URL != null && TENDERLY_CHAINID != null && TENDERLY_URL.length > 10
   tenderlyNetwork.accounts = accountsPrivates
   tenderlyNetwork.chainId = parseFloat(TENDERLY_CHAINID)
 }
+tdly.setup({
+  automaticVerifications: true,
+})
 
 const config: HardhatUserConfig = {
   solidity: {
