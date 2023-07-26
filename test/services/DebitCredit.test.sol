@@ -46,8 +46,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
     // another depositor should not be able to snatch fees from the first one
     address internal immutable feeCollectorDepositor2 =
         address(uint160(uint(keccak256(abi.encodePacked("feeCollectorDepositor2")))));
-    address internal immutable treasury =
-        address(uint160(uint(keccak256(abi.encodePacked("treasury")))));
+    address internal immutable treasury = address(uint160(uint(keccak256(abi.encodePacked("treasury")))));
 
     IManager internal immutable manager;
 
