@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat'
+import { ethers, tenderly } from 'hardhat'
 
 import { type AaveService, type Manager } from '../typechain-types'
 import { type Address } from './types'
