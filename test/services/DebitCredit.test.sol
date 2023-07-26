@@ -233,8 +233,6 @@ contract DebitCreditTest is Test, IERC721Receiver {
     }
 
     function testCallOption() public {
-        address treasury = callOptionService.owner();
-
         // In this test, the user puts a call option in various states
         // notice that the call option does not need any former liquidity in the vault
         IVault vault = IVault(manager.vaults(usdc));
