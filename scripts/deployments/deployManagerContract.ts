@@ -7,8 +7,10 @@ import {
   getFrontendDir,
   getJsonProperty,
   updateJsonProperty,
+  useHardhatENV,
 } from '../command-helpers'
 
+useHardhatENV()
 const contractJsonDir = getDataDir('contracts.json')
 const frontendContractJsonDir = getFrontendDir('contracts.json')
 

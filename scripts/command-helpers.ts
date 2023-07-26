@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { config as dotenvConfig } from 'dotenv'
+import { readFileSync, statSync, writeFileSync } from 'fs'
 import { artifacts, ethers } from 'hardhat'
 import path, { resolve } from 'path'
 
@@ -77,4 +78,13 @@ export const getContractInstance = async (contractName: string, contractAddress:
   const contractInstance = new ethers.Contract(contractAddress, contractABI, signer)
 
   return contractInstance
+}
+
+export const useHardhatENV = () => {
+  dotenvConfig({ path: '.env.hardhat' })
+
+  if (!statSync('.env.hardhat').isFile()) {
+    console.warn('No .env.hardhat file found, required to use tenderly')
+    console.warn('Please check .env.hardhat.example for an example')
+  }
 }
