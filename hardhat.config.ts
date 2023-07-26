@@ -1,6 +1,5 @@
 import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-toolbox'
-import * as tdly from '@tenderly/hardhat-tenderly'
 import { config as dotenvConfig } from 'dotenv'
 import { statSync } from 'fs'
 import { type HardhatUserConfig, type NetworkUserConfig } from 'hardhat/types'
@@ -14,14 +13,14 @@ if (!statSync('.env.hardhat').isFile()) {
   console.warn('Please check .env.hardhat.example for an example')
 }
 
-const { TENDERLY_URL, TENDERLY_USER, TENDERLY_PROJECT, TENDERLY_ACCESS_KEY } = process.env
+const { TENDERLY_URL, TENDERLY_CHAINID, TENDERLY_USER, TENDERLY_PROJECT, TENDERLY_ACCESS_KEY } = process.env
 const tenderlyNetwork = {} as NetworkUserConfig & { url?: string }
-if (TENDERLY_URL != null && TENDERLY_URL.length > 10) {
+if (TENDERLY_URL != null && TENDERLY_CHAINID != null && TENDERLY_URL.length > 10) {
   tenderlyNetwork.url = TENDERLY_URL
   tenderlyNetwork.accounts = accountsPrivates
-  tenderlyNetwork.chainId = 98745
+  tenderlyNetwork.chainId = parseFloat(TENDERLY_CHAINID)
 }
-tdly.setup()
+
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.18',

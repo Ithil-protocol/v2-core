@@ -1,3 +1,4 @@
+import * as tdly from '@tenderly/hardhat-tenderly'
 import { config as dotenvConfig } from 'dotenv'
 import { statSync, writeFileSync } from 'fs'
 import { ethers } from 'hardhat'
@@ -37,6 +38,10 @@ const WIZARDEX = '0xa05B704E88D43260F71861BB69C1851Fe77b63fD'
 const GOVERNANCE = '0x7778f7b568023379697451da178326D27682ADb8'
 
 const main = async () => {
+  tdly.setup({
+    automaticVerifications: true,
+  })
+
   const manager = await deployManager()
   console.log(`Manager contract deployed to ${manager.address}`)
 
