@@ -1,7 +1,9 @@
 import { config as dotenvConfig } from 'dotenv'
-import { readFileSync, statSync, writeFileSync } from 'fs'
+import fs, { readFileSync, statSync, writeFileSync } from 'fs'
 import { artifacts, ethers } from 'hardhat'
 import path, { resolve } from 'path'
+
+import { type JsonObject } from './types'
 
 export const getFrontendDir = (fileName: string) => {
   const { FRONTEND_PATH } = process.env
@@ -18,10 +20,17 @@ export const getFrontendDir = (fileName: string) => {
 export const promiseDelay = async (ms: number) => await new Promise((resolve) => setTimeout(resolve, ms))
 
 export const getDataDir = (fileName: string) => {
-  return path.resolve(process.cwd(), `scripts/data/${fileName}`)
-}
+  const filePath = path.resolve(process.cwd(), `scripts/data/${fileName}`)
 
-type JsonObject = Record<string, any>
+  // Check if the file exists at the resolved path
+  try {
+    fs.accessSync(filePath, fs.constants.F_OK)
+    // If the file exists, so we can return the path
+    return filePath
+  } catch (error) {
+    throw new Error(`File not found: ${fileName}`)
+  }
+}
 
 export const updateJsonProperty = (filePath: string, propertyToUpdate: string, newValue: string): void => {
   try {
@@ -42,6 +51,21 @@ export const updateJsonProperty = (filePath: string, propertyToUpdate: string, n
     }
   } catch (error) {
     console.error('Error updating JSON property:', error)
+  }
+}
+
+export const rewriteJsonFile = (filePath: string, newData: any): void => {
+  try {
+    // Convert the provided data to a JSON string
+    const jsonString = JSON.stringify(newData, null, 2)
+
+    // Write the JSON string to the file, effectively overwriting the old content
+    writeFileSync(filePath, jsonString, 'utf8')
+
+    console.log(`File "${filePath}" has been rewritten with new data:`)
+    console.log(jsonString)
+  } catch (error) {
+    console.error(`Error rewriting JSON file "${filePath}":`, error)
   }
 }
 

@@ -17,11 +17,11 @@ const frontendContractJsonDir = getFrontendDir('contracts.json')
 const currentManagerAddress = getJsonProperty(contractJsonDir, 'manager')
 
 interface DeployManagerContractProps {
-  isNewDeploy?: boolean
+  isNewDeploy: boolean
 }
 async function deployManagerContract({ isNewDeploy }: DeployManagerContractProps) {
   let manager: Manager
-  if (isNewDeploy === true) {
+  if (isNewDeploy) {
     const Manager = await ethers.getContractFactory('Manager')
     manager = await Manager.deploy()
     await manager.deployed()

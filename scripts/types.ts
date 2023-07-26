@@ -21,3 +21,5 @@ export interface Replacement {
   to: number
   value: string
 }
+
+export type JsonObject = Record<string, any>
