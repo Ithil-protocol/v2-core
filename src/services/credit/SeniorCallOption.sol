@@ -34,7 +34,6 @@ contract SeniorCallOption is CreditService {
     uint256 public immutable vestingTime;
     IERC20 public immutable underlying;
     IERC20 public immutable ithil;
-    address public immutable treasury;
 
     // 2^((n+1)/12) with 18 digit fixed point
     // this contract assumes ithil token has 18 decimals
@@ -56,7 +55,6 @@ contract SeniorCallOption is CreditService {
     // This means that the tenor duration must be at most one month or the contract would break
     constructor(
         address _manager,
-        address _treasury,
         address _ithil,
         uint256 _initialPrice,
         uint256 _halvingTime,
@@ -66,7 +64,6 @@ contract SeniorCallOption is CreditService {
     ) Service("Ithil Senior Call Option", "SCALL", _manager, 13 * 30 * 86400) {
         require(_initialPrice > 0, "Zero initial price");
         initialPrice = _initialPrice;
-        treasury = _treasury;
         underlying = IERC20(_underlying);
         ithil = IERC20(_ithil);
         halvingTime = _halvingTime;
@@ -184,7 +181,7 @@ contract SeniorCallOption is CreditService {
         }
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount)
-            vault.safeTransfer(treasury, agreement.collaterals[0].amount - toRedeem);
+            vault.safeTransfer(owner, agreement.collaterals[0].amount - toRedeem);
 
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
         ithil.safeTransfer(owner, toCall);
@@ -206,7 +203,7 @@ contract SeniorCallOption is CreditService {
         return (agreement.loans[0].amount * (1e18 - calledPortion)) / 1e18;
     }
 
-    function allocateIthil(uint256 amount) external onlyOwner {
+    function allocateIthil(uint256 amount) external {
         totalAllocation += amount;
         ithil.safeTransferFrom(msg.sender, address(this), amount);
     }

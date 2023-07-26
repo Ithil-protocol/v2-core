@@ -46,8 +46,6 @@ contract DebitCreditTest is Test, IERC721Receiver {
     // another depositor should not be able to snatch fees from the first one
     address internal immutable feeCollectorDepositor2 =
         address(uint160(uint(keccak256(abi.encodePacked("feeCollectorDepositor2")))));
-    // treasury
-    address internal immutable treasury = address(uint160(uint(keccak256(abi.encodePacked("treasury")))));
 
     IManager internal immutable manager;
 
@@ -106,16 +104,15 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.stopPrank();
         vm.prank(usdcWhale);
         IERC20(usdc).transfer(address(admin), 1);
+
         vm.startPrank(admin);
         IERC20(usdc).approve(address(manager), 1);
         manager.create(usdc);
 
         // first price is 0.2 USDC: we need to double it in the constructor
         // because the smallest price can only be achieved by maximum lock time
-        //slither-disable-next-line reentrancy
         callOptionService = new SeniorCallOption(
             address(manager),
-            treasury,
             address(ithil),
             4e5,
             86400 * 30,
@@ -234,6 +231,8 @@ contract DebitCreditTest is Test, IERC721Receiver {
     }
 
     function testCallOption() public {
+        address treasury = callOptionService.owner();
+
         // In this test, the user puts a call option in various states
         // notice that the call option does not need any former liquidity in the vault
         IVault vault = IVault(manager.vaults(usdc));
@@ -291,7 +290,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         );
         // treasury has obtained the iToken used by the signer to obtain ITHIL
         assertEq(
-            vault.balanceOf(callOptionService.treasury()),
+            vault.balanceOf(treasury),
             collaterals[0].amount - vault.convertToShares(((depositedAmount * (1e18 - calledPortion)) / 1e18))
         );
         assertEq(vault.freeLiquidity(), depositedAmount - loan - (depositedAmount * (1e18 - calledPortion)) / 1e18 + 1);
