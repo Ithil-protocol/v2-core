@@ -2,7 +2,9 @@ import { ethers } from 'hardhat'
 
 import type { AaveService } from '../../typechain-types'
 import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
-import { AAVE_POOL_ON_ARBITRUM, oneMonth } from '../config'
+import { AAVE_POOL_ON_ARBITRUM, GOVERNANCE, oneMonth } from '../config'
+import { serviceToggleWhitelist, setCapacity } from '../contracts'
+import { tokens } from '../tokens'
 import { deployManagerContract } from './deployManagerContract'
 
 useHardhatENV()
@@ -23,8 +25,17 @@ async function deployAaveServiceContract({ isNewDeploy }: DeployAaveServiceContr
     const AaveService = await ethers.getContractFactory('AaveService')
     aaveService = await AaveService.deploy(manager.address, AAVE_POOL_ON_ARBITRUM, oneMonth)
     await aaveService.deployed()
-
     console.log(`AaveService contract deployed to ${aaveService.address}`)
+
+    // Config Aave service
+    await Promise.all(tokens.map(async (token) => await setCapacity(manager, aaveService.address, token.tokenAddress)))
+    console.log(`Set capacity for ${tokens.length} tokens for Aave`)
+
+    await serviceToggleWhitelist(aaveService, false)
+    console.log('Disabled whitelist on Aave service')
+
+    await aaveService.transferOwnership(GOVERNANCE)
+    console.log('transferred aaveService ownership')
   } else {
     aaveService = await ethers.getContractAt('AaveService', currentAaveServiceAddress)
     console.log(`AaveService contract instance created with this address: ${aaveService.address}`)
