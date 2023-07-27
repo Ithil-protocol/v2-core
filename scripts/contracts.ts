@@ -27,9 +27,20 @@ export const deployOracle = async () => {
 }
 
 export const createVault = async (manager: Manager, token: Address) => {
-  await manager.create(token)
-  const address = await manager.vaults(token)
-  return address as Address
+  let address: Address
+  const previousVaultAddress = (await manager.vaults(token)) as Address
+  // if the address is not zero, it already has been created
+  const isAlreadyCreated = previousVaultAddress !== ethers.constants.AddressZero
+  if (isAlreadyCreated) {
+    console.error(`***Warning: The vault for token ${token} is already created by this manager ${manager.address}`)
+    address = previousVaultAddress
+  } else {
+    await manager.create(token)
+    address = (await manager.vaults(token)) as Address
+    console.log(`Created a vault for this token: ${token}`)
+  }
+
+  return address
 }
 
 export const deployAave = async (manager: Manager, aavePool: Address) => {
