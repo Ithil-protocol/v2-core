@@ -41,15 +41,13 @@ export const updateJsonProperty = (filePath: string, propertyToUpdate: string, n
 
     // Check if the selected property exists in the JSON object
     if (propertyToUpdate in jsonObject) {
-      // Update the selected property with the new value
-      jsonObject[propertyToUpdate] = newValue
-
-      // Write the updated JSON object back to the file
-      writeFileSync(filePath, JSON.stringify(jsonObject, null, 2))
       console.log(`Property "${propertyToUpdate}" updated with new value: ${newValue}`)
     } else {
-      console.error(`Property "${propertyToUpdate}" not found in the JSON file.`)
+      console.log(`add new property "${propertyToUpdate}" with this value: ${newValue}.`)
     }
+    jsonObject[propertyToUpdate] = newValue
+    // Write the updated JSON object back to the file
+    writeFileSync(filePath, JSON.stringify(jsonObject, null, 2))
   } catch (error) {
     console.error('Error updating JSON property:', error)
   }
