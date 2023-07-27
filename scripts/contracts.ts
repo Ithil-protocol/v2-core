@@ -1,7 +1,9 @@
 import { ethers } from 'hardhat'
 
-import { type Manager } from '../typechain-types'
-import { type Address } from './types'
+import { DebitService, type Manager } from '../typechain-types'
+import { GOVERNANCE } from './config'
+import { tokens } from './tokens'
+import { type Address, MinimalToken } from './types'
 
 export const deployIthil = async (governance: Address) => {
   const Ithil = await ethers.getContractFactory('Ithil')
@@ -136,4 +138,34 @@ export const serviceToggleWhitelist = async (service: any, value: boolean) => {
 
   if (isWhitelistEnabled === value) return
   await service.toggleWhitelistFlag()
+}
+
+interface ConfigDebitServiceProps {
+  manager: Manager
+  service: DebitService
+  serviceTokens?: MinimalToken[]
+  governance?: Address
+  capacity?: bigint
+  cap?: bigint
+  isWhitelistEnabled?: boolean
+}
+export const configDebitService = async ({
+  manager,
+  service,
+  serviceTokens = tokens,
+  governance = GOVERNANCE,
+  capacity = 10n ** 18n,
+  cap = 10n ** 36n,
+  isWhitelistEnabled = false,
+}: ConfigDebitServiceProps) => {
+  await Promise.all(
+    serviceTokens.map(async (token) => await manager.setCap(service.address, token.tokenAddress, capacity, cap)),
+  )
+  console.log(`Set capacity for ${serviceTokens.length} tokens for Aave`)
+
+  await serviceToggleWhitelist(service, isWhitelistEnabled)
+  console.log(`changed whitelist state to ${isWhitelistEnabled ? 'ON' : 'OFF'} on Aave service`)
+
+  await service.transferOwnership(governance)
+  console.log(`transferred aaveService ownership to ${governance}`)
 }
