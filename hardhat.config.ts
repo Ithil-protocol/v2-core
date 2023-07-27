@@ -20,9 +20,8 @@ if (TENDERLY_URL != null && TENDERLY_URL.length > 10) {
   tenderlyNetwork.url = TENDERLY_URL
   tenderlyNetwork.accounts = accountsPrivates
   tenderlyNetwork.chainId = 98745
-  tenderlyNetwork.gas = 50_000_000
 }
-tdly.setup()
+tdly.setup({ automaticVerifications: true })
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.18',
