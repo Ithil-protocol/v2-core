@@ -1,22 +1,23 @@
 export type Address = `0x${string}`
 
-export type AcceptedAsset = 'USDC' | 'USDT' | 'DAI' | 'WETH' | 'WBTC'
+export type AcceptedAsset = 'USDC' | 'USDT' | 'WETH' | 'WBTC'
 export enum AcceptedAssetEnum {
   USDC = 'USDC',
   USDT = 'USDT',
-  DAI = 'DAI',
   WETH = 'WETH',
   WBTC = 'WBTC',
 }
 // the minimal intersection of LendingToken and ServiceAsset
 export interface MinimalToken {
-  name: AcceptedAsset
+  name: keyof typeof AcceptedAssetEnum
   coingeckoId: string
   iconName: string
   decimals: number
   tokenAddress: Address
   oracleAddress: Address
-  initialPriceForIthil?: bigint
+  initialPriceForIthil: bigint
+  callOptionAddress: Address
+  vaultAddress: Address
 }
 
 export interface LendingToken extends MinimalToken {

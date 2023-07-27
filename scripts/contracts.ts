@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 
-import { DebitService, type Manager } from '../typechain-types'
+import { CreditService, DebitService, type Manager } from '../typechain-types'
 import { DEFAULT_MANAGER_CAP, DEFAULT_MANAGER_CAPACITY, GOVERNANCE } from './config'
 import { tokens } from './tokens'
 import { type Address, MinimalToken } from './types'
@@ -166,6 +166,31 @@ export const configDebitService = async ({
 
   await serviceToggleWhitelist(service, isWhitelistEnabled)
   console.log(`changed whitelist state to ${isWhitelistEnabled ? 'ON' : 'OFF'} on Aave service`)
+
+  await service.transferOwnership(governance)
+  console.log(`transferred aaveService ownership to ${governance}`)
+}
+
+interface ConfigCreditServiceProps {
+  manager: Manager
+  service: CreditService
+  serviceTokens?: MinimalToken[]
+  governance?: Address
+  capacity?: bigint
+  cap?: bigint
+}
+export const configCreditService = async ({
+  manager,
+  service,
+  serviceTokens = tokens,
+  governance = GOVERNANCE,
+  capacity = DEFAULT_MANAGER_CAPACITY,
+  cap = DEFAULT_MANAGER_CAP,
+}: ConfigCreditServiceProps) => {
+  await Promise.all(
+    serviceTokens.map(async (token) => await manager.setCap(service.address, token.tokenAddress, capacity, cap)),
+  )
+  console.log(`Set capacity for ${serviceTokens.length} tokens for this service: ${service.address}`)
 
   await service.transferOwnership(governance)
   console.log(`transferred aaveService ownership to ${governance}`)
