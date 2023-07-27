@@ -1,6 +1,13 @@
 export type Address = `0x${string}`
 
 export type AcceptedAsset = 'USDC' | 'USDT' | 'DAI' | 'WETH' | 'WBTC'
+export enum AcceptedAssetEnum {
+  USDC = 'USDC',
+  USDT = 'USDT',
+  DAI = 'DAI',
+  WETH = 'WETH',
+  WBTC = 'WBTC',
+}
 // the minimal intersection of LendingToken and ServiceAsset
 export interface MinimalToken {
   name: AcceptedAsset
