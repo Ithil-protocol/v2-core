@@ -1,9 +1,7 @@
 import { config as dotenvConfig } from 'dotenv'
 import fs, { readFileSync, statSync, writeFileSync } from 'fs'
-import { artifacts, ethers } from 'hardhat'
 import path, { resolve } from 'path'
 
-import { deployerAddress } from './address-list'
 import { type JsonObject } from './types'
 
 export const getFrontendDir = (fileName: string) => {

@@ -1,14 +1,10 @@
 import { ethers } from 'hardhat'
 
 import type { Manager } from '../../typechain-types'
-import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
+import { updateJsonProperty, useHardhatENV } from '../command-helpers'
+import { contractJsonDir, currentManagerAddress, frontendContractJsonDir } from '../config'
 
 useHardhatENV()
-
-const contractJsonDir = getDataDir('contracts.json')
-const frontendContractJsonDir = getFrontendDir('contracts.json')
-
-const currentManagerAddress = getJsonProperty(contractJsonDir, 'manager')
 
 interface DeployManagerContractProps {
   isNewDeploy: boolean

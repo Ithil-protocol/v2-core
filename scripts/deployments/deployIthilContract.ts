@@ -1,16 +1,11 @@
 import { ethers } from 'hardhat'
 
 import type { Ithil } from '../../typechain-types'
-import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
-import { GOVERNANCE } from '../config'
+import { updateJsonProperty, useHardhatENV } from '../command-helpers'
+import { GOVERNANCE, contractJsonDir, currentIthilAddress, frontendContractJsonDir } from '../config'
 import type { Address } from '../types'
 
 useHardhatENV()
-
-const contractJsonDir = getDataDir('contracts.json')
-const frontendContractJsonDir = getFrontendDir('contracts.json')
-
-const currentIthilAddress = getJsonProperty(contractJsonDir, 'ithil')
 
 interface DeployIthilContractProps {
   isNewDeploy: boolean

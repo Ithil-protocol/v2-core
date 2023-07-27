@@ -1,17 +1,18 @@
 import { ethers } from 'hardhat'
 
 import type { AaveService } from '../../typechain-types'
-import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
-import { AAVE_POOL_ON_ARBITRUM, oneMonth } from '../config'
+import { updateJsonProperty, useHardhatENV } from '../command-helpers'
+import {
+  AAVE_POOL_ON_ARBITRUM,
+  contractJsonDir,
+  currentAaveServiceAddress,
+  frontendContractJsonDir,
+  oneMonth,
+} from '../config'
 import { configDebitService } from '../contracts'
 import { deployManagerContract } from './deployManagerContract'
 
 useHardhatENV()
-
-const contractJsonDir = getDataDir('contracts.json')
-const frontendContractJsonDir = getFrontendDir('contracts.json')
-
-const currentAaveServiceAddress = getJsonProperty(contractJsonDir, 'aaveService')
 
 interface DeployAaveServiceContractProps {
   isNewDeploy: boolean

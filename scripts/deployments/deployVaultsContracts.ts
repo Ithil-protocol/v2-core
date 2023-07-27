@@ -1,15 +1,14 @@
 import { readFileSync } from 'fs'
 import { ethers } from 'hardhat'
 
-import { getDataDir, getFrontendDir, rewriteJsonFile, useHardhatENV } from '../command-helpers'
+import { rewriteJsonFile, useHardhatENV } from '../command-helpers'
+import { frontendVaultsJsonDir, vaultsJsonDir } from '../config'
 import { createVault } from '../contracts'
 import { tokens } from '../tokens'
 import { type LendingToken } from '../types'
 import { deployManagerContract } from './deployManagerContract'
 
 useHardhatENV()
-const vaultsJsonDir = getDataDir('vaults.json')
-const frontendVaultsJsonDir = getFrontendDir('vaults.json')
 
 interface DeployVaultsContractsProps {
   isNewDeploy: boolean

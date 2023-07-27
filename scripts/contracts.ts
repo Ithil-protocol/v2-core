@@ -149,6 +149,7 @@ interface ConfigDebitServiceProps {
   cap?: bigint
   isWhitelistEnabled?: boolean
 }
+
 export const configDebitService = async ({
   manager,
   service,

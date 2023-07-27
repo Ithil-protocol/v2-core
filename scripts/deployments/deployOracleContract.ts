@@ -1,14 +1,10 @@
 import { ethers } from 'hardhat'
 
 import type { Oracle } from '../../typechain-types'
-import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
+import { updateJsonProperty, useHardhatENV } from '../command-helpers'
+import { contractJsonDir, currentOracleAddress, frontendContractJsonDir } from '../config'
 
 useHardhatENV()
-
-const contractJsonDir = getDataDir('contracts.json')
-const frontendContractJsonDir = getFrontendDir('contracts.json')
-
-const currentOracleAddress = getJsonProperty(contractJsonDir, 'oracle')
 
 interface DeployOracleContractProps {
   isNewDeploy: boolean
