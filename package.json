@@ -82,6 +82,7 @@
     "hardhat:deploy:tenderly:callOption": "hardhat --network tenderly run scripts/deployments/deploySeniorCallOptionServiceContract.ts",
     "hardhat:fork:tenderly": "hardhat --network tenderly run scripts/fork.script.ts",
     "hardhat:faucet:tenderly": "hardhat --network tenderly run scripts/faucet.script.ts",
-    "hardhat:vaults:tenderly": "hardhat --network tenderly run scripts/fill-vaults.script.ts"
+    "hardhat:vaults:tenderly": "hardhat --network tenderly run scripts/fill-vaults.script.ts",
+    "hardhat:advanceTime:tenderly": "hardhat --network tenderly run scripts/advanceTime.ts"
   }
 }
