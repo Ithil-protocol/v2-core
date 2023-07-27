@@ -2,7 +2,7 @@ import { ethers } from 'hardhat'
 
 import type { Manager } from '../../typechain-types'
 import { updateJsonProperty, useHardhatENV } from '../command-helpers'
-import { contractJsonDir, currentManagerAddress, frontendContractJsonDir } from '../config'
+import { GOVERNANCE, contractJsonDir, currentManagerAddress, frontendContractJsonDir } from '../config'
 
 useHardhatENV()
 
@@ -16,6 +16,8 @@ async function deployManagerContract({ isNewDeploy }: DeployManagerContractProps
     manager = await Manager.deploy()
     await manager.deployed()
     console.log(`Manager contract deployed to ${manager.address}`)
+    await manager.transferOwnership(GOVERNANCE)
+    console.log(`transferred manager ownership to ${GOVERNANCE}`)
   } else {
     manager = await ethers.getContractAt('Manager', currentManagerAddress)
     console.log(`Manager contract instance created with this address: ${manager.address}`)

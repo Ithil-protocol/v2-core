@@ -34,7 +34,7 @@ async function deployGMXServiceContract({ isNewDeploy }: DeployGMXServiceContrac
     })
   } else {
     gmxService = await ethers.getContractAt('GmxService', currentGmxServiceAddress)
-    console.log(`AaveService contract instance created with this address: ${gmxService.address}`)
+    console.log(`GmxService contract instance created with this address: ${gmxService.address}`)
   }
   updateJsonProperty(contractJsonDir, 'gmxService', gmxService.address)
   updateJsonProperty(frontendContractJsonDir, 'gmxService', gmxService.address)
