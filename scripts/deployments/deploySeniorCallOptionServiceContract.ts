@@ -3,7 +3,7 @@ import { ethers } from 'hardhat'
 
 import type { SeniorCallOption } from '../../typechain-types'
 import { rewriteJsonFile, useHardhatENV } from '../command-helpers'
-import { GOVERNANCE, currentManagerAddress, oneHour, oneMonth, vaultsJsonDir } from '../config'
+import { GOVERNANCE, frontendVaultsJsonDir, oneHour, oneMonth, vaultsJsonDir } from '../config'
 import { configCreditService } from '../contracts'
 import { tokens } from '../tokens'
 import type { AcceptedAssetEnum, LendingToken, MinimalToken } from '../types'
@@ -46,16 +46,17 @@ async function deploySeniorCallOptionServiceContract({
         console.log(`callOptionService contract deployed to ${callOptionService.address}`)
 
         await configCreditService({ manager, service: callOptionService, serviceTokens: [token] })
+        await ithil.approve(callOptionService.address, 1000000n * 10n ** 18n)
+        await callOptionService.allocateIthil(100000n * 10n ** 18n) // allocate 100_000 ithil
 
         allCallOptions[token.name] = callOptionService
       }),
     )
     const vaultJson = readFileSync(vaultsJsonDir, 'utf8')
     const vaults = JSON.parse(vaultJson) as LendingToken[]
-    const newVaults = vaults.map((token) => {
-      return { ...token, callOptionAddress: allCallOptions[token.name] }
-    })
+    const newVaults = vaults.map((token) => ({ ...token, callOptionAddress: allCallOptions[token.name]!.address }))
     rewriteJsonFile(vaultsJsonDir, newVaults)
+    rewriteJsonFile(frontendVaultsJsonDir, newVaults)
   } else {
     const vaultJson = readFileSync(vaultsJsonDir, 'utf8')
     const vaults = JSON.parse(vaultJson) as LendingToken[]
@@ -68,16 +69,13 @@ async function deploySeniorCallOptionServiceContract({
     )
   }
 
-  // updateJsonProperty(contractJsonDir, 'manager', seniorCallOption.address)
-  // updateJsonProperty(frontendContractJsonDir, 'manager', seniorCallOption.address)
-
   return allCallOptions
 }
 
 // Use if (require.main === module) to check if the file is the main entry point
 if (require.main === module) {
   // If it's the main entry point, execute the deployManagerContract function
-  void deploySeniorCallOptionServiceContract({ isNewDeploy: false, callOptionTokens: tokens }).catch((error) => {
+  void deploySeniorCallOptionServiceContract({ isNewDeploy: true, callOptionTokens: tokens }).catch((error) => {
     console.error(error)
     process.exitCode = 1
   })
