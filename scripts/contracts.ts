@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat'
 
 import { DebitService, type Manager } from '../typechain-types'
-import { GOVERNANCE } from './config'
+import { DEFAULT_MANAGER_CAP, DEFAULT_MANAGER_CAPACITY, GOVERNANCE } from './config'
 import { tokens } from './tokens'
 import { type Address, MinimalToken } from './types'
 
@@ -154,8 +154,8 @@ export const configDebitService = async ({
   service,
   serviceTokens = tokens,
   governance = GOVERNANCE,
-  capacity = 10n ** 18n,
-  cap = 10n ** 36n,
+  capacity = DEFAULT_MANAGER_CAPACITY,
+  cap = DEFAULT_MANAGER_CAP,
   isWhitelistEnabled = false,
 }: ConfigDebitServiceProps) => {
   await Promise.all(

@@ -6,3 +6,6 @@ export const WIZARDEX = '0xa05B704E88D43260F71861BB69C1851Fe77b63fD'
 export const GOVERNANCE = '0x7778f7b568023379697451da178326D27682ADb8'
 
 export const oneMonth = 3600n * 24n * 30n // 30 days expressed in seconds
+
+export const DEFAULT_MANAGER_CAPACITY = 10n ** 18n
+export const DEFAULT_MANAGER_CAP = 10n ** 36n

@@ -2,9 +2,8 @@ import { ethers } from 'hardhat'
 
 import type { AaveService } from '../../typechain-types'
 import { getDataDir, getFrontendDir, getJsonProperty, updateJsonProperty, useHardhatENV } from '../command-helpers'
-import { AAVE_POOL_ON_ARBITRUM, GOVERNANCE, oneMonth } from '../config'
-import { configDebitService, serviceToggleWhitelist, setCapacity } from '../contracts'
-import { tokens } from '../tokens'
+import { AAVE_POOL_ON_ARBITRUM, oneMonth } from '../config'
+import { configDebitService } from '../contracts'
 import { deployManagerContract } from './deployManagerContract'
 
 useHardhatENV()
