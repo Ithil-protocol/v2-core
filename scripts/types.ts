@@ -9,6 +9,7 @@ export interface MinimalToken {
   decimals: number
   tokenAddress: Address
   oracleAddress: Address
+  initialPriceForIthil?: bigint
 }
 
 export interface LendingToken extends MinimalToken {

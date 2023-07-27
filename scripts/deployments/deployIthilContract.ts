@@ -9,9 +9,9 @@ useHardhatENV()
 
 interface DeployIthilContractProps {
   isNewDeploy: boolean
-  governance: Address
+  governance?: Address
 }
-async function deployIthilContract({ isNewDeploy, governance }: DeployIthilContractProps) {
+async function deployIthilContract({ isNewDeploy, governance = GOVERNANCE }: DeployIthilContractProps) {
   let ithil: Ithil
 
   if (isNewDeploy) {
