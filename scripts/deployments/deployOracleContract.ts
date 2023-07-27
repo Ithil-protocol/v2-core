@@ -3,6 +3,7 @@ import { ethers } from 'hardhat'
 import type { Oracle } from '../../typechain-types'
 import { updateJsonProperty, useHardhatENV } from '../command-helpers'
 import { contractJsonDir, currentOracleAddress, frontendContractJsonDir } from '../config'
+import { tokens } from '../tokens'
 
 useHardhatENV()
 
@@ -24,6 +25,9 @@ async function deployOracleContract({ isNewDeploy }: DeployOracleContractProps) 
 
     await oracle.deployed()
     console.log(`Oracle contract deployed to ${oracle.address}`)
+
+    await Promise.all(tokens.map(async (token) => await oracle.setPriceFeed(token.tokenAddress, token.oracleAddress)))
+    console.log(`Set price feed for ${tokens.length} tokens`)
   } else {
     // use contractFactory.attach if a link to PriceConverter needed
     oracle = await ethers.getContractAt('Oracle', currentOracleAddress)
