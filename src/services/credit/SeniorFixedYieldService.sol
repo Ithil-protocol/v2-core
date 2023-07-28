@@ -25,7 +25,7 @@ contract SeniorFixedYieldService is CreditService {
         uint256 _deadline
     )
         Service(
-            string(abi.encodePacked("Fixed Yield Service at ", ((_yield / 1e18) * 100), " maturity ", _deadline)),
+            string(abi.encodePacked("Fixed Yield Service at ", _yield, " maturity ", _deadline)),
             string(abi.encodePacked("FIXED-YIELD-SERVICE-", _yield)),
             _manager,
             _deadline
