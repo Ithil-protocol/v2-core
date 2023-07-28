@@ -97,7 +97,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         usdcChainlinkFeed.call(abi.encodeWithSignature("setPrice(int256)", int256(1e6)));
         ethChainlinkFeed.call(abi.encodeWithSignature("setPrice(int256)", int256(1.8e18)));
         manager = IManager(new Manager());
-        ithil = new Ithil();
+        ithil = new Ithil(admin);
         oracle = new Oracle();
         aaveService = new AaveService(address(manager), aavePool, 30 * 86400);
         feeCollectorService = new FeeCollectorService(address(manager), weth, 1e17, address(oracle), dexFactory);
@@ -113,7 +113,16 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // first price is 0.2 USDC: we need to double it in the constructor
         // because the smallest price can only be achieved by maximum lock time
         //slither-disable-next-line reentrancy
-        callOptionService = new SeniorCallOption(address(manager), treasury, address(ithil), 4e5, 86400 * 30, usdc);
+        callOptionService = new SeniorCallOption(
+            address(manager),
+            treasury,
+            address(ithil),
+            4e5,
+            86400 * 30,
+            86400 * 30,
+            0,
+            usdc
+        );
         vm.stopPrank();
     }
 

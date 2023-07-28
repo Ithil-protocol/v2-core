@@ -14,6 +14,7 @@ import { Service } from "../Service.sol";
 /// @notice   By putting a positive yield and a finite deadline, we obtain classical bonds
 /// @notice   In this implementation, fixed yield creditors are senior than vanilla LPs
 contract SeniorFixedYieldService is CreditService {
+    error SlippageExceeded();
     // The yield of this service, with 1e18 corresponding to 100% annually
     // Here 1 year is defined as to be 365 * 86400 seconds
     uint256 public immutable yield;
@@ -38,7 +39,9 @@ contract SeniorFixedYieldService is CreditService {
         if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount)
             IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
         // Deposit tokens to the relevant vault and register obtained amount
-        agreement.collaterals[0].amount = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
+        uint256 shares = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
+        if (shares < agreement.collaterals[0].amount) revert SlippageExceeded();
+        agreement.collaterals[0].amount = shares;
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
@@ -46,8 +49,11 @@ contract SeniorFixedYieldService is CreditService {
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
         address owner = ownerOf(tokenID);
 
+        uint256 minAmountOut = abi.decode(data, (uint256));
+
         // redeem mechanism: we first redeem everything
         uint256 transfered = vault.redeem(agreement.collaterals[0].amount, owner, address(this));
+        if (transfered < minAmountOut) revert SlippageExceeded();
         uint256 toTransfer = dueAmount(agreement, data);
 
         if (toTransfer > transfered) {

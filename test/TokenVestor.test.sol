@@ -14,7 +14,7 @@ contract TokenVestorTest is Test {
     address internal constant user2 = address(uint160(uint(keccak256(abi.encodePacked("User2")))));
 
     constructor() {
-        token = new Ithil();
+        token = new Ithil(address(this));
         tokenVestor = new TokenVestor(address(token));
     }
 

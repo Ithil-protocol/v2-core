@@ -26,29 +26,32 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.startPrank(admin);
-
-        ithil = new Ithil();
+        ithil = new Ithil(admin);
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](2);
         loanTokens[0] = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1; // DAI
         whales[loanTokens[0]] = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
         vm.stopPrank();
+
         vm.prank(whales[loanTokens[0]]);
         IERC20(loanTokens[0]).transfer(admin, 1);
+
         vm.startPrank(admin);
         IERC20(loanTokens[0]).approve(address(manager), 1);
         manager.create(loanTokens[0]);
-        //slither-disable-next-line reentrancy
+
         service = new SeniorCallOption(
             address(manager),
             address(this),
             address(ithil),
             4e17,
             86400 * 30,
+            86400 * 30,
+            0,
             loanTokens[0]
         );
-        //slither-disable-next-line reentrancy
+
         serviceAddress = address(service);
         ithil.approve(serviceAddress, 1e25);
         service.allocateIthil(1e25);
@@ -62,7 +65,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = daiAmount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;
-        IService.Order memory order = _openOrder1ForCredit(daiLoan, daiLoan, block.timestamp, abi.encode(7));
+        IService.Order memory order = _openOrder1ForCredit(daiLoan, 0, block.timestamp, abi.encode(7));
         service.open(order);
 
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);

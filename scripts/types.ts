@@ -8,6 +8,7 @@ export interface MinimalToken {
   iconName: string
   decimals: number
   tokenAddress: Address
+  oracleAddress: Address
 }
 
 export interface LendingToken extends MinimalToken {
