@@ -88,14 +88,16 @@ contract Manager is IManager, Ownable {
         uint256 exposure = caps[msg.sender][token].exposure;
         if (exposure + loan > caps[msg.sender][token].absoluteCap) revert AbsoluteCapExceeded(exposure);
         caps[msg.sender][token].exposure += loan;
-        (uint256 freeLiquidity, uint256 netLoans) = IVault(vaults[token]).borrow(amount, loan, receiver);
-        // recall that freeLiquidity is before the loan, while netLoans is after
+        (uint256 netLoans, uint256 freeLiquidity) = IVault(vaults[token]).getLoansAndLiquidity();
         // therefore, the quantity freeLiquidity + netLoans - loan is invariant during the borrow
         // notice that since amount >= loan in general, we cannot make (freeLiquidity - amount)
         // otherwise credit services could be unclosable when experiencing a loss at high liquidity pressure
-        uint256 investedPortion = RESOLUTION.mulDiv(exposure + loan, freeLiquidity + (netLoans - loan));
+        uint256 investedPortion = RESOLUTION.mulDiv(exposure + loan, freeLiquidity + netLoans);
         if (investedPortion > caps[msg.sender][token].percentageCap) revert InvestmentCapExceeded(investedPortion);
-        return (freeLiquidity, netLoans);
+
+        // at this point to prevent reentrancy
+        IVault(vaults[token]).borrow(amount, loan, receiver);
+        return (freeLiquidity, netLoans + loan);
     }
 
     /// @inheritdoc IManager

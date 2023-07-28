@@ -77,6 +77,10 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return (currentProfits, currentLosses, feeUnlockTime, latestRepay);
     }
 
+    function getLoansAndLiquidity() external view override returns (uint256, uint256) {
+        return (netLoans, freeLiquidity());
+    }
+
     // Total assets are used to calculate shares to mint and redeem
     // They represent the deposited amount, the loans and the unlocked fees
     // As per ERC4626 standard this must never throw
