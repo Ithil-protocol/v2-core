@@ -2,7 +2,7 @@ import { ethers } from 'hardhat'
 
 import type { Oracle } from '../../typechain-types'
 import { updateJsonProperty, useHardhatENV } from '../command-helpers'
-import { contractJsonDir, currentOracleAddress, frontendContractJsonDir } from '../config'
+import { GOVERNANCE, contractJsonDir, currentOracleAddress, frontendContractJsonDir } from '../config'
 import { tokens } from '../tokens'
 
 useHardhatENV()
@@ -28,6 +28,9 @@ async function deployOracleContract({ isNewDeploy }: DeployOracleContractProps) 
 
     await Promise.all(tokens.map(async (token) => await oracle.setPriceFeed(token.tokenAddress, token.oracleAddress)))
     console.log(`Set price feed for ${tokens.length} tokens`)
+
+    await oracle.transferOwnership(GOVERNANCE)
+    console.log(`transferred the oracle: ${oracle.address} ownership to ${GOVERNANCE}`)
   } else {
     // use contractFactory.attach if a link to PriceConverter needed
     oracle = await ethers.getContractAt('Oracle', currentOracleAddress)
