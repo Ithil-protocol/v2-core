@@ -53,8 +53,7 @@ abstract contract DebitService is Service, BaseRiskModel {
                 : score;
         }
 
-        // cap to 100% of the margin
-        return score < RESOLUTION ? score : RESOLUTION;
+        return score;
     }
 
     function open(Order calldata order) public virtual override unlocked {
@@ -105,16 +104,8 @@ abstract contract DebitService is Service, BaseRiskModel {
             uint256 liquidatorReward;
             if (agreementOwner != msg.sender) {
                 // This can either due to score > 0 or deadline exceeded
-                // In the latter case, the fee is linear with time until reacing 5% in one month (31 days)
-                // If a position is both liquidable and expired, liquidation has the priority
-                if (score > 0) liquidatorReward = (agreement.loans[index].margin * score) / RESOLUTION;
-                else {
-                    // in this case agreement.createdAt + deadline <= block.timestamp
-                    uint256 timeMaxOneMonth = block.timestamp - (deadline + agreement.createdAt) < 86400 * 31
-                        ? block.timestamp - (deadline + agreement.createdAt)
-                        : 86400 * 31;
-                    liquidatorReward = (agreement.loans[index].margin * timeMaxOneMonth) / (86400 * 31 * 20);
-                }
+                // we give 5% of the user's margin as liquidation fee
+                if (score > 0) liquidatorReward = agreement.loans[index].margin / 20;
                 // We cap further the liquidation reward with the obtained amount (no cross-position rewarding)
                 // This also prevents the following transfer to revert
                 liquidatorReward = liquidatorReward < obtained[index] ? liquidatorReward : obtained[index];
