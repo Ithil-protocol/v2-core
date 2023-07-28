@@ -26,7 +26,7 @@ async function deploySeniorCallOptionServiceContract({
   const allCallOptions: AllCallOptions = {}
   if (isNewDeploy) {
     const manager = await deployManagerContract({ isNewDeploy: false })
-    const ithil = await deployIthilContract({ isNewDeploy: false, governance: GOVERNANCE })
+    const ithil = await deployIthilContract({ isNewDeploy: false })
 
     const SeniorCallOption = await ethers.getContractFactory('SeniorCallOption')
 
@@ -36,7 +36,7 @@ async function deploySeniorCallOptionServiceContract({
           manager.address,
           GOVERNANCE,
           ithil.address,
-          token.initialPriceForIthil ?? 0n,
+          token.initialPriceForIthil,
           oneMonth,
           oneHour,
           3n * oneHour,
@@ -63,7 +63,7 @@ async function deploySeniorCallOptionServiceContract({
     await Promise.all(
       vaults.map(async (token) => {
         const callOptionService = await ethers.getContractAt('SeniorCallOption', token.callOptionAddress)
-        console.log(`Manager contract instance created with this address: ${callOptionService.address}`)
+        console.log(`callOptionService contract instance created with this address: ${callOptionService.address}`)
         allCallOptions[token.name] = callOptionService
       }),
     )
