@@ -162,13 +162,13 @@ export const configDebitService = async ({
   await Promise.all(
     serviceTokens.map(async (token) => await manager.setCap(service.address, token.tokenAddress, capacity, cap)),
   )
-  console.log(`Set capacity for ${serviceTokens.length} tokens for Aave`)
+  console.log(`Set capacity for ${serviceTokens.length} tokens for this service: ${service.address}`)
 
   await serviceToggleWhitelist(service, isWhitelistEnabled)
-  console.log(`changed whitelist state to ${isWhitelistEnabled ? 'ON' : 'OFF'} on Aave service`)
+  console.log(`changed whitelist state to ${isWhitelistEnabled ? 'ON' : 'OFF'} on this service: ${service.address}`)
 
   await service.transferOwnership(governance)
-  console.log(`transferred aaveService ownership to ${governance}`)
+  console.log(`transferred this service: ${service.address} ownership to ${governance}`)
 }
 
 interface ConfigCreditServiceProps {

@@ -23,3 +23,4 @@ export const currentGmxServiceAddress = getJsonProperty(contractJsonDir, 'gmxSer
 export const currentIthilAddress = getJsonProperty(contractJsonDir, 'ithil')
 export const currentManagerAddress = getJsonProperty(contractJsonDir, 'manager')
 export const currentOracleAddress = getJsonProperty(contractJsonDir, 'oracle')
+export const currentFeeCollectorServiceAddress = getJsonProperty(contractJsonDir, 'feeCollectorService')
