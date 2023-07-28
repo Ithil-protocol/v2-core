@@ -107,9 +107,6 @@ contract SeniorCallOption is CreditService {
         if (agreement.collaterals[1].token != address(ithil)) revert InvalidIthilToken();
         if (agreement.loans[0].amount == 0) revert ZeroAmount();
 
-        // Deposit tokens to the relevant vault and register obtained amount
-        uint256 shares = IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
-
         uint256 price = _currentPrice();
         // Apply reward based on lock
         uint256 durationsLocked = abi.decode(data, (uint256));
@@ -141,6 +138,7 @@ contract SeniorCallOption is CreditService {
         // The user obtains a discount based on how many months the position is locked
         uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
+        uint256 shares = IVault(_vaultAddress).convertToShares(agreement.loans[0].amount);
         if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount)
             revert SlippageExceeded();
 
@@ -149,6 +147,9 @@ contract SeniorCallOption is CreditService {
         // update allocation: since we cannot know how much will be called, we subtract max
         // since collateral <= totalAllocation, this subtraction does not underflow
         totalAllocation -= collateral;
+
+        // Deposit tokens to the relevant vault and register obtained amount
+        IVault(_vaultAddress).deposit(agreement.loans[0].amount, address(this));
     }
 
     function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
@@ -168,29 +169,30 @@ contract SeniorCallOption is CreditService {
         totalAllocation += (agreement.collaterals[1].amount - toCall);
         uint256 toTransfer = dueAmount(agreement, data);
         uint256 toRedeem = vault.convertToShares(toTransfer);
-        uint256 transfered = vault.redeem(
-            toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
-            ownerAddress,
-            address(this)
+        uint256 transfered = vault.convertToAssets(
+            toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount
         );
+        uint256 toBorrow;
+        uint256 freeLiquidity;
         if (toTransfer > transfered) {
             // Since this service is senior, we need to pay the user even if withdraw amount is too low
             // To do this, we take liquidity from the vault and register the loss
             // If we incur a loss and the freeLiquidity is not enough, we cannot make the exit fail
             // Otherwise we would have positions impossible to close: thus we withdraw what we can
-            uint256 freeLiquidity = vault.freeLiquidity() - 1;
-            if (freeLiquidity > 0)
-                manager.borrow(
-                    agreement.loans[0].token,
-                    toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered,
-                    0,
-                    ownerAddress
-                );
+            freeLiquidity = vault.freeLiquidity() - 1;
+            toBorrow = toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered;
         }
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount)
             vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
-
+        // repay the user's losses
+        if (toBorrow > 0 && freeLiquidity > 0) manager.borrow(agreement.loans[0].token, toBorrow, 0, ownerAddress);
+        // redeem the user's tokens and give the proceedings back to the user
+        vault.redeem(
+            toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
+            ownerAddress,
+            address(this)
+        );
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
         ithil.safeTransfer(ownerAddress, toCall);
     }
