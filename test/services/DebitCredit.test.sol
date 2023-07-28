@@ -46,7 +46,6 @@ contract DebitCreditTest is Test, IERC721Receiver {
     // another depositor should not be able to snatch fees from the first one
     address internal immutable feeCollectorDepositor2 =
         address(uint160(uint(keccak256(abi.encodePacked("feeCollectorDepositor2")))));
-    // treasury
     address internal immutable treasury = address(uint160(uint(keccak256(abi.encodePacked("treasury")))));
 
     IManager internal immutable manager;
@@ -106,16 +105,15 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.stopPrank();
         vm.prank(usdcWhale);
         IERC20(usdc).transfer(address(admin), 1);
+
         vm.startPrank(admin);
         IERC20(usdc).approve(address(manager), 1);
         manager.create(usdc);
 
         // first price is 0.2 USDC: we need to double it in the constructor
         // because the smallest price can only be achieved by maximum lock time
-        //slither-disable-next-line reentrancy
         callOptionService = new SeniorCallOption(
             address(manager),
-            treasury,
             address(ithil),
             4e5,
             86400 * 30,
@@ -132,6 +130,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.startPrank(admin);
         ithil.approve(address(callOptionService), 1e7 * 1e18);
         callOptionService.allocateIthil(1e7 * 1e18);
+        callOptionService.transferOwnership(treasury);
 
         // whitelist user for Aave and Gmx
         address[] memory whitelistedUsers = new address[](1);
@@ -291,11 +290,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         );
         // treasury has obtained the iToken used by the signer to obtain ITHIL
         assertEq(
-            vault.balanceOf(callOptionService.treasury()),
+            vault.balanceOf(treasury),
             collaterals[0].amount - vault.convertToShares(((depositedAmount * (1e18 - calledPortion)) / 1e18))
         );
         assertEq(vault.freeLiquidity(), depositedAmount - loan - (depositedAmount * (1e18 - calledPortion)) / 1e18 + 1);
         assertEq(vault.freeLiquidity(), 3.2e9 + 1);
+        assertEq(vault.balanceOf(treasury), 3.6e9);
         vm.stopPrank();
         // The free liquidity is now 3200 USDC and treasury has 3600 USDC worth of iTokens
 
