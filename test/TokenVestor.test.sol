@@ -13,7 +13,7 @@ contract TokenVestorTest is Test {
     address internal constant user1 = address(uint160(uint(keccak256(abi.encodePacked("User1")))));
     address internal constant user2 = address(uint160(uint(keccak256(abi.encodePacked("User2")))));
 
-    uint256 minimumAmount = 100e18;
+    uint256 internal minimumAmount = 100e18;
 
     constructor() {
         token = new Ithil(address(this));
