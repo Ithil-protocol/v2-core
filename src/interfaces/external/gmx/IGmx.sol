@@ -94,6 +94,8 @@ interface IRewardTracker {
 
     function claimable(address _account) external view returns (uint256);
 
+    function claimableReward(address _account) external view returns (uint256);
+
     function averageStakedAmounts(address _account) external view returns (uint256);
 
     function cumulativeRewards(address _account) external view returns (uint256);

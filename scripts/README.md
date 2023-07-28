@@ -1,6 +1,6 @@
 # hardhat scripts
 
-Files ending with `.script.ts` are meant to be indipendent scripts, and will be launched when executing commands like
+Files ending with `.script.ts` are meant to be independent scripts, and will be launched when executing commands like
 `yarn hardhat:deploy:tenderly`
 
 Other files are meant as libraries, and contain functions that can be imported in scripts.
@@ -19,4 +19,4 @@ Other files are meant as libraries, and contain functions that can be imported i
 
 - faucet (addresses needs money)
 - deploy (deploys contracts)
-- fill-vaults (vaults needs tokens)
+- fill-vaults (vaults need tokens)

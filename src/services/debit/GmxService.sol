@@ -28,6 +28,15 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
     IGlpManager public immutable glpManager;
     IUsdgVault public immutable usdgVault;
 
+    // We apply operator theory to distribute rewards evenly, similar to fee collector
+    // although now we should be careful not to include weth balance due to usage
+    // moreover, there is no minting in place and GLP are staked, so we need an extra
+    // "totalCollateral" variable to register the sum of all collaterals for all open positions
+    uint256 public totalRewards;
+    uint256 public totalCollateral;
+    uint256 public totalVirtualDeposits;
+    mapping(uint256 => uint256) public virtualDeposit;
+
     error InvalidToken();
     error ZeroGlpSupply();
 
@@ -45,24 +54,29 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         rewardTracker = IRewardTracker(routerV2.feeGlpTracker());
         glpManager = IGlpManager(routerV2.glpManager());
         usdgVault = IUsdgVault(glpManager.vault());
-
-        if (weth.allowance(address(this), address(glpManager)) == 0)
-            weth.approve(address(glpManager), type(uint256).max);
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        if (agreement.loans[0].token != address(weth)) revert InvalidToken();
-
+        if (IERC20(agreement.loans[0].token).allowance(address(this), address(glpManager)) == 0)
+            IERC20(agreement.loans[0].token).approve(address(glpManager), type(uint256).max);
         agreement.collaterals[0].token = address(glp);
         agreement.collaterals[0].amount = routerV2.mintAndStakeGlp(
-            address(weth),
+            agreement.loans[0].token,
             agreement.loans[0].amount + agreement.loans[0].margin,
             0,
             agreement.collaterals[0].amount
         );
+
+        totalCollateral += agreement.collaterals[0].amount;
+        if (totalCollateral == 0) revert ZeroGlpSupply();
+        // we assign a virtual deposit of v * A / S, __afterwards__ we update the total deposits
+        virtualDeposit[id] =
+            (agreement.collaterals[0].amount * (totalRewards + totalVirtualDeposits)) /
+            totalCollateral;
+        totalVirtualDeposits += virtualDeposit[id];
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
+    function _close(uint256 tokenID, Agreement memory agreement, bytes memory data) internal override {
         uint256 minAmountOut = abi.decode(data, (uint256));
 
         routerV2.unstakeAndRedeemGlp(
@@ -72,7 +86,32 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
             address(this)
         );
 
+        uint256 wethBalance = weth.balanceOf(address(this));
         router.handleRewards(false, false, false, false, false, true, false);
+        // register rewards
+        uint256 newRewards = totalRewards + (weth.balanceOf(address(this)) - wethBalance);
+        // calculate share of rewards to give to the user
+        uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * agreement.collaterals[0].amount) /
+            totalCollateral;
+        // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
+        uint256 toTransfer = totalWithdraw - virtualDeposit[tokenID];
+        // delete virtual deposits
+        totalVirtualDeposits -= virtualDeposit[tokenID];
+        delete virtualDeposit[tokenID];
+        // update totalRewards and totalCollateral
+        totalRewards = newRewards - toTransfer;
+        totalCollateral -= agreement.collaterals[0].amount;
+        // Transfer weth
+        weth.safeTransfer(msg.sender, toTransfer);
+    }
+
+    function wethReward(uint256 tokenID) public view returns (uint256) {
+        uint256 collateral = agreements[tokenID].collaterals[0].amount;
+        uint256 newRewards = totalRewards + rewardTracker.claimableReward(address(this));
+        // calculate share of rewards to give to the user
+        uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * collateral) / totalCollateral;
+        // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
+        return totalWithdraw - virtualDeposit[tokenID];
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
