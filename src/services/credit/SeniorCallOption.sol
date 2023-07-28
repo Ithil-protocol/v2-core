@@ -185,8 +185,6 @@ contract SeniorCallOption is CreditService {
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount)
             vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
-        // repay the user's losses
-        if (toBorrow > 0 && freeLiquidity > 0) manager.borrow(agreement.loans[0].token, toBorrow, 0, ownerAddress);
         // redeem the user's tokens and give the proceedings back to the user
         vault.redeem(
             toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
@@ -195,6 +193,10 @@ contract SeniorCallOption is CreditService {
         );
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
         ithil.safeTransfer(ownerAddress, toCall);
+        // repay the user's losses
+        // if an attacker were able to manipulate the vault status in some way, it could make the redeem fail
+        // therefore this call must be after redeem in order to prevent reentrancy
+        if (toBorrow > 0 && freeLiquidity > 0) manager.borrow(agreement.loans[0].token, toBorrow, 0, ownerAddress);
     }
 
     function _currentPrice() internal view returns (uint256) {
