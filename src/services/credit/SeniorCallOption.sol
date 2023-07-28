@@ -63,8 +63,16 @@ contract SeniorCallOption is CreditService {
         uint256 _tenorDuration,
         uint256 _initialVesting,
         address _underlying
-    ) Service("Ithil Senior Call Option", "SCALL", _manager, 13 * 30 * 86400) {
-        require(_initialPrice > 0, "Zero initial price");
+    )
+        Service(
+            string(abi.encodePacked("Ithil Senior Call Option - ", IERC20Metadata(_underlying).name())),
+            string(abi.encodePacked("SCALL-", IERC20Metadata(_underlying).symbol())),
+            _manager,
+            13 * 30 * 86400
+        )
+    {
+        assert(_initialPrice > 0);
+
         initialPrice = _initialPrice;
         treasury = _treasury;
         underlying = IERC20(_underlying);
