@@ -36,6 +36,7 @@ const GOVERNANCE = '0x7778f7b568023379697451da178326D27682ADb8'
 const main = async () => {
   const manager = await deployManager()
   console.log(`Manager contract deployed to ${manager.address}`)
+  // %%%
 
   // Deploy Vaults
   const vaults = await Promise.all(
@@ -47,16 +48,22 @@ const main = async () => {
       return { ...token, vaultAddress }
     }),
   )
+  // %%%
 
   const ithil = await deployIthil(GOVERNANCE)
+  // %%%
   console.log(`ITHIL contract deployed to ${ithil.address}`)
   const oracle = await deployOracle()
+  // %%%
   console.log(`Oracle contract deployed to ${oracle.address}`)
   const aaveService = await deployAave(manager, AAVE_POOL_ON_ARBITRUM)
+  // %%%
   console.log(`AaveService contract deployed to ${aaveService.address}`)
   const gmxService = await deployGmx(manager, GMX_ROUTER, GMX_ROUTER_V2)
+  // %%%
   console.log(`GmxService contract deployed to ${gmxService.address}`)
   const feeCollectorService = await deployFeeCollectorService(manager, WETH, 10n ** 17n, oracle.address, WIZARDEX)
+  // %%%
   console.log(`FeeCollectorService contract deployed to ${feeCollectorService.address}`)
 
   const callOptionService = await deployCallOptionService(
@@ -67,8 +74,10 @@ const main = async () => {
     86400 * 30,
     WETH,
   )
+  // %%%
   console.log(`CallOptionService contract deployed to ${callOptionService.address}`)
   const fixedYieldService = await deploySeniorFixedYieldService(
+    // %%%
     'Fixed yield 1m 1%',
     'FIXED-YIELD-1M1P',
     manager,
@@ -79,18 +88,23 @@ const main = async () => {
 
   // Configure Oracle
   await Promise.all(tokens.map(async (token) => await oracle.setPriceFeed(token.tokenAddress, token.oracleAddress)))
+  // %%%
   console.log(`Set price feed for ${tokens.length} tokens`)
 
   // Config Aave service
   await Promise.all(tokens.map(async (token) => await setCapacity(manager, aaveService.address, token.tokenAddress)))
+  // %%%
   console.log(`Set capacity to 10^18 for ${tokens.length} tokens for Aave`)
   await serviceToggleWhitelist(aaveService, false)
+  // %%%
   console.log('Disabled whitelist on Aave service')
 
   // Config GMX service
   await Promise.all(tokens.map(async (token) => await setCapacity(manager, gmxService.address, token.tokenAddress)))
+  // %%%
   console.log(`Set capacity to 10^18 for ${tokens.length} tokens for GMX`)
   await serviceToggleWhitelist(gmxService, false)
+  // %%%
   console.log('Disabled whitelist on GMX service')
 
   // Set ownership to the Governance
@@ -100,6 +114,7 @@ const main = async () => {
   feeCollectorService.transferOwnership(GOVERNANCE)
   callOptionService.transferOwnership(GOVERNANCE)
   fixedYieldService.transferOwnership(GOVERNANCE)
+  // %%%
 
   // Save data
   const contracts = {
@@ -112,6 +127,7 @@ const main = async () => {
     callOptionService: callOptionService.address,
     fixedYieldService: fixedYieldService.address,
   }
+  // %%%
 
   if (getFrontendDir('') != null) {
     const contractsPath = getFrontendDir('contracts.json')

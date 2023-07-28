@@ -34,7 +34,7 @@ async function deploySeniorFixedYieldServiceContract({ isNewDeploy }: DeploySeni
     })
   } else {
     seniorFixedYieldService = await ethers.getContractAt('SeniorFixedYieldService', currentFixedYieldServiceAddress)
-    console.log(`AaveService contract instance created with this address: ${seniorFixedYieldService.address}`)
+    console.log(`FixedYieldService contract instance created with this address: ${seniorFixedYieldService.address}`)
   }
   updateJsonProperty(contractJsonDir, 'fixedYieldService', seniorFixedYieldService.address)
   updateJsonProperty(frontendContractJsonDir, 'fixedYieldService', seniorFixedYieldService.address)
