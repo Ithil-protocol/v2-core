@@ -29,7 +29,7 @@
       }
     ],
     "reason-string": ["warn", { "maxLength": 64 }],
-    "reentrancy": "off",
+    "reentrancy": "warn",
     "state-visibility": "error",
     "use-forbidden-name": "warn",
     "var-name-mixedcase": "warn",
