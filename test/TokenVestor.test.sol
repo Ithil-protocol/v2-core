@@ -13,9 +13,11 @@ contract TokenVestorTest is Test {
     address internal constant user1 = address(uint160(uint(keccak256(abi.encodePacked("User1")))));
     address internal constant user2 = address(uint160(uint(keccak256(abi.encodePacked("User2")))));
 
+    uint256 minimumAmount = 100e18;
+
     constructor() {
         token = new Ithil(address(this));
-        tokenVestor = new TokenVestor(address(token));
+        tokenVestor = new TokenVestor(address(token), minimumAmount);
     }
 
     function setUp() public {
@@ -23,7 +25,7 @@ contract TokenVestorTest is Test {
     }
 
     function testVestedtokensCannotBeTransferred() public {
-        tokenVestor.addAllocation(1e18, block.timestamp, 30 days, user1);
+        tokenVestor.addAllocation(minimumAmount, block.timestamp, 30 days, user1);
 
         vm.startPrank(user1);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("TransferNotSupported()"))));
@@ -40,8 +42,20 @@ contract TokenVestorTest is Test {
         assertTrue(tokenVestor.balanceOf(user1) == 0);
     }
 
+    function testVestingBelowMinimum() public {
+        vm.prank(user1);
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("VestingBelowMinimum()"))));
+        tokenVestor.addAllocation(minimumAmount - 1, block.timestamp, 30 days, user1);
+    }
+
+    function testAlreadyVested() public {
+        tokenVestor.addAllocation(minimumAmount, block.timestamp, 30 days, user1);
+        vm.expectRevert(bytes4(keccak256(abi.encodePacked("UserAlreadyVested()"))));
+        tokenVestor.addAllocation(minimumAmount, block.timestamp, 30 days, user1);
+    }
+
     function testClaim(uint256 amount, uint256 start, uint256 duration) public {
-        amount = bound(amount, 1e18, token.balanceOf(address(this)));
+        amount = bound(amount, minimumAmount, token.balanceOf(address(this)));
         start = bound(start, block.timestamp + 1 days, block.timestamp + 24 weeks);
         duration = bound(duration, 1 days, 144 weeks);
 
@@ -49,20 +63,21 @@ contract TokenVestorTest is Test {
 
         vm.prank(user1);
         tokenVestor.claim();
-        assertTrue(token.balanceOf(user1) == 0);
+        assertEq(token.balanceOf(user1), 0);
 
         vm.warp(start + 1 seconds);
 
+        uint256 claimable = tokenVestor.claimable(user1);
         vm.prank(user1);
         tokenVestor.claim();
-        assertTrue(token.balanceOf(user1) > 0);
+        assertEq(token.balanceOf(user1), claimable);
 
         vm.warp(start + duration + 1 seconds);
 
         vm.prank(user1);
         tokenVestor.claim();
-        assertTrue(token.balanceOf(user1) == amount);
+        assertEq(token.balanceOf(user1), amount);
 
-        assertTrue(token.balanceOf(address(tokenVestor)) == 0);
+        assertEq(token.balanceOf(address(tokenVestor)), 0);
     }
 }
