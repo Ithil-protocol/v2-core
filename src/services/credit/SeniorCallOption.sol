@@ -149,8 +149,8 @@ contract SeniorCallOption is CreditService {
         // The portion of the loan amount we want to call
         // If the position is liquidable, we enforce the option not to be exercised
         uint256 calledPortion = abi.decode(data, (uint256));
-        address owner = ownerOf(tokenID);
-        if (calledPortion > 1e18 || (msg.sender != owner && calledPortion > 0)) revert InvalidCalledPortion();
+        address ownerAddress = ownerOf(tokenID);
+        if (calledPortion > 1e18 || (msg.sender != ownerAddress && calledPortion > 0)) revert InvalidCalledPortion();
 
         // redeem mechanism
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
@@ -162,7 +162,7 @@ contract SeniorCallOption is CreditService {
         uint256 toRedeem = vault.convertToShares(toTransfer);
         uint256 transfered = vault.redeem(
             toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
-            owner,
+            ownerAddress,
             address(this)
         );
         if (toTransfer > transfered) {
@@ -176,15 +176,15 @@ contract SeniorCallOption is CreditService {
                     agreement.loans[0].token,
                     toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered,
                     0,
-                    owner
+                    ownerAddress
                 );
         }
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount)
-            vault.safeTransfer(owner, agreement.collaterals[0].amount - toRedeem);
+            vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
 
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
-        ithil.safeTransfer(owner, toCall);
+        ithil.safeTransfer(ownerAddress, toCall);
     }
 
     function _currentPrice() internal view returns (uint256) {

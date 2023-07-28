@@ -295,6 +295,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         );
         assertEq(vault.freeLiquidity(), depositedAmount - loan - (depositedAmount * (1e18 - calledPortion)) / 1e18 + 1);
         assertEq(vault.freeLiquidity(), 3.2e9 + 1);
+        assertEq(vault.balanceOf(treasury), 3.6e9);
         vm.stopPrank();
         // The free liquidity is now 3200 USDC and treasury has 3600 USDC worth of iTokens
 
