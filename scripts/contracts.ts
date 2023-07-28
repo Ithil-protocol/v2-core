@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 
-import { CreditService, DebitService, type Manager } from '../typechain-types'
+import { AaveService, BalancerService, CreditService, DebitService, GmxService, type Manager } from '../typechain-types'
 import { DEFAULT_MANAGER_CAP, DEFAULT_MANAGER_CAPACITY, GOVERNANCE } from './config'
 import { tokens } from './tokens'
 import { type Address, MinimalToken } from './types'
@@ -142,7 +142,7 @@ export const serviceToggleWhitelist = async (service: any, value: boolean) => {
 
 interface ConfigDebitServiceProps {
   manager: Manager
-  service: DebitService
+  service: AaveService | GmxService | BalancerService
   serviceTokens?: MinimalToken[]
   governance?: Address
   capacity?: bigint
@@ -163,6 +163,14 @@ export const configDebitService = async ({
     serviceTokens.map(async (token) => await manager.setCap(service.address, token.tokenAddress, capacity, cap)),
   )
   console.log(`Set capacity for ${serviceTokens.length} tokens for this service: ${service.address}`)
+
+  await Promise.all(
+    serviceTokens.map(
+      async (token) => await service.setRiskParams(token.tokenAddress, BigInt(3e15), BigInt(1e16), BigInt(3 * 86400)),
+    ),
+  )
+
+  console.log(`Set Risk for ${serviceTokens.length} tokens for this service: ${service.address}`)
 
   await serviceToggleWhitelist(service, isWhitelistEnabled)
   console.log(`changed whitelist state to ${isWhitelistEnabled ? 'ON' : 'OFF'} on this service: ${service.address}`)
