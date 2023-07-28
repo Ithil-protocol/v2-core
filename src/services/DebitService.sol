@@ -69,6 +69,8 @@ abstract contract DebitService is Service, BaseRiskModel {
             );
             // No need to launch borrow if amount is zero
             uint256 freeLiquidity;
+            // this call does not constitute reentrancy, since transferring additional margin
+            // has the same effect as opening a single position with the sum of the two margins
             (freeLiquidity, ) = manager.borrow(
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
@@ -100,11 +102,11 @@ abstract contract DebitService is Service, BaseRiskModel {
             // first repay the liquidator
             // the liquidation reward can never be higher than the margin
             // if the liquidable position is closed by its owner, it is *not* considered a liquidation event
+            uint256 liquidatorReward;
             if (agreementOwner != msg.sender) {
                 // This can either due to score > 0 or deadline exceeded
                 // In the latter case, the fee is linear with time until reacing 5% in one month (31 days)
                 // If a position is both liquidable and expired, liquidation has the priority
-                uint256 liquidatorReward;
                 if (score > 0) liquidatorReward = (agreement.loans[index].margin * score) / RESOLUTION;
                 else {
                     // in this case agreement.createdAt + deadline <= block.timestamp
@@ -116,7 +118,6 @@ abstract contract DebitService is Service, BaseRiskModel {
                 // We cap further the liquidation reward with the obtained amount (no cross-position rewarding)
                 // This also prevents the following transfer to revert
                 liquidatorReward = liquidatorReward < obtained[index] ? liquidatorReward : obtained[index];
-                IERC20(agreement.loans[index].token).safeTransfer(msg.sender, liquidatorReward);
                 obtained[index] -= liquidatorReward;
 
                 emit LiquidationTriggered(tokenID, agreement.loans[index].token, msg.sender, liquidatorReward);
@@ -139,6 +140,10 @@ abstract contract DebitService is Service, BaseRiskModel {
 
             // repay the owner
             IERC20(agreement.loans[index].token).safeTransfer(agreementOwner, obtained[index] - repaidAmount);
+
+            // in case liquidatorReward > 0, a liquidation has occurred and msg.sender is the liquidator
+            // at this point to prevent liquidator side reentrancy attacks damaging the users
+            if (liquidatorReward > 0) IERC20(agreement.loans[index].token).safeTransfer(msg.sender, liquidatorReward);
         }
 
         return obtained;
