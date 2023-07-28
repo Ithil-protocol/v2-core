@@ -40,6 +40,7 @@ contract SeniorFixedYieldService is CreditService {
             IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
         // Deposit tokens to the relevant vault and register obtained amount
         uint256 shares = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
+        // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue
         if (shares < agreement.collaterals[0].amount) revert SlippageExceeded();
         agreement.collaterals[0].amount = shares;
     }

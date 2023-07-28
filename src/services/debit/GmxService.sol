@@ -68,6 +68,7 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         );
 
         totalCollateral += agreement.collaterals[0].amount;
+        // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue
         if (totalCollateral == 0) revert ZeroGlpSupply();
         // we assign a virtual deposit of v * A / S, __afterwards__ we update the total deposits
         virtualDeposit[id] =

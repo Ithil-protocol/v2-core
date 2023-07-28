@@ -44,6 +44,7 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
         aave.supply(agreement.loans[0].token, agreement.loans[0].amount + agreement.loans[0].margin, address(this), 0);
 
         uint256 computedCollateral = aToken.balanceOf(address(this)) - initialBalance;
+        // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue
         if (computedCollateral < agreement.collaterals[0].amount) revert InsufficientAmountOut();
         agreement.collaterals[0].amount = computedCollateral;
         // Due to the above check, totalAllowance is positive if there is at least one open agreement
@@ -62,6 +63,7 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
             ? totalAllowance[agreement.collaterals[0].token] - agreement.collaterals[0].amount
             : 0;
         uint256 amountIn = aave.withdraw(agreement.loans[0].token, toRedeem, address(this));
+        // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue
         if (amountIn < minimumAmountOut) revert InsufficientAmountOut();
     }
 

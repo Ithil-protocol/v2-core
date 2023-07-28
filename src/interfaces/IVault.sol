@@ -30,6 +30,8 @@ interface IVault is IERC4626 {
 
     function getFeeStatus() external view returns (uint256, uint256, uint256, uint256);
 
+    function getLoansAndLiquidity() external view returns (uint256, uint256);
+
     function toggleLock() external;
 
     function isLocked() external view returns (bool);
