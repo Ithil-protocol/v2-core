@@ -5,6 +5,7 @@ import { updateJsonProperty, useHardhatENV } from '../command-helpers'
 import {
   DEFAULT_MANAGER_CAP,
   DEFAULT_MANAGER_CAPACITY,
+  GOVERNANCE,
   WETH,
   WIZARDEX,
   contractJsonDir,
@@ -42,6 +43,8 @@ async function deployFeeCollectorServiceContract({ isNewDeploy }: DeployFeeColle
           ),
       ),
     )
+    await feeCollectorService.transferOwnership(GOVERNANCE)
+    console.log(`transferred this service: ${feeCollectorService.address} ownership to ${GOVERNANCE}`)
   } else {
     feeCollectorService = await ethers.getContractAt('FeeCollectorService', currentFeeCollectorServiceAddress)
     console.log(`FeeCollectorService contract instance created with this address: ${feeCollectorService.address}`)

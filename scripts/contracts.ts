@@ -1,9 +1,9 @@
 import { ethers } from 'hardhat'
 
-import { AaveService, BalancerService, CreditService, DebitService, GmxService, type Manager } from '../typechain-types'
+import type { AaveService, BalancerService, CreditService, GmxService, Manager } from '../typechain-types'
 import { DEFAULT_MANAGER_CAP, DEFAULT_MANAGER_CAPACITY, GOVERNANCE } from './config'
 import { tokens } from './tokens'
-import { type Address, MinimalToken } from './types'
+import type { Address, MinimalToken } from './types'
 
 export const deployIthil = async (governance: Address) => {
   const Ithil = await ethers.getContractFactory('Ithil')
@@ -201,5 +201,5 @@ export const configCreditService = async ({
   console.log(`Set capacity for ${serviceTokens.length} tokens for this service: ${service.address}`)
 
   await service.transferOwnership(governance)
-  console.log(`transferred aaveService ownership to ${governance}`)
+  console.log(`transferred this service: ${service.address} ownership to ${governance}`)
 }
