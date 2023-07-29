@@ -1,9 +1,9 @@
 import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-toolbox'
+import * as tdly from '@tenderly/hardhat-tenderly'
 import { config as dotenvConfig } from 'dotenv'
 import { statSync } from 'fs'
 import { type HardhatUserConfig, type NetworkUserConfig } from 'hardhat/types'
-import * as tdly from '@tenderly/hardhat-tenderly'
 
 import { accountsPrivates } from './scripts/address-list'
 
@@ -21,10 +21,7 @@ if (TENDERLY_URL != null && TENDERLY_CHAINID != null && TENDERLY_URL.length > 10
   tenderlyNetwork.accounts = accountsPrivates
   tenderlyNetwork.chainId = parseFloat(TENDERLY_CHAINID)
 }
-tdly.setup({
-  automaticVerifications: true,
-})
-
+tdly.setup({ automaticVerifications: true })
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.18',
@@ -40,13 +37,15 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  defaultNetwork: 'tenderly',
+
   networks: {
-    hardhat: {
-      chainId: 1337,
-      forking: {
-        url: 'https://arb1.arbitrum.io/rpc',
-      },
-    },
+    // hardhat: {
+    //   chainId: 1337,
+    //   forking: {
+    //     url: 'https://arb1.arbitrum.io/rpc',
+    //   },
+    // },
     tenderly: tenderlyNetwork,
   },
   tenderly: {

@@ -2,7 +2,6 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { config as dotenvConfig } from 'dotenv'
 import { readFileSync, statSync } from 'fs'
 import { ethers } from 'hardhat'
-import { resolve } from 'path'
 
 import { depositorList } from './address-list'
 import { getFrontendDir } from './command-helpers'
@@ -15,12 +14,11 @@ if (!statSync('.env.hardhat').isFile()) {
   process.exit(1)
 }
 
-const frontendDir = getFrontendDir()
-if (frontendDir == null) {
+if (getFrontendDir('') == null) {
   console.warn('No FRONTEND_PATH found in .env.hardhat, required for this script')
   process.exit(1)
 }
-const contractsPath = resolve(frontendDir, 'src/deploy/contracts.json')
+const contractsPath = getFrontendDir('contracts.json')
 const contractsString = readFileSync(contractsPath, 'utf8')
 const contracts = JSON.parse(contractsString)
 

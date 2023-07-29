@@ -1,0 +1,50 @@
+[
+  {
+    "name": "USDC",
+    "coingeckoId": "usd-coin",
+    "iconName": "usdc",
+    "decimals": 6,
+    "tokenAddress": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+    "oracleAddress": "0x50834f3163758fcc1df9973b6e91f0f0f0434ad3",
+    "vaultAddress": "0xcfcadf6f66985668E1cdEE83E393c3FF25B4CE68",
+    "callOptionAddress": "0xbF499DcB8EB5Cc1E479CA65f520afE482D4CcF92",
+    "aaveCollateralTokenAddress": "0x625E7708f30cA75bfd92586e17077590C60eb4cD",
+    "gmxCollateralTokenAddress": "0x1aDDD80E6039594eE970E5872D247bf0414C8903"
+  },
+  {
+    "name": "USDT",
+    "coingeckoId": "tether",
+    "iconName": "usdt",
+    "decimals": 6,
+    "tokenAddress": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+    "oracleAddress": "0x3f3f5df88dc9f13eac63df89ec16ef6e7e25dde7",
+    "vaultAddress": "0x62DeFa7087AE8b18894591ae0A48dB7eaAe16dd8",
+    "callOptionAddress": "0xc19e6b2f2242a75DC01287f1d0EfBd0A7997f302",
+    "aaveCollateralTokenAddress": "0x6ab707Aca953eDAeFBc4fD23bA73294241490620",
+    "gmxCollateralTokenAddress": "0x1aDDD80E6039594eE970E5872D247bf0414C8903"
+  },
+  {
+    "name": "WETH",
+    "coingeckoId": "ethereum",
+    "iconName": "eth",
+    "decimals": 18,
+    "tokenAddress": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+    "oracleAddress": "0x639fe6ab55c921f74e7fac1ee960c0b6293ba612",
+    "vaultAddress": "0xAcE0c05029bc22eDF18CD4bF48E15A2c5e1aF11E",
+    "callOptionAddress": "0xB18071861097C3cD1FFf58e0C11b6084fb17E509",
+    "aaveCollateralTokenAddress": "0xe50fA9b3c56FfB159cB0FCA61F5c9D750e8128c8",
+    "gmxCollateralTokenAddress": "0x1aDDD80E6039594eE970E5872D247bf0414C8903"
+  },
+  {
+    "name": "WBTC",
+    "coingeckoId": "btc",
+    "iconName": "btc",
+    "decimals": 8,
+    "tokenAddress": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
+    "oracleAddress": "0xd0c7101eacbb49f3decccc166d238410d6d46d57",
+    "vaultAddress": "0xF4aEA93874fb1ebC7cA117ba6Cc4e44a1E043e8E",
+    "callOptionAddress": "0x2A9C3b3F9dbc278b278fDD433bF042923722C126",
+    "aaveCollateralTokenAddress": "0x078f358208685046a11C85e8ad32895DED33A249",
+    "gmxCollateralTokenAddress": "0x1aDDD80E6039594eE970E5872D247bf0414C8903"
+  }
+]
