@@ -15,14 +15,14 @@ export interface MinimalToken {
   decimals: number
   tokenAddress: Address
   oracleAddress: Address
-  initialPriceForIthil: string
+  initialPriceForIthil?: string
   callOptionAddress: Address
   vaultAddress: Address
+  aaveCollateralTokenAddress: Address
+  gmxCollateralTokenAddress: Address
 }
 
-export interface LendingToken extends MinimalToken {
-  vaultAddress: Address
-}
+export interface LendingToken extends MinimalToken {}
 
 export interface Replacement {
   slot: number

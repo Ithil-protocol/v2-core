@@ -11,6 +11,8 @@ export const tokens: MinimalToken[] = [
     initialPriceForIthil: '400000',
     vaultAddress: '0x',
     callOptionAddress: '0x',
+    aaveCollateralTokenAddress: '0x',
+    gmxCollateralTokenAddress: '0x',
   },
   {
     name: 'USDT',
@@ -22,6 +24,8 @@ export const tokens: MinimalToken[] = [
     initialPriceForIthil: '400000',
     vaultAddress: '0x',
     callOptionAddress: '0x',
+    aaveCollateralTokenAddress: '0x',
+    gmxCollateralTokenAddress: '0x',
   },
   {
     name: 'WETH',
@@ -33,6 +37,8 @@ export const tokens: MinimalToken[] = [
     initialPriceForIthil: '220000000000000',
     vaultAddress: '0x',
     callOptionAddress: '0x',
+    aaveCollateralTokenAddress: '0x',
+    gmxCollateralTokenAddress: '0x',
   },
   {
     name: 'WBTC',
@@ -44,6 +50,8 @@ export const tokens: MinimalToken[] = [
     initialPriceForIthil: '1363',
     vaultAddress: '0x',
     callOptionAddress: '0x',
+    aaveCollateralTokenAddress: '0x',
+    gmxCollateralTokenAddress: '0x',
   },
 ]
 
