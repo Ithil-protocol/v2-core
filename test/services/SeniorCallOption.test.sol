@@ -43,7 +43,6 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
 
         service = new SeniorCallOption(
             address(manager),
-            address(this),
             address(ithil),
             4e17,
             86400 * 30,

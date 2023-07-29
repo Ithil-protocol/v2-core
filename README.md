@@ -90,7 +90,7 @@ You can read more about Ithil on our [documentation website](https://docs.ithil.
 The main license for the Ithil contracts is the Business Source License 1.1 (BUSL-1.1), see LICENSE file to learn more.
 The Solidity files licensed under the BUSL-1.1 have appropriate SPDX headers.
 
-## Disclamer
+## Disclaimer
 
 This application is provided "as is" and "with all faults." Me as developer makes no representations or warranties of
 any kind concerning the safety, suitability, lack of viruses, inaccuracies, typographical errors, or other harmful

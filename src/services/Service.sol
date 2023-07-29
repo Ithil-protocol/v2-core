@@ -35,9 +35,16 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _;
     }
 
+    // besides locking the entire service, this also serves as reentrancy guard
+    // to prevent a reentrancy switching the msg.sender to a non-ERC721 receivable
+    // which would produce positions impossible to close
+    // in order to be effective, it must be enforced __downstream__
+    // because saving agreements always come at the end
     modifier unlocked() {
         if (locked) revert Locked();
+        locked = true;
         _;
+        locked = false;
     }
 
     modifier editable(uint256 tokenID) {
@@ -77,7 +84,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
     /// @notice creates a new service agreement
     /// @param order a struct containing data on the agreement and extra params
-    function open(Order calldata order) public virtual override unlocked {
+    function open(Order calldata order) public virtual override {
         // Save agreement in memory to allow editing
         Agreement memory agreement = order.agreement;
 

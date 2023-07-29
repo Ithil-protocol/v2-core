@@ -12,3 +12,9 @@ This part contains various scripts located in the `package.json` script section.
 - Static data can be modified within the ./config.ts file.
 - Tokens are simplified for the frontend, which explains the inclusion of extra non-essential properties.
 - The manager is rewritten multiple times during the deploy:all script, and that is acceptable. This implementation is necessary due to the absence of a data file inside the frontend project. Therefore, for each instance, we rewrite the data as they can also be directly called.
+
+# Correct order of invocation
+
+- faucet (addresses needs money)
+- deploy (deploys contracts)
+- fill-vaults (vaults need tokens)

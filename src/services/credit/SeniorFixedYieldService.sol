@@ -20,12 +20,17 @@ contract SeniorFixedYieldService is CreditService {
     uint256 public immutable yield;
 
     constructor(
-        string memory _name,
-        string memory _symbol,
         address _manager,
         uint256 _yield,
         uint256 _deadline
-    ) Service(_name, _symbol, _manager, _deadline) {
+    )
+        Service(
+            string(abi.encodePacked("Fixed Yield Service at ", _yield, " maturity ", _deadline)),
+            string(abi.encodePacked("FIXED-YIELD-SERVICE-", _yield)),
+            _manager,
+            _deadline
+        )
+    {
         yield = _yield;
     }
 
@@ -35,6 +40,7 @@ contract SeniorFixedYieldService is CreditService {
             IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
         // Deposit tokens to the relevant vault and register obtained amount
         uint256 shares = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
+        // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue
         if (shares < agreement.collaterals[0].amount) revert SlippageExceeded();
         agreement.collaterals[0].amount = shares;
     }
