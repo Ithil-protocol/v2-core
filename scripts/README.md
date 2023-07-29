@@ -1,22 +1,8 @@
-# hardhat scripts
-
-Files ending with `.script.ts` are meant to be indipendent scripts, and will be launched when executing commands like
-`yarn hardhat:deploy:tenderly`
-
-Other files are meant as libraries, and contain functions that can be imported in scripts.
-
-# Brief explanation of scripts
-
-- **deploy.script.ts**  
-  Meant the be "the script" to deploy in testnet/production, should do all the required actions to have a working Ithil
-  protocol
-- **faucet.script.ts**  
-  Useful in testnet/devnetwork to send tokens to a set of addresses
-- **fill-vaults.script.ts**  
-  Useful in testnet/devnetwork to fill the vaults with tokens
-
-# Correct order of invocation
-
-- faucet (addresses needs money)
-- deploy (deploys contracts)
-- fill-vaults (vaults needs tokens)
+-All scripts located in package.json script section.
+-Deployment scripts are in deployments folder.
+-every deploy script is independent and can be called directly. The instance of manager, ithil, and oracle provided from data folder.
+-Manager and Vaults are unique. So for each manager you deploy, you can only have one vault for each token. and calling vault for the same manager doesn't redeploy them and only rewrite the previous vaults.
+-other deployment aren't unique and can be called multiple time for the same manager/vaults.
+-static data can be changed inside ./config.ts file
+-tokens are simplified for the frontend and that's the reason for extra none essential properties.
+-manager rewritten multiple time during the deploy:all script and that is fine. it's implemented due to missing data file inside frontend project. so for each instance we rewrite the data, as they can be called directly too.
