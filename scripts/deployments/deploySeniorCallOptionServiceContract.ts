@@ -36,7 +36,7 @@ async function deploySeniorCallOptionServiceContract({
           manager.address,
           GOVERNANCE,
           ithil.address,
-          token.initialPriceForIthil,
+          BigInt(token.initialPriceForIthil),
           oneMonth,
           oneHour,
           3n * oneHour,

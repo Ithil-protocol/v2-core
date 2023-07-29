@@ -15,7 +15,7 @@ export interface MinimalToken {
   decimals: number
   tokenAddress: Address
   oracleAddress: Address
-  initialPriceForIthil: bigint
+  initialPriceForIthil: string
   callOptionAddress: Address
   vaultAddress: Address
 }
