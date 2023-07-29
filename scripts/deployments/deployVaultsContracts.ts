@@ -23,7 +23,8 @@ async function deployVaultsContracts({ isNewDeploy }: DeployVaultsContractsProps
         const contract = await ethers.getContractAt('IERC20', token.tokenAddress)
         await contract.approve(manager.address, 100)
         const vaultAddress = await createVault(manager, token.tokenAddress)
-        return { ...token, vaultAddress }
+        const { initialPriceForIthil, ...restOfTokenProperties } = token
+        return { ...restOfTokenProperties, vaultAddress }
       }),
     )
     console.log(`Created ${tokens.length} vaults for this manager: ${manager.address}`)
