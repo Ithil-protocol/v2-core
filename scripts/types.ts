@@ -1,9 +1,10 @@
 export type Address = `0x${string}`
 
-export type AcceptedAsset = 'USDC' | 'USDT' | 'WETH' | 'WBTC'
+export type AcceptedAsset = 'USDC' | 'USDT' | 'WETH' | 'WBTC' | 'DAI'
 export enum AcceptedAssetEnum {
   USDC = 'USDC',
   USDT = 'USDT',
+  DAI = 'DAI',
   WETH = 'WETH',
   WBTC = 'WBTC',
 }

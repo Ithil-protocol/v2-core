@@ -1,8 +1,14 @@
--All scripts located in package.json script section.
--Deployment scripts are in deployments folder.
--every deploy script is independent and can be called directly. The instance of manager, ithil, and oracle provided from data folder.
--Manager and Vaults are unique. So for each manager you deploy, you can only have one vault for each token. and calling vault for the same manager doesn't redeploy them and only rewrite the previous vaults.
--other deployment aren't unique and can be called multiple time for the same manager/vaults.
--static data can be changed inside ./config.ts file
--tokens are simplified for the frontend and that's the reason for extra none essential properties.
--manager rewritten multiple time during the deploy:all script and that is fine. it's implemented due to missing data file inside frontend project. so for each instance we rewrite the data, as they can be called directly too.
+## Information
+
+This part contains various scripts located in the `package.json` script section. Deployment scripts can be found in the `deployments` folder.
+
+### Deployment Details
+
+- All scripts are located in the package.json script section.
+- Deployment scripts are placed in the deployments folder.
+- Each deploy script is independent and can be directly called. The instances of manager, ithil, and oracle are provided from the data folder.
+- Manager and Vaults are unique. Therefore, for each manager you deploy, you can only have one vault for each token. When calling the vault for the same manager, it won't redeploy them but will only overwrite the previous vaults.
+- Other deployments are not unique and can be called multiple times for the same manager/vaults.
+- Static data can be modified within the ./config.ts file.
+- Tokens are simplified for the frontend, which explains the inclusion of extra non-essential properties.
+- The manager is rewritten multiple times during the deploy:all script, and that is acceptable. This implementation is necessary due to the absence of a data file inside the frontend project. Therefore, for each instance, we rewrite the data as they can also be directly called.
