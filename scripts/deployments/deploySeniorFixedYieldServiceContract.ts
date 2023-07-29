@@ -17,13 +17,7 @@ async function deploySeniorFixedYieldServiceContract({ isNewDeploy }: DeploySeni
   if (isNewDeploy) {
     const manager = await deployManagerContract({ isNewDeploy: false })
     const SeniorFixedYieldService = await ethers.getContractFactory('SeniorFixedYieldService')
-    seniorFixedYieldService = await SeniorFixedYieldService.deploy(
-      'Fixed yield 1m 1%',
-      'FIXED-YIELD-1M1P',
-      manager.address,
-      10n ** 16n,
-      oneDay * 30n,
-    )
+    seniorFixedYieldService = await SeniorFixedYieldService.deploy(manager.address, 10n ** 16n, oneDay * 30n)
 
     await seniorFixedYieldService.deployed()
     console.log(`SeniorFixedYieldService contract deployed to ${seniorFixedYieldService.address}`)

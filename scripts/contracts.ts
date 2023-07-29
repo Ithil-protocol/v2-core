@@ -1,4 +1,4 @@
-import { ethers, tenderly } from 'hardhat'
+import { ethers } from 'hardhat'
 
 import type { AaveService, BalancerService, CreditService, GmxService, Manager } from '../typechain-types'
 import { DEFAULT_MANAGER_CAP, DEFAULT_MANAGER_CAPACITY, GOVERNANCE } from './config'
