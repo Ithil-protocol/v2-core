@@ -26,6 +26,7 @@ async function deployVaultsContracts({ isNewDeploy }: DeployVaultsContractsProps
         return { ...token, vaultAddress }
       }),
     )
+    console.log(`Created ${tokens.length} vaults for this manager: ${manager.address}`)
   } else {
     const data = readFileSync(vaultsJsonDir, 'utf8')
     vaults = JSON.parse(data) as LendingToken[]
