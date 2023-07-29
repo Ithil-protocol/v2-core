@@ -16,6 +16,11 @@ async function deployManagerContract({ isNewDeploy }: DeployManagerContractProps
     manager = await Manager.deploy()
     await manager.deployed()
     console.log(`Manager contract deployed to ${manager.address}`)
+
+    const managerBlockNumber = manager.deployTransaction.blockNumber!.toString()
+    updateJsonProperty(contractJsonDir, 'managerBlockNumber', managerBlockNumber)
+    updateJsonProperty(frontendContractJsonDir, 'managerBlockNumber', managerBlockNumber)
+
     await manager.transferOwnership(GOVERNANCE)
     console.log(`transferred manager ownership to ${GOVERNANCE}`)
   } else {
