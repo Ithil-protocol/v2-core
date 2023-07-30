@@ -25,3 +25,10 @@ export const currentManagerAddress = getJsonProperty(contractJsonDir, 'manager')
 export const currentOracleAddress = getJsonProperty(contractJsonDir, 'oracle')
 export const currentFeeCollectorServiceAddress = getJsonProperty(contractJsonDir, 'feeCollectorService')
 export const currentFixedYieldServiceAddress = getJsonProperty(contractJsonDir, 'fixedYieldService')
+
+export const valueNumbers = {
+  MILLION: 1000000n,
+  THOUSAND: 1000n,
+  HUNDRED: 100n,
+  TEN: 10n,
+}

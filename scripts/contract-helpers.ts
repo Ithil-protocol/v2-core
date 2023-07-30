@@ -1,8 +1,13 @@
 import { BigNumber } from '@ethersproject/bignumber'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
+import axios from 'axios'
 import { ethers } from 'hardhat'
 
-import { type Address, type Replacement } from './types'
+import { faucetList } from './address-list'
+import { useHardhatENV } from './command-helpers'
+import type { Address, MinimalToken, Replacement } from './types'
+
+useHardhatENV()
 
 export const fund = async (address: Address, amount: BigNumber = ethers.utils.parseEther('3')) => {
   const balance = await ethers.provider.getBalance(address)
@@ -57,4 +62,23 @@ export const findStorageSlot = async (address: Address, toFind: Address, scanAmo
   const dataWithoutPrefix = found.value.substring(2)
   const findIdx = dataWithoutPrefix.indexOf(stringToFind)
   return { slot: found.idx, from: findIdx, to: findIdx + stringToFind.length, value: found.value } as Replacement
+}
+
+export const faucetERC20Token = async (token: MinimalToken, accounts: Address[] = faucetList, amount: bigint) => {
+  const url = process.env.TENDERLY_URL!
+  // Do not use Promise.all to avoid rate limit
+  accounts.forEach(async (account) => {
+    const data = {
+      jsonrpc: '2.0',
+      method: 'tenderly_setErc20Balance',
+      params: [token.tokenAddress, account, ethers.utils.hexValue(amount * 10n ** BigInt(token.decimals))],
+      id: '1234',
+    }
+    try {
+      await axios.post(url, data)
+      console.log(`Funded account ${account} with ${amount} ${token.name}`)
+    } catch (error: any) {
+      console.error(`ERROR: couldn't fund account ${account} with ${token.name}`, error.message)
+    }
+  })
 }

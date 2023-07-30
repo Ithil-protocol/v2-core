@@ -91,6 +91,7 @@
     "deploy:feeCollector": "hardhat --network tenderly run scripts/deployments/deployFeeCollectorServiceContract.ts",
     "deploy:manager:vaults": "run-s deploy:manager deploy:vaults",
     "deploy:all:except:manager:vaults": "run-s deploy:ithil deploy:oracle deploy:aave deploy:gmx deploy:callOption deploy:fixedYield deploy:feeCollector",
-    "deploy:all": "run-s deploy:manager deploy:vaults deploy:ithil deploy:oracle deploy:aave deploy:gmx deploy:callOption deploy:fixedYield deploy:feeCollector"
+    "deploy:all": "run-s deploy:manager deploy:vaults deploy:ithil deploy:oracle deploy:aave deploy:gmx deploy:callOption deploy:fixedYield deploy:feeCollector",
+    "faucet": "hardhat --network tenderly run scripts/faucets/faucet.ts"
   }
 }
