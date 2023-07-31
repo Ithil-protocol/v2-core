@@ -7,7 +7,7 @@ import { tokens } from '../tokens'
 useHardhatENV()
 
 async function faucet() {
-  tokens.forEach(async (token) => await faucetERC20Token(token, faucetList, valueNumbers.MILLION))
+  tokens.forEach(async (token) => await faucetERC20Token(token, faucetList, valueNumbers.MILLION * 10n))
 }
 if (require.main === module) {
   // If it's the main entry point, execute the deployManagerContract function
