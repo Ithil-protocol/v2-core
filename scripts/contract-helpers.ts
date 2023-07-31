@@ -66,8 +66,7 @@ export const findStorageSlot = async (address: Address, toFind: Address, scanAmo
 
 export const faucetERC20Token = async (token: MinimalToken, accounts: Address[] = faucetList, amount: bigint) => {
   const url = process.env.TENDERLY_URL!
-  // Do not use Promise.all to avoid rate limit
-  accounts.forEach(async (account) => {
+  for (const account of accounts) {
     const data = {
       jsonrpc: '2.0',
       method: 'tenderly_setErc20Balance',
@@ -80,5 +79,5 @@ export const faucetERC20Token = async (token: MinimalToken, accounts: Address[] 
     } catch (error: any) {
       console.error(`ERROR: couldn't fund account ${account} with ${token.name}`, error.message)
     }
-  })
+  }
 }
