@@ -16,7 +16,7 @@ export interface MinimalToken {
   decimals: number
   tokenAddress: Address
   oracleAddress: Address
-  initialPriceForIthil?: string
+  initialPriceForIthil: string
   callOptionAddress: Address
   vaultAddress: Address
   aaveCollateralTokenAddress: Address

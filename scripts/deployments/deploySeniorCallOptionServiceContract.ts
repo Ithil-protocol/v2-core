@@ -3,7 +3,7 @@ import { ethers } from 'hardhat'
 
 import type { SeniorCallOption } from '../../typechain-types'
 import { rewriteJsonFile, useHardhatENV } from '../command-helpers'
-import { frontendVaultsJsonDir, oneHour, oneMonth, vaultsJsonDir } from '../config'
+import { frontendVaultsJsonDir, oneMinute, oneSecond, vaultsJsonDir } from '../config'
 import { configCreditService } from '../contracts'
 import { tokens } from '../tokens'
 import type { AcceptedAssetEnum, LendingToken, MinimalToken } from '../types'
@@ -35,10 +35,10 @@ async function deploySeniorCallOptionServiceContract({
         const callOptionService = await SeniorCallOption.deploy(
           manager.address,
           ithil.address,
-          BigInt(token.initialPriceForIthil ?? '0'),
-          oneMonth,
-          oneHour,
-          3n * oneHour,
+          BigInt(token.initialPriceForIthil),
+          oneMinute,
+          oneSecond,
+          0n,
           token.tokenAddress,
         )
         await callOptionService.deployed()
