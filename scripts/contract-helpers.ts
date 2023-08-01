@@ -64,8 +64,12 @@ export const findStorageSlot = async (address: Address, toFind: Address, scanAmo
   return { slot: found.idx, from: findIdx, to: findIdx + stringToFind.length, value: found.value } as Replacement
 }
 
-export const faucetERC20Token = async (token: MinimalToken, accounts: Address[] = faucetList, amount: bigint) => {
-  const url = process.env.TENDERLY_URL!
+export const faucetERC20Token = async (
+  token: MinimalToken,
+  accounts: Address[] = faucetList,
+  amount: bigint,
+  url: string,
+) => {
   for (const account of accounts) {
     const data = {
       jsonrpc: '2.0',
