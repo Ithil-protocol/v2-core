@@ -18,8 +18,8 @@ export const DEFAULT_MANAGER_CAP = 10n ** 36n
 
 export const contractJsonDir = getDataDir('contracts.json')
 export const frontendContractJsonDir = getFrontendDir('contracts.json')
-export const vaultsJsonDir = getDataDir('vaults.json')
-export const frontendVaultsJsonDir = getFrontendDir('vaults.json')
+export const vaultsJsonDir = getDataDir('assets.json')
+export const frontendVaultsJsonDir = getFrontendDir('assets.json')
 export const currentAaveServiceAddress = getJsonProperty(contractJsonDir, 'aaveService')
 export const currentGmxServiceAddress = getJsonProperty(contractJsonDir, 'gmxService')
 export const currentIthilAddress = getJsonProperty(contractJsonDir, 'ithil')
