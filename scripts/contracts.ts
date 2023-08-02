@@ -55,11 +55,13 @@ export const configDebitService = async ({
   )
   console.log(`Set capacity for ${serviceTokens.length} tokens for this service: ${service.address}`)
 
-  await Promise.all(
-    serviceTokens.map(
-      async (token) => await service.setRiskParams(token.tokenAddress, BigInt(3e15), BigInt(1e16), BigInt(3 * 86400)),
-    ),
-  )
+  for (const token of serviceTokens) {
+    try {
+      await service.setRiskParams(token.tokenAddress, BigInt(3e15), BigInt(1e16), BigInt(3 * 86400))
+    } catch (error) {
+      console.error(`Failed to set risk params for token: ${token.tokenAddress}`, error)
+    }
+  }
 
   console.log(`Set Risk for ${serviceTokens.length} tokens for this service: ${service.address}`)
 
