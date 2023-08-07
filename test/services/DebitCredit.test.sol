@@ -67,7 +67,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
     address internal immutable ethChainlinkFeed; /* = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612*/
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 110027886;
+    uint256 internal constant blockNumber = 119065280;
 
     uint64[] internal _rewards;
 

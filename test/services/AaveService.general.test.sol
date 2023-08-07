@@ -25,7 +25,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
     uint256 internal loanLength;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 76396000;
+    uint256 internal constant blockNumber = 119065280;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString(rpcUrl), blockNumber);

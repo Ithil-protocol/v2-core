@@ -13,7 +13,7 @@ contract OracleTest is Test {
     address internal constant usdcFeed = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 66047796;
+    uint256 internal constant blockNumber = 119065280;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString(rpcUrl), blockNumber);
@@ -40,6 +40,6 @@ contract OracleTest is Test {
         uint256 price = oracle.getPrice(weth, usdc, 8);
         price /= 1e8;
 
-        assertTrue(price > 1640 && price < 1650);
+        assertTrue(price > 1820 && price < 1830);
     }
 }

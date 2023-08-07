@@ -39,7 +39,7 @@ contract FeeCollectorServiceTest is BaseIntegrationServiceTest {
     Service internal immutable payer;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 55895589;
+    uint256 internal constant blockNumber = 119065280;
 
     IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     address internal constant wethWhale = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
