@@ -1,7 +1,7 @@
 {
-  "name": "@ithil-protocol/v1-core",
+  "name": "@ithil-protocol/v2-core",
   "description": "Core smart contracts for the Ithil protocol",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "license": "BUSL-1.1",
   "keywords": [
     "ithil",
