@@ -18,29 +18,44 @@ contract TokenVestor is ERC20 {
     mapping(address => VestingSchedule) public vestedAmount;
     IERC20 public immutable ithil;
 
+    uint256 internal immutable _minimumVesting;
+
     error NullAllocation();
+    error UserAlreadyVested();
     error TransferNotSupported();
+    error VestingBelowMinimum();
 
     modifier notNull() {
         if (vestedAmount[msg.sender].amount == 0) revert NullAllocation();
         _;
     }
 
-    constructor(address _token) ERC20("magic coin", "MAGIC COIN") {
+    constructor(address _token, uint256 _minimum) ERC20("magic coin", "MAGIC COIN") {
         ithil = IERC20(_token);
+        _minimumVesting = _minimum;
     }
 
     function addAllocation(uint256 amount, uint256 start, uint256 duration, address to) external {
+        if (amount < _minimumVesting) revert VestingBelowMinimum();
+        VestingSchedule memory vesting = vestedAmount[to];
+        // user should not be already vested, even in the past: 1 address - 1 vesting
+        // an attacker invalidating a given address would need to pay the victim, so it will not occur
+        if (vesting.amount >= _minimumVesting) revert UserAlreadyVested();
+        // at this point to prevent reentrancy
+        vestedAmount[to] = VestingSchedule(start, duration, amount, 0);
+        // nothing prevents a caller to vest some ithil to a given address and it's fine
         ithil.safeTransferFrom(msg.sender, address(this), amount);
         _mint(to, amount);
-        vestedAmount[to] = VestingSchedule(start, duration, amount, 0);
     }
 
     function claim() external notNull {
         uint256 toTransfer = claimable(msg.sender);
+        // at this point to prevent reentrancy
         vestedAmount[msg.sender].totalClaimed += toTransfer;
 
         ithil.safeTransfer(msg.sender, toTransfer);
+        // we are sure the claimer has the correct Magic Token amount
+        // because the token is non-transferable
         _burn(msg.sender, toTransfer);
     }
 
@@ -69,10 +84,6 @@ contract TokenVestor is ERC20 {
         address /*recipient*/,
         uint256 /*amount*/
     ) public virtual override returns (bool) {
-        revert TransferNotSupported();
-    }
-
-    function approve(address /*spender*/, uint256 /*amount*/) public virtual override returns (bool) {
         revert TransferNotSupported();
     }
 }
