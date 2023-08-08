@@ -40,8 +40,6 @@ contract SeniorCallOption is CreditService {
     uint64[] internal _rewards;
     address internal immutable _vaultAddress;
 
-    bool internal _reentrancyGuard;
-
     error ZeroAmount();
     error LockPeriodStillActive();
     error MaxLockExceeded();
@@ -99,15 +97,6 @@ contract SeniorCallOption is CreditService {
         _rewards[9] = 1781797436280678609;
         _rewards[10] = 1887748625363386993;
         _rewards[11] = 2000000000000000000;
-
-        _reentrancyGuard = false;
-    }
-
-    modifier nonReentrant() {
-        require(!_reentrancyGuard, "Nice try");
-        _reentrancyGuard = true;
-        _;
-        _reentrancyGuard = false;
     }
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
@@ -166,11 +155,7 @@ contract SeniorCallOption is CreditService {
     // the following must have a reentrancy guard since we do not have token minting
     // therefore we do not have any state variable which prevents an attacker from continuously losing
     // and continuously being refunded by the vault until the min(vaultLiquidity, thisLiquidity) is drained
-    function _close(
-        uint256 tokenID,
-        IService.Agreement memory agreement,
-        bytes memory data
-    ) internal virtual override nonReentrant {
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
         // The position can be closed only after the locking period
         if (block.timestamp < agreement.createdAt + deadline - tenorDuration) revert LockPeriodStillActive();
         // The portion of the loan amount we want to call

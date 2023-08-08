@@ -90,9 +90,10 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
         // Body
         _open(agreement, order.data);
-        _safeMint(msg.sender, id++);
 
         _saveAgreement(agreement);
+
+        _safeMint(msg.sender, id++);
 
         emit PositionOpened(id, msg.sender, agreement);
     }

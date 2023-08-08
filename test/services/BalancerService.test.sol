@@ -71,7 +71,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
     // address internal constant weightedMath = 0x37aaA5c2925b6A30D76a3D4b6C7D2a9137F02dc2;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 76395332;
+    uint256 internal constant blockNumber = 119065280;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);

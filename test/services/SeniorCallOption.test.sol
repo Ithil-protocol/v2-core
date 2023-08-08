@@ -22,9 +22,24 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
     address internal constant weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 76395332;
+    uint256 internal constant blockNumber = 119065280;
+
+    uint64[] internal _rewards;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
+        _rewards = new uint64[](12);
+        _rewards[0] = 1059463094359295265;
+        _rewards[1] = 1122462048309372981;
+        _rewards[2] = 1189207115002721067;
+        _rewards[3] = 1259921049894873165;
+        _rewards[4] = 1334839854170034365;
+        _rewards[5] = 1414213562373095049;
+        _rewards[6] = 1498307076876681499;
+        _rewards[7] = 1587401051968199475;
+        _rewards[8] = 1681792830507429086;
+        _rewards[9] = 1781797436280678609;
+        _rewards[10] = 1887748625363386993;
+        _rewards[11] = 2000000000000000000;
         vm.startPrank(admin);
         ithil = new Ithil(admin);
         loanLength = 1;
@@ -67,9 +82,15 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         IService.Order memory order = _openOrder1ForCredit(daiLoan, 0, block.timestamp, abi.encode(7));
         service.open(order);
 
+        uint256 initialPrice = service.currentPrice();
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
 
-        // TODO: check price change and allocations
+        // no fees, thus deposited amount and collaterals[0] are the same (vault 1:1 with underlying)
+        assertEq(collaterals[0].amount, order.agreement.loans[0].amount);
+        // due to the bump in the option price, we expect actual amount to be less than the virtual amount
+        assertLe(collaterals[1].amount, (order.agreement.loans[0].amount * _rewards[7]) / initialPrice);
+        // price was bumped by at least the allocation percentage (virtually) bougth
+        assertGe(service.currentPrice(), initialPrice);
     }
 
     function testSCOClosePosition(uint256 daiAmount, uint256 daiLoan) public {

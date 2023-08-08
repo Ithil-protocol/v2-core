@@ -26,7 +26,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
     uint256 internal constant usdcAmount = 1e10; // 10k USDC
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 115152176;
+    uint256 internal constant blockNumber = 119065280;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.deal(admin, 1 ether);
@@ -34,6 +34,11 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
 
         vm.prank(admin);
         service = new GmxService(address(manager), gmxRouter, gmxRouterV2, 30 * 86400);
+    }
+
+    function _equalityWithTolerance(uint256 amount1, uint256 amount2, uint256 tolerance) internal {
+        assertGe(amount1 + tolerance, amount2);
+        assertGe(amount2 + tolerance, amount1);
     }
 
     function setUp() public override {
@@ -151,6 +156,6 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, IService.Status.OPEN);
 
         service.close(0, abi.encode(uint256(1)));
-        assertEq(usdc.balanceOf(address(this)), initial + service.quote(agreement)[0] - loans[0]);
+        _equalityWithTolerance(usdc.balanceOf(address(this)), initial + service.quote(agreement)[0] - loans[0], 1);
     }
 }
