@@ -61,15 +61,21 @@ contract Manager is IManager, Ownable {
         emit CapWasUpdated(service, token, percentageCap, absoluteCap);
     }
 
-    function setFeeUnlockTime(address token, uint256 feeUnlockTime) external override onlyOwner {
-        IVault(vaults[token]).setFeeUnlockTime(feeUnlockTime);
+    function setFeeUnlockTime(address vaultToken, uint256 feeUnlockTime) external override onlyOwner {
+        assert(vaults[vaultToken] != address(0));
+
+        IVault(vaults[vaultToken]).setFeeUnlockTime(feeUnlockTime);
     }
 
     function sweep(address vaultToken, address spuriousToken, address to) external onlyOwner {
+        assert(vaults[vaultToken] != address(0));
+
         IVault(vaults[vaultToken]).sweep(to, spuriousToken);
     }
 
     function toggleVaultLock(address vaultToken) external onlyOwner {
+        assert(vaults[vaultToken] != address(0));
+
         IVault(vaults[vaultToken]).toggleLock();
     }
 
