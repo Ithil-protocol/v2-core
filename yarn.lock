@@ -898,9 +898,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ithil-protocol/v1-core@workspace:.":
+"@ithil-protocol/v2-core@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@ithil-protocol/v1-core@workspace:."
+  resolution: "@ithil-protocol/v2-core@workspace:."
   dependencies:
     "@commitlint/cli": ^17.6.5
     "@commitlint/config-conventional": ^17.6.5

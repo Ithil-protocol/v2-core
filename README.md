@@ -39,8 +39,8 @@ Prerequisites for this project are:
 To get a copy of the source
 
 ```bash
-git clone https://github.com/Ithil-protocol/v1-core
-cd v1-core
+git clone https://github.com/Ithil-protocol/v2-core
+cd v2-core
 forge install
 ```
 
