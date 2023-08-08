@@ -10,11 +10,12 @@ abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
     mapping(address => uint256) public minMargin;
-    // Liquidator is initialized to be the contract's owner, but it can be set
-    address public liquidator = owner();
+    // If liquidator is not initialized, then liquidation is permissionless
+    address public liquidator;
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();
+    error OnlyLiquidator();
     error LossByArbitraryAddress();
 
     function setMinMargin(address token, uint256 margin) external onlyOwner {
@@ -110,10 +111,10 @@ abstract contract DebitService is Service, BaseRiskModel {
             uint256 liquidatorReward;
             if (agreementOwner != msg.sender) {
                 // Liquidations can produce a loss either to the user or to the vault, or both
-                // Only the liquidator can produce a loss via a liquidation
+                // If the liquidator is initialized, only the liquidator can produce a loss via a liquidation
                 // This protects the service from virtually any attack coming from quoter manipulations
                 // and/or hacks on the target protocol which cause a temporary state change (read-only reentrancy)
-                if (msg.sender != liquidator) revert LossByArbitraryAddress();
+                if (msg.sender != liquidator && liquidator != address(0)) revert OnlyLiquidator();
                 // This can either be due to score > 0 or deadline exceeded
                 // we give 5% of the user's margin as liquidation fee
                 liquidatorReward = agreement.loans[index].margin / 20;
@@ -124,6 +125,13 @@ abstract contract DebitService is Service, BaseRiskModel {
 
                 emit LiquidationTriggered(tokenID, agreement.loans[index].token, msg.sender, liquidatorReward);
             }
+
+            // If the obtained amount (net of liquidator reward) is less than the loan, closing would produce a loss
+            // This is blocked even for the agreementOwner, which could otherwise accept a loss for a gain elsewhere
+            // We instead allow the user to liquidate its own position without vault loss
+            // Because it is not a vulnerability even if the user manipulated the quoter on purpose to experience a loss
+            if (obtained[index] < agreement.loans[index].amount && msg.sender != liquidator && liquidator != address(0))
+                revert LossByArbitraryAddress();
 
             // repay the vault
             uint256 repaidAmount = obtained[index] > dueFees[index] + agreement.loans[index].amount
