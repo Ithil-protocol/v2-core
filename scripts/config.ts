@@ -10,14 +10,16 @@ export const GOVERNANCE = '0x7778f7b568023379697451da178326D27682ADb8'
 export const oneMonth = 3600n * 24n * 30n // 30 days expressed in seconds
 export const oneDay = 24n * 60n * 60n // in seconds
 export const oneHour = 3600n // in seconds
+export const oneMinute = 60n // in seconds
+export const oneSecond = 1n // in seconds
 
 export const DEFAULT_MANAGER_CAPACITY = 10n ** 18n
 export const DEFAULT_MANAGER_CAP = 10n ** 36n
 
 export const contractJsonDir = getDataDir('contracts.json')
 export const frontendContractJsonDir = getFrontendDir('contracts.json')
-export const vaultsJsonDir = getDataDir('vaults.json')
-export const frontendVaultsJsonDir = getFrontendDir('vaults.json')
+export const vaultsJsonDir = getDataDir('assets.json')
+export const frontendVaultsJsonDir = getFrontendDir('assets.json')
 export const currentAaveServiceAddress = getJsonProperty(contractJsonDir, 'aaveService')
 export const currentGmxServiceAddress = getJsonProperty(contractJsonDir, 'gmxService')
 export const currentIthilAddress = getJsonProperty(contractJsonDir, 'ithil')
@@ -25,3 +27,10 @@ export const currentManagerAddress = getJsonProperty(contractJsonDir, 'manager')
 export const currentOracleAddress = getJsonProperty(contractJsonDir, 'oracle')
 export const currentFeeCollectorServiceAddress = getJsonProperty(contractJsonDir, 'feeCollectorService')
 export const currentFixedYieldServiceAddress = getJsonProperty(contractJsonDir, 'fixedYieldService')
+
+export const valueNumbers = {
+  MILLION: 1000000n,
+  THOUSAND: 1000n,
+  HUNDRED: 100n,
+  TEN: 10n,
+}

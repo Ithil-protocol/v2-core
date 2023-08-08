@@ -20,6 +20,6 @@ This part contains various scripts located in the `package.json` script section.
 
 # Correct order of invocation
 
-- faucet (addresses needs money)
-- deploy (deploys contracts)
-- fill-vaults (vaults need tokens)
+- faucet (addresses needs money) / run hardhat:faucet:tenderly
+- deploy (deploys contracts) run deploy:manager, deploy:vaults, ...
+- fill-vaults (vaults need tokens) run hardhat:vaults:tenderly

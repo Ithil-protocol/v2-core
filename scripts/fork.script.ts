@@ -8,9 +8,9 @@ const { TENDERLY_USER, TENDERLY_PROJECT, TENDERLY_ACCESS_KEY } = process.env
 const TENDERLY_FORK_API = `https://api.tenderly.co/api/v1/account/${TENDERLY_USER!}/project/${TENDERLY_PROJECT!}/fork`
 const body = {
   network_id: '42161', // network you wish to fork
-  block_number: 111127539,
+  block_number: 116901153,
   chain_config: {
-    chain_id: 98745, // chain_id used in the forked environment
+    chain_id: 54789, // chain_id used in the forked environment
   },
 }
 
