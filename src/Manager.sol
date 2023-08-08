@@ -63,7 +63,7 @@ contract Manager is IManager, Ownable {
 
     function setFeeUnlockTime(address vaultToken, uint256 feeUnlockTime) external override onlyOwner {
         assert(vaults[vaultToken] != address(0));
-    
+
         IVault(vaults[vaultToken]).setFeeUnlockTime(feeUnlockTime);
     }
 
