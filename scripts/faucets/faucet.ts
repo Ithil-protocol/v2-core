@@ -7,26 +7,23 @@ import { valueNumbers } from '../config'
 import { faucetERC20Token } from '../contract-helpers'
 import { tokens } from '../tokens'
 
-// YOUR WALLET
-const YOUR_WALLET = '0x....'
-
 useHardhatENV()
 const url = process.env.TENDERLY_URL!
 async function faucet() {
-  tokens.forEach(async (token) => await faucetERC20Token(token, [YOUR_WALLET], valueNumbers.THOUSAND, url))
+  tokens.forEach(async (token) => await faucetERC20Token(token, faucetList, valueNumbers.THOUSAND * 100n, url))
 
   try {
-    const ethAmount = valueNumbers.THOUSAND
+    const ethAmount = valueNumbers.THOUSAND * 10n ** 18n
     const requestData = {
       jsonrpc: '2.0',
       method: 'tenderly_addBalance',
-      params: [[YOUR_WALLET], ethers.utils.hexValue(ethAmount)],
+      params: [faucetList, ethers.utils.hexValue(ethAmount)],
       id: '1234',
     }
 
     await axios.post(url, requestData)
 
-    console.log(`Funded ${faucetList.length} accounts with ${ethAmount} ETH`)
+    console.log(`Funded ${faucetList.length} accounts with ${ethAmount / 10n ** 18n} ETH`)
   } catch (error: any) {
     console.error(`ERROR: couldn't fund accounts with ETH`, error.message)
   }
