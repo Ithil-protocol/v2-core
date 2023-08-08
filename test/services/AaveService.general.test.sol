@@ -40,6 +40,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         vm.startPrank(admin);
         manager = IManager(new Manager());
         service = new AaveService(address(manager), aavePool, 30 * 86400);
+        service.setLiquidator(liquidator);
         vm.stopPrank();
     }
 
