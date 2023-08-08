@@ -105,7 +105,7 @@ abstract contract DebitService is Service, BaseRiskModel {
             if (agreementOwner != msg.sender) {
                 // This can either due to score > 0 or deadline exceeded
                 // we give 5% of the user's margin as liquidation fee
-                if (score > 0) liquidatorReward = agreement.loans[index].margin / 20;
+                liquidatorReward = agreement.loans[index].margin / 20;
                 // We cap further the liquidation reward with the obtained amount (no cross-position rewarding)
                 // This also prevents the following transfer to revert
                 liquidatorReward = liquidatorReward < obtained[index] ? liquidatorReward : obtained[index];
