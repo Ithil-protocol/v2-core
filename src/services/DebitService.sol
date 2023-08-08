@@ -10,6 +10,7 @@ abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
     mapping(address => uint256) public minMargin;
+    address public liquidator;
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();
@@ -17,6 +18,10 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     function setMinMargin(address token, uint256 margin) external onlyOwner {
         minMargin[token] = margin;
+    }
+
+    function setLiquidator(address _liquidator) external onlyOwner {
+        liquidator = _liquidator;
     }
 
     /// @dev Defaults to amount + margin * (ir + riskSpread) / 1e18
@@ -103,7 +108,12 @@ abstract contract DebitService is Service, BaseRiskModel {
             // if the liquidable position is closed by its owner, it is *not* considered a liquidation event
             uint256 liquidatorReward;
             if (agreementOwner != msg.sender) {
-                // This can either due to score > 0 or deadline exceeded
+                // Liquidations can produce a loss either to the user or to the vault, or both
+                // Only the liquidator can produce a loss via a liquidation
+                // This protects the service from virtually any attack coming from quoter manipulations
+                // and/or hacks on the target protocol which cause a temporary state change (read-only reentrancy)
+                if (msg.sender != liquidator) revert LossByArbitraryAddress();
+                // This can either be due to score > 0 or deadline exceeded
                 // we give 5% of the user's margin as liquidation fee
                 liquidatorReward = agreement.loans[index].margin / 20;
                 // We cap further the liquidation reward with the obtained amount (no cross-position rewarding)
@@ -113,13 +123,6 @@ abstract contract DebitService is Service, BaseRiskModel {
 
                 emit LiquidationTriggered(tokenID, agreement.loans[index].token, msg.sender, liquidatorReward);
             }
-
-            // If the obtained amount (net of liquidator reward) is less than the loan, closing would produce a loss
-            // Only the owner of the contract can produce a loss via a liquidation
-            // This protects the vault from virtually any attack coming from quoter manipulations
-            // and/or hacks on the target protocol which cause a temporary state change
-            if (obtained[index] < agreement.loans[index].amount && msg.sender != owner())
-                revert LossByArbitraryAddress();
 
             // repay the vault
             uint256 repaidAmount = obtained[index] > dueFees[index] + agreement.loans[index].amount
