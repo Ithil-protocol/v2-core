@@ -10,7 +10,8 @@ abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
 
     mapping(address => uint256) public minMargin;
-    address public liquidator;
+    // Liquidator is initialized to be the contract's owner, but it can be set
+    address public liquidator = owner();
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
     error MarginTooLow();
