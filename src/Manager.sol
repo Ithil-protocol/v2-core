@@ -79,7 +79,6 @@ contract Manager is IManager, Ownable {
         IVault(vaults[vaultToken]).toggleLock();
     }
 
-    /// @inheritdoc IManager
     function borrow(
         address token,
         uint256 amount,
@@ -106,7 +105,6 @@ contract Manager is IManager, Ownable {
         return (freeLiquidity, netLoans + loan);
     }
 
-    /// @inheritdoc IManager
     function repay(
         address token,
         uint256 amount,
