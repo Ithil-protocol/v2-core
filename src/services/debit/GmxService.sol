@@ -87,22 +87,26 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
             address(this)
         );
 
-        uint256 wethBalance = weth.balanceOf(address(this));
+        uint256 initialBalance = weth.balanceOf(address(this));
         router.handleRewards(false, false, false, false, false, true, false);
         // register rewards
-        uint256 newRewards = totalRewards + (weth.balanceOf(address(this)) - wethBalance);
+        uint256 finalBalance = weth.balanceOf(address(this));
+        uint256 newRewards = totalRewards + (finalBalance - initialBalance);
         // calculate share of rewards to give to the user
         uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * agreement.collaterals[0].amount) /
             totalCollateral;
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
-        uint256 toTransfer = totalWithdraw - virtualDeposit[tokenID];
+        // Due to integer arithmetic, we may get underflow if we do not make checks
+        uint256 toTransfer = totalWithdraw >= virtualDeposit[tokenID] + (finalBalance - initialBalance)
+            ? totalWithdraw - virtualDeposit[tokenID]
+            : 0;
         // delete virtual deposits
         totalVirtualDeposits -= virtualDeposit[tokenID];
         delete virtualDeposit[tokenID];
         // update totalRewards and totalCollateral
         totalRewards = newRewards - toTransfer;
         totalCollateral -= agreement.collaterals[0].amount;
-        // Transfer weth
+        // Transfer weth: since toTransfer <= totalWithdraw
         weth.safeTransfer(msg.sender, toTransfer);
     }
 
