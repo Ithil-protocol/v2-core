@@ -17,7 +17,7 @@
 > Ithil is a financial interoperability layer that connects the whole web3 space facilitating new value creation via
 > crowdlending.
 
-This repository contains the core smart contracts for Ithil V1.
+This repository contains the core smart contracts for Ithil V2.
 
 ## Key Features
 
