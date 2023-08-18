@@ -176,7 +176,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         tokens[0] = address(usdc);
 
         uint256[] memory loans = new uint256[](1);
-        loans[0] = loanAmount % usdcAmount;
+        loans[0] = loanAmount % 1e9;
 
         uint256[] memory margins = new uint256[](1);
         margins[0] = margin;
@@ -204,7 +204,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         service.open(order);
     }
 
-    function _generalOpen(
+    function _generalOpenEth(
         uint256 loanAmount,
         uint256 margin,
         uint128 extraCollateral,
@@ -216,6 +216,28 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         margin = (margin % 9e17) + 1e17;
         service.tweakState(extraCollateral);
         _openGmxEth(loanAmount, margin);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(index);
+
+        // state changes as expected
+        assertEq(service.totalCollateral(), initialCollateral + extraCollateral + collaterals[0].amount);
+        uint256 virtualDeposit = (collaterals[0].amount * (service.totalRewards() + initialVD)) /
+            (initialCollateral + collaterals[0].amount);
+        assertEq(service.totalVirtualDeposits(), initialVD + virtualDeposit);
+        return (uint128(collaterals[0].amount), uint128(virtualDeposit));
+    }
+
+    function _generalOpenUsdc(
+        uint256 loanAmount,
+        uint256 margin,
+        uint128 extraCollateral,
+        uint256 index
+    ) internal returns (uint128, uint128) {
+        // test fuzzy to check opening a position is successful for any initial state
+        uint256 initialCollateral = service.totalCollateral();
+        uint256 initialVD = service.totalVirtualDeposits();
+        margin = (margin % 9e7) + 1e8;
+        service.tweakState(extraCollateral);
+        _openGmxUsdc(loanAmount, margin);
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(index);
 
         // state changes as expected
@@ -257,7 +279,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         return uint128(modifiedAmount % (1 << 128));
     }
 
-    function testGeneralClose(
+    function testGeneralCloseEth(
         uint256 loanAmount,
         uint256 margin,
         uint128 extraCollateral,
@@ -269,11 +291,50 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint128[] memory collaterals = new uint128[](3);
         uint128[] memory virtualDeposits = new uint128[](3);
         // open three positions and modify state in a random way each time
-        (collaterals[0], virtualDeposits[0]) = _generalOpen(loanAmount, margin, extraCollateral, 0);
+        (collaterals[0], virtualDeposits[0]) = _generalOpenEth(loanAmount, margin, extraCollateral, 0);
         extraCollateral = _modifyAmount(extraCollateral, seed);
-        (collaterals[1], virtualDeposits[1]) = _generalOpen(loanAmount, margin, extraCollateral, 1);
+        (collaterals[1], virtualDeposits[1]) = _generalOpenEth(loanAmount, margin, extraCollateral, 1);
         extraCollateral = _modifyAmount(extraCollateral, seed);
-        (collaterals[2], virtualDeposits[2]) = _generalOpen(loanAmount, margin, extraCollateral, 2);
+        (collaterals[2], virtualDeposits[2]) = _generalOpenEth(loanAmount, margin, extraCollateral, 2);
+        // close the three positions in a random order, always modifying the state
+        service.tweakState(extraCollateral);
+        fakeCollateral =
+            fakeCollateral %
+            (uint128(service.totalCollateral()) - collaterals[0] - collaterals[1] - collaterals[2] + 1);
+        virtualDeposit =
+            virtualDeposit %
+            (uint128(service.totalVirtualDeposits()) -
+                virtualDeposits[0] -
+                virtualDeposits[1] -
+                virtualDeposits[2] +
+                1);
+        service.fakeClose(fakeCollateral, virtualDeposit);
+        mockRouter.setAmount(uint256(reward));
+        uint256 index = seed % 3;
+        service.close(index, abi.encode(1));
+        index = (index + 1) % 3;
+        service.close(index, abi.encode(1));
+        index = (index + 1) % 3;
+        service.close(index, abi.encode(1));
+    }
+
+    function testGeneralCloseUsdc(
+        uint256 loanAmount,
+        uint256 margin,
+        uint128 extraCollateral,
+        uint128 fakeCollateral,
+        uint128 virtualDeposit,
+        uint128 reward,
+        uint256 seed
+    ) public {
+        uint128[] memory collaterals = new uint128[](3);
+        uint128[] memory virtualDeposits = new uint128[](3);
+        // open three positions and modify state in a random way each time
+        (collaterals[0], virtualDeposits[0]) = _generalOpenUsdc(loanAmount, margin, extraCollateral, 0);
+        extraCollateral = _modifyAmount(extraCollateral, seed);
+        (collaterals[1], virtualDeposits[1]) = _generalOpenUsdc(loanAmount, margin, extraCollateral, 1);
+        extraCollateral = _modifyAmount(extraCollateral, seed);
+        (collaterals[2], virtualDeposits[2]) = _generalOpenUsdc(loanAmount, margin, extraCollateral, 2);
         // close the three positions in a random order, always modifying the state
         service.tweakState(extraCollateral);
         fakeCollateral =
