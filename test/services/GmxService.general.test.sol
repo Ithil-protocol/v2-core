@@ -41,6 +41,32 @@ contract ManualGmx is GmxService {
             totalVirtualDeposits += (collateral * (totalRewards + totalVirtualDeposits)) / totalCollateral;
         }
     }
+
+    // we can simulate the closure of a position with this, with a caveat:
+    // we should be sure to leave at least the known positions' collaterals (otherwise it's inconsistent)
+    // also, the mock router has a fixed reward which must change in a fuzzy way to increase test power
+    function fakeClose(uint128 collateral, uint128 virtualDeposit) external {
+        uint256 initialBalance = weth.balanceOf(address(this));
+        router.handleRewards(false, false, false, false, false, true, false);
+        // register rewards
+        uint256 finalBalance = weth.balanceOf(address(this));
+        uint256 newRewards = totalRewards + (finalBalance - initialBalance);
+        // calculate share of rewards to give to the user
+        uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * collateral) / totalCollateral;
+        // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
+        // Due to integer arithmetic, we may get underflow if we do not make checks
+        uint256 toTransfer = totalWithdraw >= virtualDeposit
+            ? totalWithdraw - virtualDeposit <= finalBalance ? totalWithdraw - virtualDeposit : finalBalance
+            : 0;
+        // delete virtual deposits
+        totalVirtualDeposits -= virtualDeposit;
+        delete virtualDeposit;
+        // update totalRewards and totalCollateral
+        totalRewards = newRewards - toTransfer;
+        totalCollateral -= collateral;
+        // Transfer weth: since toTransfer <= totalWithdraw
+        weth.transfer(msg.sender, toTransfer);
+    }
 }
 
 contract GmxServiceTest is BaseIntegrationServiceTest {
@@ -183,7 +209,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256 margin,
         uint128 extraCollateral,
         uint256 index
-    ) internal returns (uint256, uint256) {
+    ) internal returns (uint128, uint128) {
         // test fuzzy to check opening a position is successful for any initial state
         uint256 initialCollateral = service.totalCollateral();
         uint256 initialVD = service.totalVirtualDeposits();
@@ -197,7 +223,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256 virtualDeposit = (collaterals[0].amount * (service.totalRewards() + initialVD)) /
             (initialCollateral + collaterals[0].amount);
         assertEq(service.totalVirtualDeposits(), initialVD + virtualDeposit);
-        return (collaterals[0].amount, virtualDeposit);
+        return (uint128(collaterals[0].amount), uint128(virtualDeposit));
     }
 
     function _modifyAmount(uint256 amount, uint256 seed) internal pure returns (uint128) {
@@ -235,11 +261,13 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256 loanAmount,
         uint256 margin,
         uint128 extraCollateral,
+        uint128 fakeCollateral,
+        uint128 virtualDeposit,
         uint128 reward,
         uint256 seed
     ) public {
-        uint256[] memory collaterals = new uint256[](3);
-        uint256[] memory virtualDeposits = new uint256[](3);
+        uint128[] memory collaterals = new uint128[](3);
+        uint128[] memory virtualDeposits = new uint128[](3);
         // open three positions and modify state in a random way each time
         (collaterals[0], virtualDeposits[0]) = _generalOpen(loanAmount, margin, extraCollateral, 0);
         extraCollateral = _modifyAmount(extraCollateral, seed);
@@ -248,6 +276,17 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         (collaterals[2], virtualDeposits[2]) = _generalOpen(loanAmount, margin, extraCollateral, 2);
         // close the three positions in a random order, always modifying the state
         service.tweakState(extraCollateral);
+        fakeCollateral =
+            fakeCollateral %
+            (uint128(service.totalCollateral()) - collaterals[0] - collaterals[1] - collaterals[2] + 1);
+        virtualDeposit =
+            virtualDeposit %
+            (uint128(service.totalVirtualDeposits()) -
+                virtualDeposits[0] -
+                virtualDeposits[1] -
+                virtualDeposits[2] +
+                1);
+        service.fakeClose(fakeCollateral, virtualDeposit);
         mockRouter.setAmount(uint256(reward));
         uint256 index = seed % 3;
         service.close(index, abi.encode(1));
