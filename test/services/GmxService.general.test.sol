@@ -300,14 +300,13 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         service.tweakState(extraCollateral);
         fakeCollateral =
             fakeCollateral %
-            (uint128(service.totalCollateral()) - collaterals[0] - collaterals[1] - collaterals[2] + 1);
+            uint128((service.totalCollateral() - collaterals[0] - collaterals[1] - collaterals[2] + 1) % (1 << 128));
         virtualDeposit =
             virtualDeposit %
-            (uint128(service.totalVirtualDeposits()) -
-                virtualDeposits[0] -
-                virtualDeposits[1] -
-                virtualDeposits[2] +
-                1);
+            uint128(
+                (service.totalVirtualDeposits() - virtualDeposits[0] - virtualDeposits[1] - virtualDeposits[2] + 1) %
+                    (1 << 128)
+            );
         service.fakeClose(fakeCollateral, virtualDeposit);
         mockRouter.setAmount(uint256(reward));
         uint256 index = seed % 3;
@@ -339,14 +338,13 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         service.tweakState(extraCollateral);
         fakeCollateral =
             fakeCollateral %
-            (uint128(service.totalCollateral()) - collaterals[0] - collaterals[1] - collaterals[2] + 1);
+            uint128((service.totalCollateral() - collaterals[0] - collaterals[1] - collaterals[2] + 1) % (1 << 128));
         virtualDeposit =
             virtualDeposit %
-            (uint128(service.totalVirtualDeposits()) -
-                virtualDeposits[0] -
-                virtualDeposits[1] -
-                virtualDeposits[2] +
-                1);
+            uint128(
+                (service.totalVirtualDeposits() - virtualDeposits[0] - virtualDeposits[1] - virtualDeposits[2] + 1) %
+                    (1 << 128)
+            );
         service.fakeClose(fakeCollateral, virtualDeposit);
         mockRouter.setAmount(uint256(reward));
         uint256 index = seed % 3;
