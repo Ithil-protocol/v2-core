@@ -65,7 +65,7 @@ contract AaveScenarioTest is Test, IERC721Receiver {
         collaterals[0] = IService.Collateral(IService.ItemType.ERC20, collateralTokens[0], 0, collateral);
         IService.Agreement memory agreement = IService.Agreement(loans, collaterals, 0, IService.Status.OPEN);
         IService.Order memory order = IService.Order(agreement, abi.encode(0));
-        
+
         // uint256 freeLiquidity = vaults[0].freeLiquidity();
         // console2.log("freeLiquidity", freeLiquidity);
         // (, bytes memory data) = address(aaveService).staticcall(
