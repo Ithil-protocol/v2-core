@@ -44,9 +44,27 @@ contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
         service.open(order);
     }
 
-    function testFYSClosePosition(uint256 daiAmount, uint256 daiLoan) public {
+    function testFYSClosePositionWithGain(uint256 daiAmount, uint256 daiLoan) public {
         testFYSOpenPosition(daiAmount, daiLoan);
-        (IService.Loan[] memory loans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        vm.startPrank(whales[loanTokens[0]]);
+        uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
+        IERC20(loanTokens[0]).transfer(manager.vaults(loanTokens[0]), whaleBalance / 2);
+        vm.stopPrank();
+        uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
+        if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
+            service.close(0, abi.encode(0));
+        } else service.close(0, abi.encode(0));
+    }
+
+    function testFYSClosePositionWithLoss(uint256 daiAmount, uint256 daiLoan) public {
+        testFYSOpenPosition(daiAmount, daiLoan);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        vm.startPrank(manager.vaults(loanTokens[0]));
+        uint256 vaultBalance = IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0]));
+        IERC20(loanTokens[0]).transfer(whales[loanTokens[0]], vaultBalance / 2);
+        vm.stopPrank();
         uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));

@@ -52,28 +52,30 @@ contract SeniorFixedYieldService is CreditService {
 
         uint256 minAmountOut = abi.decode(data, (uint256));
 
-        // redeem mechanism: we first redeem everything
-        uint256 transfered = vault.redeem(agreement.collaterals[0].amount, owner, address(this));
-        if (transfered < minAmountOut) revert SlippageExceeded();
+        // redeem mechanism: we first redeem everything and transfer proceedings here
+        uint256 redeemed = vault.redeem(agreement.collaterals[0].amount, address(this), address(this));
+        if (redeemed < minAmountOut) revert SlippageExceeded();
         uint256 toTransfer = dueAmount(agreement, data);
 
-        if (toTransfer > transfered) {
+        if (toTransfer > redeemed) {
             // Since this service is senior, we need to pay the user even if redeemable is too low
             // To do this, we take liquidity from the vault and register the loss (no loan)
             uint256 freeLiquidity = vault.freeLiquidity() - 1;
             if (freeLiquidity > 0) {
                 manager.borrow(
                     agreement.loans[0].token,
-                    toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered,
+                    toTransfer - redeemed > freeLiquidity ? freeLiquidity : toTransfer - redeemed,
                     0,
                     owner
                 );
             }
+            toTransfer = redeemed;
         } else {
             // In the ideal case when the amount to transfer is less than the maximum redeemable
             // we generate a profit by repaying the Vault of the difference, thus creating a "boost"
-            manager.repay(agreement.loans[0].token, transfered - toTransfer, 0, address(this));
+            manager.repay(agreement.loans[0].token, redeemed - toTransfer, 0, address(this));
         }
+        IERC20(agreement.loans[0].token).transfer(owner, toTransfer);
     }
 
     function dueAmount(
