@@ -10,8 +10,6 @@ import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { SeniorFixedYieldService } from "../../src/services/credit/SeniorFixedYieldService.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 contract SFYScenarioTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
 
