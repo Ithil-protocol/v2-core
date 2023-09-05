@@ -31,7 +31,6 @@ contract SFYScenarioTest is Test, IERC721Receiver {
         collateralTokens[0] = 0x8b002cf7380403329627149aA3D730E633BF1D33;
         vaults[0] = IVault(0x8b002cf7380403329627149aA3D730E633BF1D33);
         vm.selectFork(forkId);
-        vm.prank(admin);
     }
 
     function onERC721Received(
