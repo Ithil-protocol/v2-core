@@ -177,14 +177,6 @@ contract SeniorCallOption is CreditService {
         );
         uint256 toBorrow;
         uint256 freeLiquidity;
-        if (toTransfer > transfered) {
-            // Since this service is senior, we need to pay the user even if withdraw amount is too low
-            // To do this, we take liquidity from the vault and register the loss
-            // If we incur a loss and the freeLiquidity is not enough, we cannot make the exit fail
-            // Otherwise we would have positions impossible to close: thus we withdraw what we can
-            freeLiquidity = vault.freeLiquidity() - 1;
-            toBorrow = toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered;
-        }
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount)
             vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
@@ -194,6 +186,14 @@ contract SeniorCallOption is CreditService {
             ownerAddress,
             address(this)
         );
+        if (toTransfer > transfered) {
+            // Since this service is senior, we need to pay the user even if withdraw amount is too low
+            // To do this, we take liquidity from the vault and register the loss
+            // If we incur a loss and the freeLiquidity is not enough, we cannot make the exit fail
+            // Otherwise we would have positions impossible to close: thus we withdraw what we can
+            freeLiquidity = vault.freeLiquidity() - 1;
+            toBorrow = toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered;
+        }
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
         ithil.safeTransfer(ownerAddress, toCall);
         // repay the user's losses
