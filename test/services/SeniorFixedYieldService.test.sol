@@ -9,15 +9,15 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
-import { SeniorFixedYieldService } from "../../src/services/credit/SeniorFixedYieldService.sol";
+import { FixedYieldService } from "../../src/services/credit/FixedYieldService.sol";
 import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
+contract FixedYieldServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
-    SeniorFixedYieldService internal immutable service;
+    FixedYieldService internal immutable service;
     address internal constant weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
@@ -25,7 +25,7 @@ contract SeniorFixedYieldServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new SeniorFixedYieldService(address(manager), 1e16, 86400 * 30);
+        service = new FixedYieldService(address(manager), 1e16, 86400 * 30);
 
         loanLength = 1;
         loanTokens = new address[](loanLength);

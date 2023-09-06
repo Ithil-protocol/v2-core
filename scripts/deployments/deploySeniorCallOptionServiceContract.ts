@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import { ethers } from 'hardhat'
 
-import type { SeniorCallOption } from '../../typechain-types'
+import type { CallOption } from '../../typechain-types'
 import { rewriteJsonFile, useHardhatENV } from '../command-helpers'
 import { frontendVaultsJsonDir, oneMinute, oneSecond, vaultsJsonDir } from '../config'
 import { configCreditService } from '../contracts'
@@ -11,28 +11,28 @@ import { deployIthilContract } from './deployIthilContract'
 import { deployManagerContract } from './deployManagerContract'
 
 useHardhatENV()
-interface DeploySeniorCallOptionServiceContractProps {
+interface DeployCallOptionServiceContractProps {
   isNewDeploy: boolean
   callOptionTokens: MinimalToken[]
 }
 
 type AllCallOptions = {
-  [key in AcceptedAssetEnum]?: SeniorCallOption
+  [key in AcceptedAssetEnum]?: CallOption
 }
-async function deploySeniorCallOptionServiceContract({
+async function deployCallOptionServiceContract({
   isNewDeploy,
   callOptionTokens,
-}: DeploySeniorCallOptionServiceContractProps) {
+}: DeployCallOptionServiceContractProps) {
   const allCallOptions: AllCallOptions = {}
   if (isNewDeploy) {
     const manager = await deployManagerContract({ isNewDeploy: false })
     const ithil = await deployIthilContract({ isNewDeploy: false })
 
-    const SeniorCallOption = await ethers.getContractFactory('SeniorCallOption')
+    const CallOption = await ethers.getContractFactory('CallOption')
 
     await Promise.all(
       callOptionTokens.map(async (token) => {
-        const callOptionService = await SeniorCallOption.deploy(
+        const callOptionService = await CallOption.deploy(
           manager.address,
           ithil.address,
           BigInt(token.initialPriceForIthil),
@@ -61,7 +61,7 @@ async function deploySeniorCallOptionServiceContract({
     const vaults = JSON.parse(vaultJson) as LendingToken[]
     await Promise.all(
       vaults.map(async (token) => {
-        const callOptionService = await ethers.getContractAt('SeniorCallOption', token.callOptionAddress)
+        const callOptionService = await ethers.getContractAt('CallOption', token.callOptionAddress)
         console.log(`callOptionService contract instance created with this address: ${callOptionService.address}`)
         allCallOptions[token.name] = callOptionService
       }),
@@ -74,10 +74,10 @@ async function deploySeniorCallOptionServiceContract({
 // Use if (require.main === module) to check if the file is the main entry point
 if (require.main === module) {
   // If it's the main entry point, execute the deployManagerContract function
-  void deploySeniorCallOptionServiceContract({ isNewDeploy: true, callOptionTokens: tokens }).catch((error) => {
+  void deployCallOptionServiceContract({ isNewDeploy: true, callOptionTokens: tokens }).catch((error) => {
     console.error(error)
     process.exitCode = 1
   })
 }
 
-export { deploySeniorCallOptionServiceContract }
+export { deployCallOptionServiceContract }

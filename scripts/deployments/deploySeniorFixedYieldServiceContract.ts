@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 
-import type { SeniorFixedYieldService } from '../../typechain-types'
+import type { FixedYieldService } from '../../typechain-types'
 import { updateJsonProperty, useHardhatENV } from '../command-helpers'
 import { contractJsonDir, currentFixedYieldServiceAddress, frontendContractJsonDir, oneDay } from '../config'
 import { configCreditService } from '../contracts'
@@ -8,40 +8,40 @@ import { deployManagerContract } from './deployManagerContract'
 
 useHardhatENV()
 
-interface DeploySeniorFixedYieldServiceContractProps {
+interface DeployFixedYieldServiceContractProps {
   isNewDeploy: boolean
 }
-async function deploySeniorFixedYieldServiceContract({ isNewDeploy }: DeploySeniorFixedYieldServiceContractProps) {
-  let seniorFixedYieldService: SeniorFixedYieldService
+async function deployFixedYieldServiceContract({ isNewDeploy }: DeployFixedYieldServiceContractProps) {
+  let FixedYieldService: FixedYieldService
 
   if (isNewDeploy) {
     const manager = await deployManagerContract({ isNewDeploy: false })
-    const SeniorFixedYieldService = await ethers.getContractFactory('SeniorFixedYieldService')
-    seniorFixedYieldService = await SeniorFixedYieldService.deploy(manager.address, 10n ** 16n, oneDay * 30n)
+    const FixedYieldService = await ethers.getContractFactory('FixedYieldService')
+    FixedYieldService = await FixedYieldService.deploy(manager.address, 10n ** 16n, oneDay * 30n)
 
-    await seniorFixedYieldService.deployed()
-    console.log(`SeniorFixedYieldService contract deployed to ${seniorFixedYieldService.address}`)
+    await FixedYieldService.deployed()
+    console.log(`FixedYieldService contract deployed to ${FixedYieldService.address}`)
 
     await configCreditService({
       manager,
-      service: seniorFixedYieldService,
+      service: FixedYieldService,
     })
   } else {
-    seniorFixedYieldService = await ethers.getContractAt('SeniorFixedYieldService', currentFixedYieldServiceAddress)
-    console.log(`FixedYieldService contract instance created with this address: ${seniorFixedYieldService.address}`)
+    FixedYieldService = await ethers.getContractAt('FixedYieldService', currentFixedYieldServiceAddress)
+    console.log(`FixedYieldService contract instance created with this address: ${FixedYieldService.address}`)
   }
-  updateJsonProperty(contractJsonDir, 'fixedYieldService', seniorFixedYieldService.address)
-  updateJsonProperty(frontendContractJsonDir, 'fixedYieldService', seniorFixedYieldService.address)
-  return seniorFixedYieldService
+  updateJsonProperty(contractJsonDir, 'fixedYieldService', FixedYieldService.address)
+  updateJsonProperty(frontendContractJsonDir, 'fixedYieldService', FixedYieldService.address)
+  return FixedYieldService
 }
 
 // Use if (require.main === module) to check if the file is the main entry point
 if (require.main === module) {
   // If it's the main entry point, execute the deployManagerContract function
-  void deploySeniorFixedYieldServiceContract({ isNewDeploy: true }).catch((error) => {
+  void deployFixedYieldServiceContract({ isNewDeploy: true }).catch((error) => {
     console.error(error)
     process.exitCode = 1
   })
 }
 
-export { deploySeniorFixedYieldServiceContract }
+export { deployFixedYieldServiceContract }

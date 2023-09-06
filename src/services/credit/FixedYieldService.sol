@@ -12,8 +12,8 @@ import { Service } from "../Service.sol";
 /// @notice   A service to provide liquidity at a fixed yield
 /// @notice   Boosting is a particular case with yield = 0 (or in general lower than LPs' average)
 /// @notice   By putting a positive yield and a finite deadline, we obtain classical bonds
-/// @notice   In this implementation, fixed yield creditors are senior than vanilla LPs
-contract SeniorFixedYieldService is CreditService {
+/// @notice   In this implementation, fixed yield creditors are more guaranteed than vanilla LPs
+contract FixedYieldService is CreditService {
     error SlippageExceeded();
     // The yield of this service, with 1e18 corresponding to 100% annually
     // Here 1 year is defined as to be 365 * 86400 seconds
@@ -23,14 +23,7 @@ contract SeniorFixedYieldService is CreditService {
         address _manager,
         uint256 _yield,
         uint256 _deadline
-    )
-        Service(
-            string(abi.encodePacked("Fixed Yield Service at ", _yield, " maturity ", _deadline)),
-            string(abi.encodePacked("FIXED-YIELD-SERVICE-", _yield)),
-            _manager,
-            _deadline
-        )
-    {
+    ) Service("Fixed Yield Service", "FIXED-YIELD-SERVICE", _manager, _deadline) {
         yield = _yield;
     }
 

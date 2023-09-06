@@ -12,7 +12,7 @@ import { Service } from "../Service.sol";
 /// @title    Call option contract
 /// @author   Ithil
 /// @notice   A service to obtain a call option on ITHIL by boosting
-contract SeniorCallOption is CreditService {
+contract CallOption is CreditService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IVault;
 

@@ -8,12 +8,12 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { SeniorFixedYieldService } from "../../src/services/credit/SeniorFixedYieldService.sol";
+import { FixedYieldService } from "../../src/services/credit/FixedYieldService.sol";
 
 contract SFYScenarioTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
 
-    IService internal constant seniorFixedYieldService = IService(0x40A87286EF87e17a48a5b266F94c918A53289956);
+    IService internal constant FixedYieldService = IService(0x40A87286EF87e17a48a5b266F94c918A53289956);
     address internal constant admin = 0xabcdBC2EcB47642Ee8cf52fD7B88Fa42FBb69f98;
     IVault[] internal vaults;
     address[] internal loanTokens;
@@ -45,7 +45,7 @@ contract SFYScenarioTest is Test, IERC721Receiver {
     function testClose() public {
         vm.startPrank(admin);
         vm.expectRevert("ERC20: transfer amount exceeds balance");
-        seniorFixedYieldService.close(0, abi.encode(0));
+        FixedYieldService.close(0, abi.encode(0));
         vm.stopPrank();
     }
 }

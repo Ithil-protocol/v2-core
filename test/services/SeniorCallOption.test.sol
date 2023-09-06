@@ -9,15 +9,15 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { Ithil } from "../../src/Ithil.sol";
-import { SeniorCallOption } from "../../src/services/credit/SeniorCallOption.sol";
+import { CallOption } from "../../src/services/credit/CallOption.sol";
 import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-contract SeniorCallOptionTest is BaseIntegrationServiceTest {
+contract CallOptionTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
-    SeniorCallOption internal immutable service;
+    CallOption internal immutable service;
     Ithil internal immutable ithil;
     address internal constant weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
@@ -56,15 +56,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         IERC20(loanTokens[0]).approve(address(manager), 1);
         manager.create(loanTokens[0]);
 
-        service = new SeniorCallOption(
-            address(manager),
-            address(ithil),
-            4e17,
-            86400 * 30,
-            86400 * 30,
-            0,
-            loanTokens[0]
-        );
+        service = new CallOption(address(manager), address(ithil), 4e17, 86400 * 30, 86400 * 30, 0, loanTokens[0]);
 
         serviceAddress = address(service);
         ithil.approve(serviceAddress, 1e25);
