@@ -13,7 +13,7 @@ import { Oracle } from "../../src/Oracle.sol";
 import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { Ithil } from "../../src/Ithil.sol";
-import { SeniorCallOption } from "../../src/services/credit/SeniorCallOption.sol";
+import { CallOption } from "../../src/services/credit/CallOption.sol";
 import { FeeCollectorService } from "../../src/services/neutral/FeeCollectorService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { AaveService } from "../../src/services/debit/AaveService.sol";
@@ -51,7 +51,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
     IManager internal immutable manager;
 
     AaveService internal immutable aaveService;
-    SeniorCallOption internal immutable callOptionService;
+    CallOption internal immutable callOptionService;
     FeeCollectorService internal immutable feeCollectorService;
     Ithil internal immutable ithil;
     Oracle internal immutable oracle;
@@ -112,15 +112,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
 
         // first price is 0.2 USDC: we need to double it in the constructor
         // because the smallest price can only be achieved by maximum lock time
-        callOptionService = new SeniorCallOption(
-            address(manager),
-            address(ithil),
-            4e5,
-            86400 * 30,
-            86400 * 30,
-            0,
-            usdc
-        );
+        callOptionService = new CallOption(address(manager), address(ithil), 4e5, 86400 * 30, 86400 * 30, 0, usdc);
         vm.stopPrank();
     }
 

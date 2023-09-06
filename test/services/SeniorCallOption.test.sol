@@ -9,15 +9,15 @@ import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
 import { Ithil } from "../../src/Ithil.sol";
-import { SeniorCallOption } from "../../src/services/credit/SeniorCallOption.sol";
+import { CallOption } from "../../src/services/credit/CallOption.sol";
 import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-contract SeniorCallOptionTest is BaseIntegrationServiceTest {
+contract CallOptionTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
-    SeniorCallOption internal immutable service;
+    CallOption internal immutable service;
     Ithil internal immutable ithil;
     address internal constant weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
@@ -56,15 +56,7 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         IERC20(loanTokens[0]).approve(address(manager), 1);
         manager.create(loanTokens[0]);
 
-        service = new SeniorCallOption(
-            address(manager),
-            address(ithil),
-            4e17,
-            86400 * 30,
-            86400 * 30,
-            0,
-            loanTokens[0]
-        );
+        service = new CallOption(address(manager), address(ithil), 4e17, 86400 * 30, 86400 * 30, 0, loanTokens[0]);
 
         serviceAddress = address(service);
         ithil.approve(serviceAddress, 1e25);
@@ -93,9 +85,28 @@ contract SeniorCallOptionTest is BaseIntegrationServiceTest {
         assertGe(service.currentPrice(), initialPrice);
     }
 
-    function testSCOClosePosition(uint256 daiAmount, uint256 daiLoan) public {
+    function testSCOClosePositionWithGain(uint256 daiAmount, uint256 daiLoan) public {
         testSCOOpenPosition(daiAmount, daiLoan);
-        (IService.Loan[] memory loans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        vm.startPrank(whales[loanTokens[0]]);
+        uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
+        IERC20(loanTokens[0]).transfer(manager.vaults(loanTokens[0]), whaleBalance / 2);
+        vm.stopPrank();
+        uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
+        vm.warp(block.timestamp + 8 * 30 * 86500);
+        if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
+            vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
+            service.close(0, abi.encode(1e17));
+        } else service.close(0, abi.encode(1e17));
+    }
+
+    function testSCOClosePositionWithLoss(uint256 daiAmount, uint256 daiLoan) public {
+        testSCOOpenPosition(daiAmount, daiLoan);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        vm.startPrank(manager.vaults(loanTokens[0]));
+        uint256 vaultBalance = IERC20(loanTokens[0]).balanceOf(manager.vaults(loanTokens[0]));
+        IERC20(loanTokens[0]).transfer(whales[loanTokens[0]], vaultBalance / 2);
+        vm.stopPrank();
         uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
         vm.warp(block.timestamp + 8 * 30 * 86500);
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
