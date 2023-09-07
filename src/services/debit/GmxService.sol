@@ -129,8 +129,7 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         if (glpSupply == 0) revert ZeroGlpSupply();
         uint256 usdgAmount = (agreement.collaterals[0].amount * aumInUsdg) / glpSupply;
 
-        uint256 usdgDelta = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount) +
-            rewardTracker.cumulativeRewards(address(this));
+        uint256 usdgDelta = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
 
         uint256 feeBasisPoints = usdgVault.getFeeBasisPoints(
             agreement.loans[0].token,
