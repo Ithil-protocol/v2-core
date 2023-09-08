@@ -12,6 +12,19 @@ import { GmxService } from "../../src/services/debit/GmxService.sol";
 
 // import { console2 } from "forge-std/console2.sol";
 
+contract MockRouter {
+    uint256 public amount;
+    IERC20 internal constant weth = IERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
+
+    constructor(uint256 _amount) {
+        amount = _amount;
+    }
+
+    function handleRewards(bool, bool, bool, bool, bool, bool, bool) external {
+        weth.transfer(msg.sender, amount);
+    }
+}
+
 interface IQuotable is IService {
     function quote(Agreement memory agreement) external view returns (uint256[] memory);
 }
@@ -19,15 +32,19 @@ interface IQuotable is IService {
 contract GmxScenarioTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
 
+    address internal constant gmxRouterV2 = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     IQuotable internal constant gmxService = IQuotable(0x2B1050f9df5f210Ec121B92E23c96216DB966aa5);
     address internal constant admin = 0xabcdBC2EcB47642Ee8cf52fD7B88Fa42FBb69f98;
+    address internal constant manager = 0x9136D8C2d303D47e927e269134eC3fB39576dB3E;
+    GmxService internal immutable newGmxService;
+    MockRouter internal mockRouter;
     IVault[] internal vaults;
     address[] internal loanTokens;
     mapping(address => address) internal whales;
     address[] internal collateralTokens;
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
-    uint256 internal constant blockNumber = 124506946;
+    uint256 internal constant blockNumber = 129111218;
 
     constructor() {
         uint256 forkId = vm.createFork(vm.envString(rpcUrl), blockNumber);
@@ -42,6 +59,10 @@ contract GmxScenarioTest is Test, IERC721Receiver {
         vm.prank(admin);
         (bool success, ) = address(gmxService).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
         require(success, "toggleWhitelistFlag failed");
+
+        mockRouter = new MockRouter(1e16);
+        vm.prank(admin);
+        newGmxService = new GmxService(manager, address(mockRouter), gmxRouterV2, 30 * 86400);
     }
 
     function setUp() public virtual {
@@ -75,5 +96,19 @@ contract GmxScenarioTest is Test, IERC721Receiver {
 
         ///@dev Activate this to test!
         // gmxService.open(order);
+    }
+
+    function testQuoteNickPosition() public {
+        (
+            IService.Loan[] memory actualLoans,
+            IService.Collateral[] memory actualCollaterals,
+            uint256 createdAt,
+            IService.Status status
+        ) = gmxService.getAgreement(3);
+        IService.Agreement memory agreement = IService.Agreement(actualLoans, actualCollaterals, createdAt, status);
+        uint256[] memory originalQuoted = gmxService.quote(agreement);
+        uint256[] memory newQuoted = newGmxService.quote(agreement);
+        console2.log("original quoted for Nick", originalQuoted[0] - actualLoans[0].amount);
+        console2.log("new quoted for Nick", newQuoted[0] - actualLoans[0].amount);
     }
 }
