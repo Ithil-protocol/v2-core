@@ -98,7 +98,7 @@ contract GmxScenarioTest is Test, IERC721Receiver {
         // gmxService.open(order);
     }
 
-    function testQuoteNickPosition() public {
+    function testQuotePosition() public {
         (
             IService.Loan[] memory actualLoans,
             IService.Collateral[] memory actualCollaterals,
@@ -108,7 +108,5 @@ contract GmxScenarioTest is Test, IERC721Receiver {
         IService.Agreement memory agreement = IService.Agreement(actualLoans, actualCollaterals, createdAt, status);
         uint256[] memory originalQuoted = gmxService.quote(agreement);
         uint256[] memory newQuoted = newGmxService.quote(agreement);
-        console2.log("original quoted for Nick", originalQuoted[0] - actualLoans[0].amount);
-        console2.log("new quoted for Nick", newQuoted[0] - actualLoans[0].amount);
     }
 }
