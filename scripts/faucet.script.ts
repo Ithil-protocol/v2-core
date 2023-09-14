@@ -140,7 +140,6 @@ const main = async () => {
       await genericMint(address, tokenMap.USDC, 100000n)
       await genericMint(address, tokenMap.USDT, 100000n)
       await genericMint(address, tokenMap.WBTC, 10n)
-      await faucetERC20Token(tokenMap.DAI, faucetList, valueNumbers.THOUSAND * 100n, url)
     }),
   )
 }
