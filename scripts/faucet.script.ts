@@ -2,12 +2,9 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { ethers } from 'hardhat'
 
 import { faucetList } from './address-list'
-import { valueNumbers } from './config'
-import { faucetERC20Token, simpleFundTenderly } from './contract-helpers'
+import { simpleFundTenderly } from './contract-helpers'
 import { tokenMap } from './tokens'
 import { type Address, type MinimalToken, type Replacement } from './types'
-
-const url = process.env.TENDERLY_URL!
 
 const replaceContractStorage = async (contractAddress: Address, replacements: Replacement[]) => {
   return await Promise.all(
