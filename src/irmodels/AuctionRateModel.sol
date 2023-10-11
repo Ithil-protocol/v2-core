@@ -59,7 +59,7 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
             ? (base * (2 * halvingTime[token] + latestBorrow - block.timestamp)) / (2 * halvingTime[token])
             : 0;
         // Increase base with a linear bump based on the risk spread
-        uint256 newBase = dampedBase + (riskSpreads[token] * loan) / freeLiquidity;
+        uint256 newBase = dampedBase + ((riskSpreads[token] + dampedBase) * loan) / freeLiquidity;
         uint256 spread = _riskSpreadFromMargin(token, loan, margin);
         return (newBase, spread);
     }

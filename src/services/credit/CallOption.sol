@@ -201,7 +201,10 @@ contract CallOption is CreditService {
     }
 
     function _currentPrice() internal view returns (uint256) {
-        return initialPrice + (latestSpread * halvingTime) / (block.timestamp - latestOpen + halvingTime);
+        return
+            block.timestamp < 2 * halvingTime + latestOpen
+                ? initialPrice + (latestSpread * (2 * halvingTime + latestOpen - block.timestamp)) / (2 * halvingTime)
+                : initialPrice;
     }
 
     function currentPrice() public view returns (uint256) {
