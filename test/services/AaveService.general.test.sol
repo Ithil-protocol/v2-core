@@ -254,11 +254,16 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         (uint256 interest1, ) = _getInterestAndSpread(0);
         // Open a new order: time is already warped by "warp" after first one
         _openOrder(vaultAmount, loan, margin, 0);
-        (uint256 interest2, ) = _getInterestAndSpread(1);
-        uint256 rateDecay = warp < 2 * service.halvingTime(loanTokens[0])
-            ? (interest1 * (2 * service.halvingTime(loanTokens[0]) - warp)) / (2 * service.halvingTime(loanTokens[0]))
-            : 0;
-        assertGe(interest2, rateDecay);
+        // there is a chance that latest order was not open due to margin constraint
+        // I add this check to avoid index out of bounds
+        if (service.id() > 1) {
+            (uint256 interest2, ) = _getInterestAndSpread(1);
+            uint256 rateDecay = warp < 2 * service.halvingTime(loanTokens[0])
+                ? (interest1 * (2 * service.halvingTime(loanTokens[0]) - warp)) /
+                    (2 * service.halvingTime(loanTokens[0]))
+                : 0;
+            assertGe(interest2, rateDecay);
+        }
     }
 
     function testRandom(
