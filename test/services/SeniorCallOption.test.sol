@@ -68,9 +68,6 @@ contract CallOptionTest is BaseIntegrationServiceTest {
     function testSCOOpenPosition(uint256 daiAmount, uint256 daiLoan) public {
         collateralTokens[0] = manager.vaults(loanTokens[0]);
         collateralTokens[1] = address(ithil);
-        uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        uint256 transformedAmount = daiAmount % whaleBalance;
-        if (transformedAmount == 0) transformedAmount++;
         IService.Order memory order = _openOrder1ForCredit(daiLoan, 0, block.timestamp, abi.encode(7));
         service.open(order);
 
@@ -83,6 +80,21 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         assertLe(collaterals[1].amount, (order.agreement.loans[0].amount * _rewards[7]) / initialPrice);
         // price was bumped by at least the allocation percentage (virtually) bougth
         assertGe(service.currentPrice(), initialPrice);
+    }
+
+    function testPriceDecay(uint256 daiAmount, uint256 daiLoan, uint64 warp) public {
+        collateralTokens[0] = manager.vaults(loanTokens[0]);
+        collateralTokens[1] = address(ithil);
+        uint256 initialPrice = service.currentPrice();
+        // This bumps the price
+        IService.Order memory order = _openOrder1ForCredit(daiLoan, 0, block.timestamp, abi.encode(7));
+        service.open(order);
+        vm.warp(block.timestamp + warp);
+        uint256 priceDecay = warp < 2 * service.halvingTime()
+            ? (initialPrice * (2 * service.halvingTime() - warp)) / (2 * service.halvingTime())
+            : 0;
+        uint256 finalPrice = service.currentPrice();
+        assertGe(finalPrice, priceDecay);
     }
 
     function testSCOClosePositionWithGain(uint256 daiAmount, uint256 daiLoan) public {

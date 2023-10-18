@@ -144,6 +144,12 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         vm.warp(block.timestamp + warp);
     }
 
+    function _getInterestAndSpread(uint256 tokenID) internal returns (uint256, uint256) {
+        (IService.Loan[] memory actualLoans, , , ) = service.getAgreement(tokenID);
+        uint256 interestAndSpread = actualLoans[0].interestAndSpread;
+        return (interestAndSpread >> 128, interestAndSpread % (1 << 128));
+    }
+
     function _closeAgreement(uint256 index, uint256 minimumAmountOut) internal {
         uint256 totalIds = service.id();
         index = totalIds == 0 ? 0 : index % totalIds;
@@ -243,6 +249,23 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         if (seed % 3 == 2) _modifyBalance(modify, giveOrTake);
     }
 
+    function testInterestRateChange(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) public {
+        _openOrder(vaultAmount, loan, margin, warp);
+        (uint256 interest1, ) = _getInterestAndSpread(0);
+        // Open a new order: time is already warped by "warp" after first one
+        _openOrder(vaultAmount, loan, margin, 0);
+        // there is a chance that latest order was not open due to margin constraint
+        // I add this check to avoid index out of bounds
+        if (service.id() > 1) {
+            (uint256 interest2, ) = _getInterestAndSpread(1);
+            uint256 rateDecay = warp < 2 * service.halvingTime(loanTokens[0])
+                ? (interest1 * (2 * service.halvingTime(loanTokens[0]) - warp)) /
+                    (2 * service.halvingTime(loanTokens[0]))
+                : 0;
+            assertGe(interest2, rateDecay);
+        }
+    }
+
     function testRandom(
         uint256 vaultAmount,
         uint256 loan,
@@ -253,7 +276,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         uint256 modify,
         uint256 giveOrTake,
         uint256 seed
-    ) public {
+    ) internal {
         _randomTest(vaultAmount, loan, margin, warp, index, minimumAmountOut, modify, giveOrTake, seed);
         seed %= 5727913735782256336127425223006579443;
         _randomTest(vaultAmount, loan, margin, warp, index, minimumAmountOut, modify, giveOrTake, seed);

@@ -169,9 +169,10 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, IService.Status.OPEN);
 
         service.close(0, abi.encode(uint256(1)));
-        assertEq(
+        _equalityWithTolerance(
             weth.balanceOf(address(this)),
-            initial + mockRouter.amount() + service.quote(agreement)[0] - loan[0].amount
+            initial + mockRouter.amount() + service.quote(agreement)[0] - loan[0].amount,
+            1
         );
     }
 

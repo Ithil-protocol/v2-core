@@ -53,11 +53,13 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
         uint256 freeLiquidity
     ) public view returns (uint256, uint256) {
         (uint256 latestBorrow, uint256 base) = (latestAndBase[token] >> 128, latestAndBase[token] % (1 << 128));
-        // Increase base due to new borrow and then
-        // apply time based discount: after halvingTime it is divided by 2
-        // this will revert if loan = freeLiquidity, which is expected
-        uint256 newBase = ((halvingTime[token] * (base * freeLiquidity)) / (freeLiquidity - loan)) /
-            (block.timestamp - latestBorrow + halvingTime[token]);
+        // linear damping in which in 2*halfTime after the last borrow, the base is zero
+        // just after latestBorrow, base is roughly unchanged
+        uint256 dampedBase = block.timestamp < 2 * halvingTime[token] + latestBorrow
+            ? (base * (2 * halvingTime[token] + latestBorrow - block.timestamp)) / (2 * halvingTime[token])
+            : 0;
+        // Increase base with a linear bump based on the risk spread
+        uint256 newBase = dampedBase + ((riskSpreads[token] + dampedBase) * loan) / freeLiquidity;
         uint256 spread = _riskSpreadFromMargin(token, loan, margin);
         return (newBase, spread);
     }
