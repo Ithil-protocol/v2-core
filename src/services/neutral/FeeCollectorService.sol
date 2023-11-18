@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IVault } from "../../interfaces/IVault.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
-import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
-import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
-import { Whitelisted } from "../Whitelisted.sol";
-import { Service } from "../Service.sol";
-import { VeIthil } from "../../VeIthil.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IVault} from "../../interfaces/IVault.sol";
+import {IOracle} from "../../interfaces/IOracle.sol";
+import {IFactory} from "../../interfaces/external/wizardex/IFactory.sol";
+import {IPool} from "../../interfaces/external/wizardex/IPool.sol";
+import {Whitelisted} from "../Whitelisted.sol";
+import {Service} from "../Service.sol";
+import {VeIthil} from "../../VeIthil.sol";
 
 /// @title    FeeCollectorService contract
 /// @author   Ithil
@@ -49,13 +49,9 @@ contract FeeCollectorService is Service {
 
     // Since the maximum lock is 1 year, the deadline is 1 year + one month
     // (By convention, a month is 30 days, therefore the actual deadline is 5 or 6 days less)
-    constructor(
-        address _manager,
-        address _weth,
-        uint256 _feePercentage,
-        address _oracle,
-        address _dex
-    ) Service("FeeCollector", "FEE-COLLECTOR", _manager, 13 * 30 * 86400) {
+    constructor(address _manager, address _weth, uint256 _feePercentage, address _oracle, address _dex)
+        Service("FeeCollector", "FEE-COLLECTOR", _manager, 13 * 30 * 86400)
+    {
         veToken = new VeIthil();
 
         weth = IERC20(_weth);
@@ -105,8 +101,7 @@ contract FeeCollectorService is Service {
 
         // Collateral is equal to the amount of veTokens to mint
         agreement.collaterals[0].amount =
-            (agreement.loans[0].margin * (_rewards[monthsLocked] * weights[agreement.loans[0].token])) /
-            1e36;
+            (agreement.loans[0].margin * (_rewards[monthsLocked] * weights[agreement.loans[0].token])) / 1e36;
 
         // we assign a virtual deposit of v * A / S, __afterwards__ we update the total deposits
         virtualDeposit[id] = totalAssets == 0
@@ -119,7 +114,7 @@ contract FeeCollectorService is Service {
         IERC20(agreement.loans[0].token).safeTransferFrom(msg.sender, address(this), agreement.loans[0].margin);
     }
 
-    function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/) internal override {
+    function _close(uint256 tokenID, Agreement memory agreement, bytes memory /*data*/ ) internal override {
         // The position can be closed only after the locking period
         if (block.timestamp < agreement.createdAt + deadline - 30 * 86400) revert BeforeExpiry();
         uint256 totalWithdraw = (totalAssets() * agreement.collaterals[0].amount) / veToken.totalSupply();
@@ -147,8 +142,8 @@ contract FeeCollectorService is Service {
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
         uint256 toTransfer = totalWithdraw - virtualDeposit[tokenId];
         // we update the virtual deposit, and the total ones, so to mock a re-deposit after withdraw
-        uint256 newVirtualDeposit = (agreement.collaterals[0].amount * (totalAssets - totalWithdraw)) /
-            (totalSupply - agreement.collaterals[0].amount);
+        uint256 newVirtualDeposit = (agreement.collaterals[0].amount * (totalAssets - totalWithdraw))
+            / (totalSupply - agreement.collaterals[0].amount);
         totalVirtualDeposits = totalVirtualDeposits - virtualDeposit[tokenId] + newVirtualDeposit;
         virtualDeposit[tokenId] = newVirtualDeposit;
 
@@ -170,7 +165,7 @@ contract FeeCollectorService is Service {
 
     function _harvestFees(address token) internal returns (uint256, address) {
         IVault vault = IVault(manager.vaults(token));
-        (uint256 profits, uint256 losses, , uint256 latestRepay) = vault.getFeeStatus();
+        (uint256 profits, uint256 losses,, uint256 latestRepay) = vault.getFeeStatus();
         if (latestRepay <= latestHarvest[token]) revert Throttled();
         if (profits <= losses) revert InsufficientProfits();
         latestHarvest[token] = block.timestamp;
@@ -186,7 +181,7 @@ contract FeeCollectorService is Service {
         uint256[] memory amounts = new uint256[](tokens.length);
         uint256[] memory prices = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            (uint256 amount, ) = _harvestFees(tokens[i]);
+            (uint256 amount,) = _harvestFees(tokens[i]);
             amounts[i] = amount;
 
             // Swap if not WETH
@@ -194,8 +189,8 @@ contract FeeCollectorService is Service {
                 // TODO check assumption: all pools will have same the tick
                 IPool pool = IPool(dex.pools(tokens[i], address(weth), 5));
                 // We allow for a 10% discount in the price
-                uint256 price = (oracle.getPrice(address(weth), tokens[i], IERC20Metadata(tokens[i]).decimals()) * 9) /
-                    10;
+                uint256 price =
+                    (oracle.getPrice(address(weth), tokens[i], IERC20Metadata(tokens[i]).decimals()) * 9) / 10;
                 prices[i] = price;
                 IERC20(tokens[i]).approve(address(pool), amount);
                 pool.createOrder(amount, price, address(this), block.timestamp + 3600);

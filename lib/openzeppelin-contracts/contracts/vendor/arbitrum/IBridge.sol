@@ -54,17 +54,14 @@ interface IBridge {
      *      These messages are later sequenced in the SequencerInbox, either
      *      by the sequencer as part of a normal batch, or by force inclusion.
      */
-    function enqueueDelayedMessage(
-        uint8 kind,
-        address sender,
-        bytes32 messageDataHash
-    ) external payable returns (uint256);
+    function enqueueDelayedMessage(uint8 kind, address sender, bytes32 messageDataHash)
+        external
+        payable
+        returns (uint256);
 
-    function executeCall(
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external returns (bool success, bytes memory returnData);
+    function executeCall(address to, uint256 value, bytes calldata data)
+        external
+        returns (bool success, bytes memory returnData);
 
     function delayedMessageCount() external view returns (uint256);
 
@@ -77,14 +74,7 @@ interface IBridge {
         uint256 afterDelayedMessagesRead,
         uint256 prevMessageCount,
         uint256 newMessageCount
-    )
-        external
-        returns (
-            uint256 seqMessageIndex,
-            bytes32 beforeAcc,
-            bytes32 delayedAcc,
-            bytes32 acc
-        );
+    ) external returns (uint256 seqMessageIndex, bytes32 beforeAcc, bytes32 delayedAcc, bytes32 acc);
 
     /**
      * @dev Allows the sequencer inbox to submit a delayed message of the batchPostingReport type

@@ -14,8 +14,8 @@
 
 pragma solidity =0.8.18;
 
-import { FixedPoint } from "./FixedPoint.sol";
-import { Math } from "./Math.sol";
+import {FixedPoint} from "./FixedPoint.sol";
+import {Math} from "./Math.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 
@@ -23,6 +23,7 @@ library WeightedMath {
     using FixedPoint for uint256;
     // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
     // implementation of the power function, as these ratios are often exponents.
+
     uint256 internal constant _MIN_WEIGHT = 0.01e18;
     // Having a minimum normalized weight imposes a limit on the maximum number of tokens;
     // i.e., the largest possible pool is one where all tokens have exactly the minimum weight.
@@ -43,16 +44,19 @@ library WeightedMath {
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
-    function _calculateInvariant(
-        uint256[] memory normalizedWeights,
-        uint256[] memory balances
-    ) internal pure returns (uint256 invariant) {
-        /**********************************************************************************************
-        // invariant               _____                                                             //
-        // wi = weight index i      | |      wi                                                      //
-        // bi = balance index i     | |  bi ^   = i                                                  //
-        // i = invariant                                                                             //
-        **********************************************************************************************/
+    function _calculateInvariant(uint256[] memory normalizedWeights, uint256[] memory balances)
+        internal
+        pure
+        returns (uint256 invariant)
+    {
+        /**
+         *
+         *     // invariant               _____                                                             //
+         *     // wi = weight index i      | |      wi                                                      //
+         *     // bi = balance index i     | |  bi ^   = i                                                  //
+         *     // i = invariant                                                                             //
+         *
+         */
 
         invariant = FixedPoint.ONE;
         for (uint256 i = 0; i < normalizedWeights.length; i++) {
@@ -71,15 +75,17 @@ library WeightedMath {
         uint256 weightOut,
         uint256 amountIn
     ) internal pure returns (uint256) {
-        /**********************************************************************************************
-        // outGivenIn                                                                                //
-        // aO = amountOut                                                                            //
-        // bO = balanceOut                                                                           //
-        // bI = balanceIn              /      /            bI             \    (wI / wO) \           //
-        // aI = amountIn    aO = bO * |  1 - | --------------------------  | ^            |          //
-        // wI = weightIn               \      \       ( bI + aI )         /              /           //
-        // wO = weightOut                                                                            //
-        **********************************************************************************************/
+        /**
+         *
+         *     // outGivenIn                                                                                //
+         *     // aO = amountOut                                                                            //
+         *     // bO = balanceOut                                                                           //
+         *     // bI = balanceIn              /      /            bI             \    (wI / wO) \           //
+         *     // aI = amountIn    aO = bO * |  1 - | --------------------------  | ^            |          //
+         *     // wI = weightIn               \      \       ( bI + aI )         /              /           //
+         *     // wO = weightOut                                                                            //
+         *
+         */
 
         // Amount out, so we round down overall.
 
@@ -106,15 +112,17 @@ library WeightedMath {
         uint256 weightOut,
         uint256 amountOut
     ) internal pure returns (uint256) {
-        /**********************************************************************************************
-        // inGivenOut                                                                                //
-        // aO = amountOut                                                                            //
-        // bO = balanceOut                                                                           //
-        // bI = balanceIn              /  /            bO             \    (wO / wI)      \          //
-        // aI = amountIn    aI = bI * |  | --------------------------  | ^            - 1  |         //
-        // wI = weightIn               \  \       ( bO - aO )         /                   /          //
-        // wO = weightOut                                                                            //
-        **********************************************************************************************/
+        /**
+         *
+         *     // inGivenOut                                                                                //
+         *     // aO = amountOut                                                                            //
+         *     // bO = balanceOut                                                                           //
+         *     // bI = balanceIn              /  /            bO             \    (wO / wI)      \          //
+         *     // aI = amountIn    aI = bI * |  | --------------------------  | ^            - 1  |         //
+         *     // wI = weightIn               \  \       ( bO - aO )         /                   /          //
+         *     // wO = weightOut                                                                            //
+         *
+         */
 
         // Amount in, so we round up overall.
 
@@ -183,14 +191,16 @@ library WeightedMath {
         uint256 bptTotalSupply,
         uint256 swapFee
     ) internal pure returns (uint256) {
-        /******************************************************************************************
-        // tokenInForExactBPTOut                                                                 //
-        // a = amountIn                                                                          //
-        // b = balance                      /  /    totalBPT + bptOut      \    (1 / w)       \  //
-        // bptOut = bptAmountOut   a = b * |  | --------------------------  | ^          - 1  |  //
-        // bpt = totalBPT                   \  \       totalBPT            /                  /  //
-        // w = weight                                                                            //
-        ******************************************************************************************/
+        /**
+         *
+         *     // tokenInForExactBPTOut                                                                 //
+         *     // a = amountIn                                                                          //
+         *     // b = balance                      /  /    totalBPT + bptOut      \    (1 / w)       \  //
+         *     // bptOut = bptAmountOut   a = b * |  | --------------------------  | ^          - 1  |  //
+         *     // bpt = totalBPT                   \  \       totalBPT            /                  /  //
+         *     // w = weight                                                                            //
+         *
+         */
 
         // Token in, so we round up overall.
 
@@ -225,9 +235,8 @@ library WeightedMath {
         uint256 invariantRatioWithoutFees = 0;
         for (uint256 i = 0; i < balances.length; i++) {
             balanceRatiosWithoutFee[i] = balances[i].sub(amountsOut[i]).divUp(balances[i]);
-            invariantRatioWithoutFees = invariantRatioWithoutFees.add(
-                balanceRatiosWithoutFee[i].mulUp(normalizedWeights[i])
-            );
+            invariantRatioWithoutFees =
+                invariantRatioWithoutFees.add(balanceRatiosWithoutFee[i].mulUp(normalizedWeights[i]));
         }
 
         uint256 invariantRatio = FixedPoint.ONE;
@@ -260,14 +269,16 @@ library WeightedMath {
         uint256 bptTotalSupply,
         uint256 swapFee
     ) internal pure returns (uint256) {
-        /*****************************************************************************************
-        // exactBPTInForTokenOut                                                                //
-        // a = amountOut                                                                        //
-        // b = balance                     /      /    totalBPT - bptIn       \    (1 / w)  \   //
-        // bptIn = bptAmountIn    a = b * |  1 - | --------------------------  | ^           |  //
-        // bpt = totalBPT                  \      \       totalBPT            /             /   //
-        // w = weight                                                                           //
-        *****************************************************************************************/
+        /**
+         *
+         *     // exactBPTInForTokenOut                                                                //
+         *     // a = amountOut                                                                        //
+         *     // b = balance                     /      /    totalBPT - bptIn       \    (1 / w)  \   //
+         *     // bptIn = bptAmountIn    a = b * |  1 - | --------------------------  | ^           |  //
+         *     // bpt = totalBPT                  \      \       totalBPT            /             /   //
+         *     // w = weight                                                                           //
+         *
+         */
 
         // Token out, so we round down overall. The multiplication rounds down, but the power rounds up (so the base
         // rounds up). Because (totalBPT - bptIn) / totalBPT <= 1, the exponent rounds down.
@@ -294,19 +305,21 @@ library WeightedMath {
         return nonTaxableAmount.add(taxableAmount.mulDown(swapFee.complement()));
     }
 
-    function _calcTokensOutGivenExactBptIn(
-        uint256[] memory balances,
-        uint256 bptAmountIn,
-        uint256 totalBPT
-    ) internal pure returns (uint256[] memory) {
-        /**********************************************************************************************
-        // exactBPTInForTokensOut                                                                    //
-        // (per token)                                                                               //
-        // aO = amountOut                  /        bptIn         \                                  //
-        // b = balance           a0 = b * | ---------------------  |                                 //
-        // bptIn = bptAmountIn             \       totalBPT       /                                  //
-        // bpt = totalBPT                                                                            //
-        **********************************************************************************************/
+    function _calcTokensOutGivenExactBptIn(uint256[] memory balances, uint256 bptAmountIn, uint256 totalBPT)
+        internal
+        pure
+        returns (uint256[] memory)
+    {
+        /**
+         *
+         *     // exactBPTInForTokensOut                                                                    //
+         *     // (per token)                                                                               //
+         *     // aO = amountOut                  /        bptIn         \                                  //
+         *     // b = balance           a0 = b * | ---------------------  |                                 //
+         *     // bptIn = bptAmountIn             \       totalBPT       /                                  //
+         *     // bpt = totalBPT                                                                            //
+         *
+         */
 
         // Since we're computing an amount out, we round down overall. This means rounding down on both the
         // multiplication and division.
@@ -328,9 +341,11 @@ library WeightedMath {
         uint256 currentInvariant,
         uint256 protocolSwapFeePercentage
     ) internal pure returns (uint256) {
-        /*********************************************************************************
-        /*  protocolSwapFeePercentage * balanceToken * ( 1 - (previousInvariant / currentInvariant) ^ (1 / weightToken))
-        *********************************************************************************/
+        /**
+         *
+         *     /*  protocolSwapFeePercentage * balanceToken * ( 1 - (previousInvariant / currentInvariant) ^ (1 / weightToken))
+         *
+         */
 
         if (currentInvariant <= previousInvariant) {
             // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool

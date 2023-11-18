@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
-import { IVault } from "../../src/interfaces/IVault.sol";
-import { IService } from "../../src/interfaces/IService.sol";
-import { IManager, Manager } from "../../src/Manager.sol";
-import { GmxService } from "../../src/services/debit/GmxService.sol";
-import { GeneralMath } from "../helpers/GeneralMath.sol";
-import { OrderHelper } from "../helpers/OrderHelper.sol";
-import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
+import {IVault} from "../../src/interfaces/IVault.sol";
+import {IService} from "../../src/interfaces/IService.sol";
+import {IManager, Manager} from "../../src/Manager.sol";
+import {GmxService} from "../../src/services/debit/GmxService.sol";
+import {GeneralMath} from "../helpers/GeneralMath.sol";
+import {OrderHelper} from "../helpers/OrderHelper.sol";
+import {BaseIntegrationServiceTest} from "./BaseIntegrationServiceTest.sol";
 
 contract MockRouter {
     uint256 public amount;
@@ -113,14 +113,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         collateralAmounts[0] = 0;
 
         IService.Order memory order = OrderHelper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
-            block.timestamp,
-            ""
+            tokens, loans, margins, itemTypes, collateralTokens, collateralAmounts, block.timestamp, ""
         );
 
         service.open(order);
@@ -146,14 +139,7 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         collateralAmounts[0] = ((loans[0] + margins[0]) * 99 * 1e12) / 100;
 
         IService.Order memory order = OrderHelper.createAdvancedOrder(
-            tokens,
-            loans,
-            margins,
-            itemTypes,
-            collateralTokens,
-            collateralAmounts,
-            block.timestamp,
-            ""
+            tokens, loans, margins, itemTypes, collateralTokens, collateralAmounts, block.timestamp, ""
         );
 
         service.open(order);
@@ -163,8 +149,8 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         margin = (margin % 9e17) + 1e17;
         uint256 initial = weth.balanceOf(address(this)) - margin;
         _openGmxEth(loanAmount, margin);
-        (IService.Loan[] memory loan, IService.Collateral[] memory collaterals, uint256 createdAt, ) = service
-            .getAgreement(0);
+        (IService.Loan[] memory loan, IService.Collateral[] memory collaterals, uint256 createdAt,) =
+            service.getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, IService.Status.OPEN);
 
@@ -181,17 +167,13 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         uint256 initial = usdc.balanceOf(address(this)) - margin;
         _openGmxUsdc(loanAmount, margin);
 
-        (IService.Loan[] memory loan, IService.Collateral[] memory collaterals, uint256 createdAt, ) = service
-            .getAgreement(0);
+        (IService.Loan[] memory loan, IService.Collateral[] memory collaterals, uint256 createdAt,) =
+            service.getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, IService.Status.OPEN);
 
         service.close(0, abi.encode(uint256(1)));
-        _equalityWithTolerance(
-            usdc.balanceOf(address(this)),
-            initial + service.quote(agreement)[0] - loan[0].amount,
-            1
-        );
+        _equalityWithTolerance(usdc.balanceOf(address(this)), initial + service.quote(agreement)[0] - loan[0].amount, 1);
     }
 
     // setting to private since it becomes too heavy

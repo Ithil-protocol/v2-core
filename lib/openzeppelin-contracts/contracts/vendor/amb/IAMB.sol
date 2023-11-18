@@ -6,10 +6,7 @@ interface IAMB {
     event UserRequestForAffirmation(bytes32 indexed messageId, bytes encodedData);
     event UserRequestForSignature(bytes32 indexed messageId, bytes encodedData);
     event AffirmationCompleted(
-        address indexed sender,
-        address indexed executor,
-        bytes32 indexed messageId,
-        bool status
+        address indexed sender, address indexed executor, bytes32 indexed messageId, bool status
     );
     event RelayedMessage(address indexed sender, address indexed executor, bytes32 indexed messageId, bool status);
 
@@ -31,17 +28,11 @@ interface IAMB {
 
     function failedMessageSender(bytes32 _messageId) external view returns (address);
 
-    function requireToPassMessage(
-        address _contract,
-        bytes calldata _data,
-        uint256 _gas
-    ) external returns (bytes32);
+    function requireToPassMessage(address _contract, bytes calldata _data, uint256 _gas) external returns (bytes32);
 
-    function requireToConfirmMessage(
-        address _contract,
-        bytes calldata _data,
-        uint256 _gas
-    ) external returns (bytes32);
+    function requireToConfirmMessage(address _contract, bytes calldata _data, uint256 _gas)
+        external
+        returns (bytes32);
 
     function sourceChainId() external view returns (uint256);
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { RESOLUTION } from "../Constants.sol";
+import {RESOLUTION} from "../Constants.sol";
 
 library FloatingPointMath {
     function mul(uint256 x, uint256 y) internal pure returns (uint256) {

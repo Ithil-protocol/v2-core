@@ -15,7 +15,14 @@ ERC20Votes
 TimelockController
 */
 
-contract WizardControlFirstPriority is Governor, GovernorProposalThreshold, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction, GovernorTimelockControl {
+contract WizardControlFirstPriority is
+    Governor,
+    GovernorProposalThreshold,
+    GovernorCountingSimple,
+    GovernorVotes,
+    GovernorVotesQuorumFraction,
+    GovernorTimelockControl
+{
     constructor(ERC20Votes _token, TimelockController _timelock, string memory name, uint256 quorumFraction)
         Governor(name)
         GovernorVotes(_token)
@@ -28,7 +35,7 @@ contract WizardControlFirstPriority is Governor, GovernorProposalThreshold, Gove
     function isExecuted(uint256 proposalId) public view returns (bool) {
         return _proposals[proposalId].executed;
     }
-    
+
     function isCanceled(uint256 proposalId) public view returns (bool) {
         return _proposals[proposalId].canceled;
     }
@@ -41,40 +48,41 @@ contract WizardControlFirstPriority is Governor, GovernorProposalThreshold, Gove
 
     mapping(uint256 => uint256) public ghost_sum_vote_power_by_id;
 
-    function _castVote(
-        uint256 proposalId,
-        address account,
-        uint8 support,
-        string memory reason
-    ) internal override virtual returns (uint256) {
-        
-        uint256 deltaWeight = super._castVote(proposalId, account, support, reason);  //HARNESS
+    function _castVote(uint256 proposalId, address account, uint8 support, string memory reason)
+        internal
+        virtual
+        override
+        returns (uint256)
+    {
+        uint256 deltaWeight = super._castVote(proposalId, account, support, reason); //HARNESS
         ghost_sum_vote_power_by_id[proposalId] += deltaWeight;
 
-        return deltaWeight;        
+        return deltaWeight;
     }
-    
+
     function snapshot(uint256 proposalId) public view returns (uint64) {
         return _proposals[proposalId].voteStart._deadline;
     }
 
-
-    function getExecutor() public view returns (address){
+    function getExecutor() public view returns (address) {
         return _executor();
     }
 
     // original code, harnessed
 
-    function votingDelay() public view override returns (uint256) {     // HARNESS: pure -> view
-        return _votingDelay;                                            // HARNESS: parametric
+    function votingDelay() public view override returns (uint256) {
+        // HARNESS: pure -> view
+        return _votingDelay; // HARNESS: parametric
     }
 
-    function votingPeriod() public view override returns (uint256) {    // HARNESS: pure -> view
-        return _votingPeriod;                                           // HARNESS: parametric
+    function votingPeriod() public view override returns (uint256) {
+        // HARNESS: pure -> view
+        return _votingPeriod; // HARNESS: parametric
     }
 
-    function proposalThreshold() public view override returns (uint256) {   // HARNESS: pure -> view
-        return _proposalThreshold;                                          // HARNESS: parametric
+    function proposalThreshold() public view override returns (uint256) {
+        // HARNESS: pure -> view
+        return _proposalThreshold; // HARNESS: parametric
     }
 
     // original code, not harnessed
@@ -107,35 +115,35 @@ contract WizardControlFirstPriority is Governor, GovernorProposalThreshold, Gove
         return super.state(proposalId);
     }
 
-    function propose(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, string memory description)
-        public
-        override(Governor, GovernorProposalThreshold, IGovernor)
-        returns (uint256)
-    {
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description
+    ) public override(Governor, GovernorProposalThreshold, IGovernor) returns (uint256) {
         return super.propose(targets, values, calldatas, description);
     }
 
-    function _execute(uint256 proposalId, address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
-        internal
-        override(Governor, GovernorTimelockControl)
-    {
+    function _execute(
+        uint256 proposalId,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) {
         super._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
-    function _cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
-        internal
-        override(Governor, GovernorTimelockControl)
-        returns (uint256)
-    {
+    function _cancel(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) returns (uint256) {
         return super._cancel(targets, values, calldatas, descriptionHash);
     }
 
-    function _executor()
-        internal
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (address)
-    {
+    function _executor() internal view override(Governor, GovernorTimelockControl) returns (address) {
         return super._executor();
     }
 

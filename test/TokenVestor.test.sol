@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { Test } from "forge-std/Test.sol";
-import { TokenVestor } from "../src/TokenVestor.sol";
-import { Ithil } from "../src/Ithil.sol";
+import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import {Test} from "forge-std/Test.sol";
+import {TokenVestor} from "../src/TokenVestor.sol";
+import {Ithil} from "../src/Ithil.sol";
 
 contract TokenVestorTest is Test {
     Ithil internal immutable token;
     TokenVestor internal immutable tokenVestor;
-    address internal constant user1 = address(uint160(uint(keccak256(abi.encodePacked("User1")))));
-    address internal constant user2 = address(uint160(uint(keccak256(abi.encodePacked("User2")))));
+    address internal constant user1 = address(uint160(uint256(keccak256(abi.encodePacked("User1")))));
+    address internal constant user2 = address(uint160(uint256(keccak256(abi.encodePacked("User2")))));
 
     uint256 internal minimumAmount = 100e18;
 

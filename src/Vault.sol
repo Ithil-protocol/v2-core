@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import { IVault } from "./interfaces/IVault.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import {ERC4626, IERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {IVault} from "./interfaces/IVault.sol";
 
 // Since this vault inherits from ERC4626, it has the known vulnerability of the "donation attack"
 // In the Ithil framework this is fixed by deploying the Vault already with 1 token deposited
@@ -25,9 +25,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     uint256 public override currentLosses;
     bool public override isLocked;
 
-    constructor(
-        IERC20Metadata _token
-    )
+    constructor(IERC20Metadata _token)
         ERC20(string(abi.encodePacked("Ithil ", _token.name())), string(abi.encodePacked("i", _token.symbol())))
         ERC20Permit(string(abi.encodePacked("Ithil ", _token.name())))
         ERC4626(_token)
@@ -141,14 +139,11 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return ERC4626.deposit(_assets, receiver);
     }
 
-    function depositWithPermit(
-        uint256 assets,
-        address receiver,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external unlocked returns (uint256) {
+    function depositWithPermit(uint256 assets, address receiver, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+        unlocked
+        returns (uint256)
+    {
         IERC20Permit(asset()).permit(msg.sender, address(this), assets, deadline, v, r, s);
 
         return deposit(assets, receiver);
@@ -157,11 +152,11 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Throws 'ERC20: transfer amount exceeds balance
     // IERC20(asset()).balanceOf(address(this)) < assets
     // Needs approvals if caller is not owner
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override(ERC4626, IERC4626) returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override(ERC4626, IERC4626)
+        returns (uint256)
+    {
         // assets cannot be more than the current free liquidity
         uint256 freeLiq = freeLiquidity();
         if (assets >= freeLiq) revert InsufficientLiquidity();
@@ -177,11 +172,11 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     // Needs approvals if caller is not owner
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public override(ERC4626, IERC4626) returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override(ERC4626, IERC4626)
+        returns (uint256)
+    {
         uint256 freeLiq = freeLiquidity();
         uint256 totalAssetsCache = freeLiq + netLoans + _calculateLockedLosses();
         // previewRedeem, leveraging the fact of having already computed freeLiq
@@ -197,11 +192,13 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     // Owner is the only trusted borrower
     // Invariant: totalAssets()
-    function borrow(
-        uint256 assets,
-        uint256 loan,
-        address receiver
-    ) external override unlocked onlyOwner returns (uint256, uint256) {
+    function borrow(uint256 assets, uint256 loan, address receiver)
+        external
+        override
+        unlocked
+        onlyOwner
+        returns (uint256, uint256)
+    {
         // We do not allow loans higher than the assets: borrowing cannot generate profits
         // This prevents overflow in totalAssets() and netLoans
         // And makes totalAssets() a sub-invariant of this function

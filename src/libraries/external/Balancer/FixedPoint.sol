@@ -14,7 +14,7 @@
 
 pragma solidity =0.8.18;
 
-import { LogExpMath } from "./LogExpMath.sol";
+import {LogExpMath} from "./LogExpMath.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 
