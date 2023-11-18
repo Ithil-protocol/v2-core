@@ -20,12 +20,10 @@ contract GovernorCompMock is GovernorVotesComp, GovernorCountingSimple {
         return 16;
     }
 
-    function cancel(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) public returns (uint256 proposalId) {
+    function cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        public
+        returns (uint256 proposalId)
+    {
         return _cancel(targets, values, calldatas, salt);
     }
 }

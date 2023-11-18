@@ -46,12 +46,10 @@ contract GovernorTimelockCompoundMock is
         return super.quorum(blockNumber);
     }
 
-    function cancel(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) public returns (uint256 proposalId) {
+    function cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        public
+        returns (uint256 proposalId)
+    {
         return _cancel(targets, values, calldatas, salt);
     }
 
@@ -81,12 +79,11 @@ contract GovernorTimelockCompoundMock is
         super._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
-    function _cancel(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) internal override(Governor, GovernorTimelockCompound) returns (uint256 proposalId) {
+    function _cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        internal
+        override(Governor, GovernorTimelockCompound)
+        returns (uint256 proposalId)
+    {
         return super._cancel(targets, values, calldatas, salt);
     }
 

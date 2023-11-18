@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { Test } from "forge-std/Test.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import { IVault } from "../../src/interfaces/IVault.sol";
-import { IService } from "../../src/interfaces/IService.sol";
-import { GeneralMath } from "../helpers/GeneralMath.sol";
-import { IManager, Manager } from "../../src/Manager.sol";
-import { AaveService } from "../../src/services/debit/AaveService.sol";
+import {Test} from "forge-std/Test.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IVault} from "../../src/interfaces/IVault.sol";
+import {IService} from "../../src/interfaces/IService.sol";
+import {GeneralMath} from "../helpers/GeneralMath.sol";
+import {IManager, Manager} from "../../src/Manager.sol";
+import {AaveService} from "../../src/services/debit/AaveService.sol";
 
 contract AaveEconomicTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
-    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
-    address internal immutable liquidator = address(uint160(uint(keccak256(abi.encodePacked("liquidator")))));
+
+    address internal immutable admin = address(uint160(uint256(keccak256(abi.encodePacked("admin")))));
+    address internal immutable liquidator = address(uint160(uint256(keccak256(abi.encodePacked("liquidator")))));
     IManager internal immutable manager;
 
     AaveService internal immutable service;
@@ -44,12 +45,12 @@ contract AaveEconomicTest is Test, IERC721Receiver {
     }
 
     function setUp() public virtual {
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             IERC20(loanTokens[i]).approve(address(service), type(uint256).max);
 
             vm.deal(whales[loanTokens[i]], 1 ether);
         }
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             // Create Vault: DAI
             vm.prank(whales[loanTokens[i]]);
             IERC20(loanTokens[i]).transfer(admin, 1);
@@ -63,35 +64,29 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             vm.stopPrank();
         }
         vm.prank(admin);
-        (bool success, ) = address(service).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
+        (bool success,) = address(service).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
         require(success, "toggleWhitelistFlag failed");
     }
 
-    function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
-    ) external pure returns (bytes4) {
+    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
+        external
+        pure
+        returns (bytes4)
+    {
         return IERC721Receiver.onERC721Received.selector;
     }
 
     function _aaveSupply(address token, uint256 amount, address onBehalfOf) internal {
-        (bool success, ) = aavePool.call(
+        (bool success,) = aavePool.call(
             abi.encodeWithSignature("supply(address,uint256,address,uint16)", token, amount, onBehalfOf, 0)
         );
         require(success, "Aave supply failed");
     }
 
     function _aaveBorrow(address token, uint256 amount, uint256 interestRateMode, address onBehalfOf) internal {
-        (bool success, ) = aavePool.call(
+        (bool success,) = aavePool.call(
             abi.encodeWithSignature(
-                "borrow(address,uint256,uint256,uint16,address)",
-                token,
-                amount,
-                interestRateMode,
-                0,
-                onBehalfOf
+                "borrow(address,uint256,uint256,uint16,address)", token, amount, interestRateMode, 0, onBehalfOf
             )
         );
         require(success, "Aave borrow failed");
@@ -102,12 +97,10 @@ contract AaveEconomicTest is Test, IERC721Receiver {
         assertGe(amount2 + tolerance, amount1);
     }
 
-    function _prepareVaultAndUser(
-        uint256 vaultAmount,
-        uint256 loan,
-        uint256 margin,
-        uint64 warp
-    ) internal returns (uint256, uint256, uint256, uint64) {
+    function _prepareVaultAndUser(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp)
+        internal
+        returns (uint256, uint256, uint256, uint64)
+    {
         warp = warp % (365 * 86400 * 10); // Warp 10y maximum
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         vaultAmount = whaleBalance == 0 ? 0 : vaultAmount % whaleBalance;
@@ -140,18 +133,11 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             uint256 maxLoan = (freeLiquidity * (GeneralMath.RESOLUTION - currentBase - 5e15)) / GeneralMath.RESOLUTION;
             maxLoan = maxLoan.min((GeneralMath.RESOLUTION * margin) / (currentBase + 5e15));
             loan = maxLoan == 0 ? 0 : loan % maxLoan;
-            (uint256 baseRate, uint256 spread) = service.computeBaseRateAndSpread(
-                loanTokens[0],
-                loan,
-                margin,
-                freeLiquidity
-            );
+            (uint256 baseRate, uint256 spread) =
+                service.computeBaseRateAndSpread(loanTokens[0], loan, margin, freeLiquidity);
             loans[0] = IService.Loan(loanTokens[0], loan, margin, GeneralMath.packInUint(baseRate, spread));
             collaterals[0] = IService.Collateral(
-                IService.ItemType.ERC20,
-                collateralTokens[0],
-                0,
-                loan + margin < 2 ? loan + margin : loan + margin - 1
+                IService.ItemType.ERC20, collateralTokens[0], 0, loan + margin < 2 ? loan + margin : loan + margin - 1
             );
             order = IService.Order(
                 IService.Agreement(

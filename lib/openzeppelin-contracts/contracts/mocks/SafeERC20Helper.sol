@@ -19,11 +19,7 @@ contract ERC20ReturnFalseMock is Context {
         return false;
     }
 
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public returns (bool) {
+    function transferFrom(address, address, uint256) public returns (bool) {
         _dummy = 0;
         return false;
     }
@@ -51,11 +47,7 @@ contract ERC20ReturnTrueMock is Context {
         return true;
     }
 
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public returns (bool) {
+    function transferFrom(address, address, uint256) public returns (bool) {
         _dummy = 0;
         return true;
     }
@@ -85,11 +77,7 @@ contract ERC20NoReturnMock is Context {
         _dummy = 0;
     }
 
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public {
+    function transferFrom(address, address, uint256) public {
         _dummy = 0;
     }
 
@@ -126,15 +114,10 @@ contract ERC20PermitNoRevertMock is
         super.permit(owner, spender, value, deadline, v, r, s);
     }
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public override {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+        override
+    {
         try this.permitThatMayRevert(owner, spender, value, deadline, v, r, s) {
             // do nothing
         } catch {
@@ -172,15 +155,9 @@ contract SafeERC20Wrapper is Context {
         _token.safeDecreaseAllowance(address(0), amount);
     }
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+    {
         SafeERC20.safePermit(IERC20Permit(address(_token)), owner, spender, value, deadline, v, r, s);
     }
 

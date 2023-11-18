@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { CreditService } from "../CreditService.sol";
-import { Service } from "../Service.sol";
-import { IService } from "../../interfaces/IService.sol";
-import { IVault } from "../../interfaces/IVault.sol";
-import { Service } from "../Service.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {CreditService} from "../CreditService.sol";
+import {Service} from "../Service.sol";
+import {IService} from "../../interfaces/IService.sol";
+import {IVault} from "../../interfaces/IVault.sol";
+import {Service} from "../Service.sol";
 
 /// @title    Call option contract
 /// @author   Ithil
@@ -139,8 +139,9 @@ contract CallOption is CreditService {
         uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
         uint256 shares = IVault(_vaultAddress).convertToShares(agreement.loans[0].amount);
-        if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount)
+        if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount) {
             revert SlippageExceeded();
+        }
 
         agreement.collaterals[0].amount = shares;
         agreement.collaterals[1].amount = collateral;
@@ -155,7 +156,11 @@ contract CallOption is CreditService {
     // the following must have a reentrancy guard since we do not have token minting
     // therefore we do not have any state variable which prevents an attacker from continuously losing
     // and continuously being refunded by the vault until the min(vaultLiquidity, thisLiquidity) is drained
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
+        internal
+        virtual
+        override
+    {
         // The position can be closed only after the locking period
         if (block.timestamp < agreement.createdAt + deadline - tenorDuration) revert LockPeriodStillActive();
         // The portion of the loan amount we want to call
@@ -178,8 +183,9 @@ contract CallOption is CreditService {
         uint256 toBorrow;
         uint256 freeLiquidity;
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
-        if (toRedeem < agreement.collaterals[0].amount)
+        if (toRedeem < agreement.collaterals[0].amount) {
             vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
+        }
         // redeem the user's tokens and give the proceedings back to the user
         vault.redeem(
             toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
@@ -201,10 +207,9 @@ contract CallOption is CreditService {
     }
 
     function _currentPrice() internal view returns (uint256) {
-        return
-            block.timestamp < 2 * halvingTime + latestOpen
-                ? initialPrice + (latestSpread * (2 * halvingTime + latestOpen - block.timestamp)) / (2 * halvingTime)
-                : initialPrice;
+        return block.timestamp < 2 * halvingTime + latestOpen
+            ? initialPrice + (latestSpread * (2 * halvingTime + latestOpen - block.timestamp)) / (2 * halvingTime)
+            : initialPrice;
     }
 
     function currentPrice() public view returns (uint256) {

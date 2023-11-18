@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { Test } from "forge-std/Test.sol";
-import { Oracle } from "../src/Oracle.sol";
+import {Test} from "forge-std/Test.sol";
+import {Oracle} from "../src/Oracle.sol";
 
 contract OracleTest is Test {
     Oracle internal immutable oracle;

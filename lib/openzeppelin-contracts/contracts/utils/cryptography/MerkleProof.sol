@@ -24,11 +24,7 @@ library MerkleProof {
      * sibling hashes on the branch from the leaf to the root of the tree. Each
      * pair of leaves and each pair of pre-images are assumed to be sorted.
      */
-    function verify(
-        bytes32[] memory proof,
-        bytes32 root,
-        bytes32 leaf
-    ) internal pure returns (bool) {
+    function verify(bytes32[] memory proof, bytes32 root, bytes32 leaf) internal pure returns (bool) {
         return processProof(proof, leaf) == root;
     }
 
@@ -37,11 +33,7 @@ library MerkleProof {
      *
      * _Available since v4.7._
      */
-    function verifyCalldata(
-        bytes32[] calldata proof,
-        bytes32 root,
-        bytes32 leaf
-    ) internal pure returns (bool) {
+    function verifyCalldata(bytes32[] calldata proof, bytes32 root, bytes32 leaf) internal pure returns (bool) {
         return processProofCalldata(proof, leaf) == root;
     }
 
@@ -82,12 +74,11 @@ library MerkleProof {
      *
      * _Available since v4.7._
      */
-    function multiProofVerify(
-        bytes32[] memory proof,
-        bool[] memory proofFlags,
-        bytes32 root,
-        bytes32[] memory leaves
-    ) internal pure returns (bool) {
+    function multiProofVerify(bytes32[] memory proof, bool[] memory proofFlags, bytes32 root, bytes32[] memory leaves)
+        internal
+        pure
+        returns (bool)
+    {
         return processMultiProof(proof, proofFlags, leaves) == root;
     }
 
@@ -119,11 +110,11 @@ library MerkleProof {
      *
      * _Available since v4.7._
      */
-    function processMultiProof(
-        bytes32[] memory proof,
-        bool[] memory proofFlags,
-        bytes32[] memory leaves
-    ) internal pure returns (bytes32 merkleRoot) {
+    function processMultiProof(bytes32[] memory proof, bool[] memory proofFlags, bytes32[] memory leaves)
+        internal
+        pure
+        returns (bytes32 merkleRoot)
+    {
         // This function rebuild the root hash by traversing the tree up from the leaves. The root is rebuilt by
         // consuming and producing values on a queue. The queue starts with the `leaves` array, then goes onto the
         // `hashes` array. At the end of the process, the last hash in the `hashes` array should contain the root of
@@ -167,11 +158,11 @@ library MerkleProof {
      *
      * _Available since v4.7._
      */
-    function processMultiProofCalldata(
-        bytes32[] calldata proof,
-        bool[] calldata proofFlags,
-        bytes32[] memory leaves
-    ) internal pure returns (bytes32 merkleRoot) {
+    function processMultiProofCalldata(bytes32[] calldata proof, bool[] calldata proofFlags, bytes32[] memory leaves)
+        internal
+        pure
+        returns (bytes32 merkleRoot)
+    {
         // This function rebuild the root hash by traversing the tree up from the leaves. The root is rebuilt by
         // consuming and producing values on a queue. The queue starts with the `leaves` array, then goes onto the
         // `hashes` array. At the end of the process, the last hash in the `hashes` array should contain the root of

@@ -100,20 +100,14 @@ abstract contract Votes is IVotes, Context, EIP712 {
     /**
      * @dev Delegates votes from signer to `delegatee`.
      */
-    function delegateBySig(
-        address delegatee,
-        uint256 nonce,
-        uint256 expiry,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
+        public
+        virtual
+        override
+    {
         require(block.timestamp <= expiry, "Votes: signature expired");
         address signer = ECDSA.recover(
-            _hashTypedDataV4(keccak256(abi.encode(_DELEGATION_TYPEHASH, delegatee, nonce, expiry))),
-            v,
-            r,
-            s
+            _hashTypedDataV4(keccak256(abi.encode(_DELEGATION_TYPEHASH, delegatee, nonce, expiry))), v, r, s
         );
         require(nonce == _useNonce(signer), "Votes: invalid nonce");
         _delegate(signer, delegatee);
@@ -136,11 +130,7 @@ abstract contract Votes is IVotes, Context, EIP712 {
      * @dev Transfers, mints, or burns voting units. To register a mint, `from` should be zero. To register a burn, `to`
      * should be zero. Total supply of voting units will be adjusted with mints and burns.
      */
-    function _transferVotingUnits(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual {
+    function _transferVotingUnits(address from, address to, uint256 amount) internal virtual {
         if (from == address(0)) {
             _totalCheckpoints.push(_add, amount);
         }
@@ -153,11 +143,7 @@ abstract contract Votes is IVotes, Context, EIP712 {
     /**
      * @dev Moves delegated votes from one delegate to another.
      */
-    function _moveDelegateVotes(
-        address from,
-        address to,
-        uint256 amount
-    ) private {
+    function _moveDelegateVotes(address from, address to, uint256 amount) private {
         if (from != to && amount > 0) {
             if (from != address(0)) {
                 (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[from].push(_subtract, amount);

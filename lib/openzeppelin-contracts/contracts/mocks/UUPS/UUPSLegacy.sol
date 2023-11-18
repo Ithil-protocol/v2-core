@@ -17,11 +17,7 @@ contract UUPSUpgradeableLegacyMock is UUPSUpgradeableMock {
         StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
     }
 
-    function _upgradeToAndCallSecureLegacyV1(
-        address newImplementation,
-        bytes memory data,
-        bool forceCall
-    ) internal {
+    function _upgradeToAndCallSecureLegacyV1(address newImplementation, bytes memory data, bool forceCall) internal {
         address oldImplementation = _getImplementation();
 
         // Initial upgrade and setup call
@@ -36,8 +32,7 @@ contract UUPSUpgradeableLegacyMock is UUPSUpgradeableMock {
             // Trigger rollback using upgradeTo from the new implementation
             rollbackTesting.value = true;
             Address.functionDelegateCall(
-                newImplementation,
-                abi.encodeWithSignature("upgradeTo(address)", oldImplementation)
+                newImplementation, abi.encodeWithSignature("upgradeTo(address)", oldImplementation)
             );
             rollbackTesting.value = false;
             // Check rollback was effective

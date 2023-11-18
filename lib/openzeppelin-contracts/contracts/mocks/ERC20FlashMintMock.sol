@@ -8,12 +8,9 @@ contract ERC20FlashMintMock is ERC20FlashMint {
     uint256 _flashFeeAmount;
     address _flashFeeReceiverAddress;
 
-    constructor(
-        string memory name,
-        string memory symbol,
-        address initialAccount,
-        uint256 initialBalance
-    ) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, address initialAccount, uint256 initialBalance)
+        ERC20(name, symbol)
+    {
         _mint(initialAccount, initialBalance);
     }
 

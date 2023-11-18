@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
-import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
-import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
-import { IBalancerVault } from "../../interfaces/external/balancer/IBalancerVault.sol";
-import { IBalancerPool } from "../../interfaces/external/balancer/IBalancerPool.sol";
-import { IProtocolFeesCollector } from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
-import { IGauge } from "../../interfaces/external/balancer/IGauge.sol";
-import { BalancerHelper } from "../../libraries/BalancerHelper.sol";
-import { VaultHelper } from "../../libraries/VaultHelper.sol";
-import { WeightedMath } from "../../libraries/external/Balancer/WeightedMath.sol";
-import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
-import { Service } from "../Service.sol";
-import { DebitService } from "../DebitService.sol";
-import { Whitelisted } from "../Whitelisted.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IOracle} from "../../interfaces/IOracle.sol";
+import {IFactory} from "../../interfaces/external/wizardex/IFactory.sol";
+import {IPool} from "../../interfaces/external/wizardex/IPool.sol";
+import {IBalancerVault} from "../../interfaces/external/balancer/IBalancerVault.sol";
+import {IBalancerPool} from "../../interfaces/external/balancer/IBalancerPool.sol";
+import {IProtocolFeesCollector} from "../../interfaces/external/balancer/IProtocolFeesCollector.sol";
+import {IGauge} from "../../interfaces/external/balancer/IGauge.sol";
+import {BalancerHelper} from "../../libraries/BalancerHelper.sol";
+import {VaultHelper} from "../../libraries/VaultHelper.sol";
+import {WeightedMath} from "../../libraries/external/Balancer/WeightedMath.sol";
+import {AuctionRateModel} from "../../irmodels/AuctionRateModel.sol";
+import {Service} from "../Service.sol";
+import {DebitService} from "../DebitService.sol";
+import {Whitelisted} from "../Whitelisted.sol";
 
 /// @title    BalancerService contract
 /// @author   Ithil
@@ -65,7 +65,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         bal = _bal;
     }
 
-    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
+    function _open(Agreement memory agreement, bytes memory /*data*/ ) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
@@ -84,10 +84,8 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
             assets: tokens,
             maxAmountsIn: amountsIn,
             userData: abi.encode(
-                IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT,
-                amountsIn,
-                agreement.collaterals[0].amount
-            ),
+                IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, agreement.collaterals[0].amount
+                ),
             fromInternalBalance: false
         });
         balancerVault.joinPool(pool.balancerPoolID, address(this), address(this), request);
@@ -96,7 +94,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
+    function _close(uint256, /*tokenID*/ Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little
@@ -148,7 +146,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         PoolData memory pool = pools[agreement.collaterals[0].token];
         if (pool.length == 0) revert InexistentPool();
 
-        (, uint256[] memory totalBalances, ) = balancerVault.getPoolTokens(pool.balancerPoolID);
+        (, uint256[] memory totalBalances,) = balancerVault.getPoolTokens(pool.balancerPoolID);
         uint256[] memory amountsOut = new uint256[](agreement.loans.length);
         uint256[] memory profits;
         for (uint256 index = 0; index < agreement.loans.length; index++) {
@@ -181,7 +179,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     function addPool(address poolAddress, bytes32 balancerPoolID, address gauge) external onlyOwner {
         assert(poolAddress != address(0));
 
-        (address[] memory poolTokens, , ) = balancerVault.getPoolTokens(balancerPoolID);
+        (address[] memory poolTokens,,) = balancerVault.getPoolTokens(balancerPoolID);
         uint256 length = poolTokens.length;
         assert(length > 0);
 
@@ -194,8 +192,9 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         uint256[] memory scalingFactors = new uint256[](length);
 
         for (uint8 i = 0; i < length; i++) {
-            if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
+            if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0) {
                 IERC20(poolTokens[i]).approve(address(balancerVault), type(uint256).max);
+            }
             if (weights[i] > weights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
             scalingFactors[i] = 10 ** (18 - IERC20Metadata(poolTokens[i]).decimals());
         }
@@ -241,14 +240,15 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         // TODO add premium to the caller
     }
 
-    function _modifyBalancesWithFees(
-        address poolAddress,
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights
-    ) internal view {
+    function _modifyBalancesWithFees(address poolAddress, uint256[] memory balances, uint256[] memory normalizedWeights)
+        internal
+        view
+    {
         PoolData memory pool = pools[poolAddress];
 
-        for (uint256 i = 0; i < pool.length; i++) balances[i] *= pool.scalingFactors[i];
+        for (uint256 i = 0; i < pool.length; i++) {
+            balances[i] *= pool.scalingFactors[i];
+        }
 
         uint256[] memory dueProtocolFeeAmounts = new uint256[](pool.length);
         dueProtocolFeeAmounts[pool.maximumWeightIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
@@ -263,16 +263,18 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     // Assumes balances are already upscaled and downscales them back together with balances
-    function _calculateExpectedBPTToExit(
-        address poolAddress,
-        uint256[] memory balances,
-        uint256[] memory amountsOut
-    ) internal view returns (uint256) {
+    function _calculateExpectedBPTToExit(address poolAddress, uint256[] memory balances, uint256[] memory amountsOut)
+        internal
+        view
+        returns (uint256)
+    {
         PoolData memory pool = pools[poolAddress];
         uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
         _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);
 
-        for (uint256 i = 0; i < pool.length; i++) amountsOut[i] *= pool.scalingFactors[i];
+        for (uint256 i = 0; i < pool.length; i++) {
+            amountsOut[i] *= pool.scalingFactors[i];
+        }
 
         uint256 expectedBpt = WeightedMath._calcBptInGivenExactTokensOut(
             balances,
