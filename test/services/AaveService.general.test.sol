@@ -70,11 +70,12 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         require(success, "toggleWhitelistFlag failed");
     }
 
-    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
-        external
-        pure
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
+    ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 

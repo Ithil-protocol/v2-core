@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {FeeCollectorService} from "../../src/services/neutral/FeeCollectorService.sol";
-import {Service} from "../../src/services/Service.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {OrderHelper} from "../helpers/OrderHelper.sol";
-import {Ithil} from "../../src/Ithil.sol";
-import {VeIthil} from "../../src/VeIthil.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {BaseIntegrationServiceTest} from "./BaseIntegrationServiceTest.sol";
-import {MockChainLinkOracle} from "../helpers/MockChainLinkOracle.sol";
+import { IERC20, ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { FeeCollectorService } from "../../src/services/neutral/FeeCollectorService.sol";
+import { Service } from "../../src/services/Service.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { Ithil } from "../../src/Ithil.sol";
+import { VeIthil } from "../../src/VeIthil.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
+import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
 
 contract Payer is Service {
     // Dummy service to produce fees
     constructor(address _manager) Service("Payer", "PAYER", _manager, 86400) {}
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
-        internal
-        virtual
-        override
-    {}
+    function _close(
+        uint256 tokenID,
+        IService.Agreement memory agreement,
+        bytes memory data
+    ) internal virtual override {}
 
     function _open(IService.Agreement memory agreement, bytes memory data) internal virtual override {}
 }

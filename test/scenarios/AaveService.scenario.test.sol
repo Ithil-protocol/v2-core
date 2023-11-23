@@ -44,10 +44,12 @@ contract AaveScenarioTest is Test, IERC721Receiver {
         IERC20(loanTokens[0]).approve(address(aaveService), type(uint256).max);
     }
 
-    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
+    ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 

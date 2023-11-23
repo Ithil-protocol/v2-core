@@ -61,10 +61,12 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         (bool success,) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
-    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
+    ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 

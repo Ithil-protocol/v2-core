@@ -14,7 +14,8 @@ library PriceConverter {
             int256 basePrice,
             ,
             /*uint256 startedAt*/
-            uint256 updatedAt, /*uint80 answeredInRound*/
+            uint256 updatedAt /*uint80 answeredInRound*/,
+
         ) = AggregatorV3Interface(_base).latestRoundData();
         if (updatedAt < block.timestamp - 1 days) revert StaleOracleData();
 
@@ -27,7 +28,8 @@ library PriceConverter {
             int256 quotePrice,
             ,
             /*uint256 startedAt*/
-            uint256 timestamp, /*uint80 answeredInRound*/
+            uint256 timestamp /*uint80 answeredInRound*/,
+
         ) = AggregatorV3Interface(_quote).latestRoundData();
         if (timestamp < block.timestamp - 1 days) revert StaleOracleData();
 
