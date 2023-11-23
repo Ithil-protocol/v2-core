@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Test} from "forge-std/Test.sol";
-import {IVault} from "../src/interfaces/IVault.sol";
-import {IManager, Manager} from "../src/Manager.sol";
+import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Test } from "forge-std/Test.sol";
+import { IVault } from "../src/interfaces/IVault.sol";
+import { IManager, Manager } from "../src/Manager.sol";
 
 /// @dev Manager native state:
 /// bytes32 public constant override salt = "ithil";
@@ -96,7 +96,7 @@ contract ManagerTest is Test {
         cap = (cap % 1e18) + 1;
 
         manager.setCap(debitServiceOne, address(firstToken), cap, type(uint256).max);
-        (uint256 storedCap,,) = manager.caps(debitServiceOne, address(firstToken));
+        (uint256 storedCap, , ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
         return cap;
     }
@@ -104,7 +104,7 @@ contract ManagerTest is Test {
     function testSetCap(uint256 previousDeposit, uint256 debitCap, uint256 cap) public {
         _setupArbitraryState(previousDeposit, debitCap);
         manager.setCap(debitServiceOne, address(firstToken), cap, type(uint256).max);
-        (uint256 storedCap,,) = manager.caps(debitServiceOne, address(firstToken));
+        (uint256 storedCap, , ) = manager.caps(debitServiceOne, address(firstToken));
         assertTrue(storedCap == cap);
     }
 
@@ -144,7 +144,7 @@ contract ManagerTest is Test {
         address vaultAddress = manager.vaults(address(firstToken));
         debitCap = _setupArbitraryState(previousDeposit, debitCap);
         uint256 freeLiquidity = IVault(vaultAddress).freeLiquidity();
-        (,, uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
+        (, , uint256 currentExposure) = manager.caps(debitServiceOne, address(firstToken));
 
         // Avoid revert due to insufficient free liquidity
         borrowed = freeLiquidity == 0 ? 0 : borrowed % freeLiquidity;
@@ -155,7 +155,8 @@ contract ManagerTest is Test {
         uint256 investedPortion = freeLiquidity == 0
             ? 1e18
             : uint256(1e18).mulDiv(
-                (currentExposure + loan), (freeLiquidity - borrowed) + (IVault(vaultAddress).netLoans() + loan)
+                (currentExposure + loan),
+                (freeLiquidity - borrowed) + (IVault(vaultAddress).netLoans() + loan)
             );
         if (investedPortion > debitCap) {
             manager.setCap(debitServiceOne, address(firstToken), investedPortion, type(uint256).max);

@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {IBalancerVault} from "../../src/interfaces/external/balancer/IBalancerVault.sol";
-import {IBalancerPool} from "../../src/interfaces/external/balancer/IBalancerPool.sol";
-import {BalancerService} from "../../src/services/debit/BalancerService.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {WeightedMath} from "../../src/libraries/external/Balancer/WeightedMath.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {BaseIntegrationServiceTest} from "./BaseIntegrationServiceTest.sol";
-import {StringEncoder} from "../helpers/StringEncoder.sol";
-import {OrderHelper} from "../helpers/OrderHelper.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { IBalancerVault } from "../../src/interfaces/external/balancer/IBalancerVault.sol";
+import { IBalancerPool } from "../../src/interfaces/external/balancer/IBalancerPool.sol";
+import { BalancerService } from "../../src/services/debit/BalancerService.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { WeightedMath } from "../../src/libraries/external/Balancer/WeightedMath.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
+import { StringEncoder } from "../helpers/StringEncoder.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 /// @dev State study
 /// BalancerService native state:
@@ -139,11 +139,10 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         balances[maxWeightTokenIndex] -= dueProtocolFeeAmounts[maxWeightTokenIndex];
     }
 
-    function _calculateExpectedBPTFromJoin(uint256[] memory balances, uint256[] memory amountsIn)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateExpectedBPTFromJoin(
+        uint256[] memory balances,
+        uint256[] memory amountsIn
+    ) internal view returns (uint256) {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsIn);
@@ -159,11 +158,10 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return amountOut;
     }
 
-    function _calculateExpectedBPTToExit(uint256[] memory balances, uint256[] memory amountsOut)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateExpectedBPTToExit(
+        uint256[] memory balances,
+        uint256[] memory amountsOut
+    ) internal view returns (uint256) {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         _upscaleArray(amountsOut);
@@ -179,11 +177,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         return expectedBpt;
     }
 
-    function _calculateExpectedTokensFromBPT(uint256[] memory balances, uint256 amount, uint256 totalSupply)
-        internal
-        view
-        returns (uint256[] memory)
-    {
+    function _calculateExpectedTokensFromBPT(
+        uint256[] memory balances,
+        uint256 amount,
+        uint256 totalSupply
+    ) internal view returns (uint256[] memory) {
         uint256[] memory normalizedWeights = IBalancerPool(collateralTokens[0]).getNormalizedWeights();
         _modifyBalancesWithFees(balances, normalizedWeights);
         uint256[] memory expectedTokens = WeightedMath._calcTokensOutGivenExactBptIn(balances, amount, totalSupply);
@@ -200,16 +198,25 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         uint256 loan2,
         uint256 margin2
     ) public {
-        IService.Order memory order =
-            _openOrder3(loan0, margin0, loan1, margin1, loan2, margin2, 0, block.timestamp, "");
+        IService.Order memory order = _openOrder3(
+            loan0,
+            margin0,
+            loan1,
+            margin1,
+            loan2,
+            margin2,
+            0,
+            block.timestamp,
+            ""
+        );
         uint256[] memory amountsIn = new uint256[](loanLength);
         for (uint256 i = 0; i < loanLength; i++) {
             amountsIn[i] = order.agreement.loans[i].amount + order.agreement.loans[i].margin;
         }
-        (, uint256[] memory balances,) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         uint256 expectedTokens = _calculateExpectedBPTFromJoin(balances, amountsIn);
         service.open(order);
-        (, IService.Collateral[] memory collaterals,,) = service.getAgreement(0);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
 
         assertEq(collaterals[0].amount, expectedTokens);
         // Gauge token is 1:1 both at deposit and withdraw
@@ -230,7 +237,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         // TODO: activate
         testBalancerIntegrationOpenPosition(loan0, margin0, loan1, margin1, loan2, margin2);
 
-        (, uint256[] memory totalBalances,) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        (, uint256[] memory totalBalances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         // this is necessary otherwise Balancer math library throws a SUB_OVERFLOW error
         minAmountsOut0 = minAmountsOut0 % (1 + totalBalances[0] / 2);
         minAmountsOut1 = minAmountsOut1 % (1 + totalBalances[1] / 2);
@@ -242,7 +249,7 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         }
 
         uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
-        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals,,) = service.getAgreement(0);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
 
         bytes memory swapData;
         uint256[] memory minAmountsOut = new uint256[](3);
@@ -251,11 +258,12 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         minAmountsOut[1] = minAmountsOut1;
         minAmountsOut[2] = minAmountsOut2;
         bytes memory data = abi.encode(minAmountsOut, swapData);
-        (, uint256[] memory balances,) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
+        (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         if (
-            minAmountsOut0 > actualLoans[0].amount && minAmountsOut1 > actualLoans[1].amount
-                && minAmountsOut2 > actualLoans[2].amount
-                && _calculateExpectedBPTToExit(balances, minAmountsOut) > collaterals[0].amount
+            minAmountsOut0 > actualLoans[0].amount &&
+            minAmountsOut1 > actualLoans[1].amount &&
+            minAmountsOut2 > actualLoans[2].amount &&
+            _calculateExpectedBPTToExit(balances, minAmountsOut) > collaterals[0].amount
         ) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("SlippageError()"))));
             service.close(0, data);
@@ -273,8 +281,11 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                     balances[i] -= minAmountsOut[i];
                 }
             }
-            uint256[] memory finalAmounts =
-                _calculateExpectedTokensFromBPT(balances, collaterals[0].amount - firstStep, bptTotalSupply - firstStep);
+            uint256[] memory finalAmounts = _calculateExpectedTokensFromBPT(
+                balances,
+                collaterals[0].amount - firstStep,
+                bptTotalSupply - firstStep
+            );
             // TODO: this proves that most positions are badly liquidated: fix the strategy
             // TODO: Balancer quoter has a bug!!! redo it
             uint256 liquidationScore = service.liquidationScore(0);
@@ -291,7 +302,8 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
                 finalAmounts[i] += initialBalances[i] + minAmountsOut[i];
                 // Payoff is paid to address(this) which is the user
                 assertEq(
-                    IERC20(loanTokens[i]).balanceOf(address(this)), finalAmounts[i].positiveSub(actualLoans[i].amount)
+                    IERC20(loanTokens[i]).balanceOf(address(this)),
+                    finalAmounts[i].positiveSub(actualLoans[i].amount)
                 );
             }
         }

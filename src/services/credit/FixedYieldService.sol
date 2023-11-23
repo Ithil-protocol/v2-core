@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {CreditService} from "../CreditService.sol";
-import {IService} from "../../interfaces/IService.sol";
-import {IVault} from "../../interfaces/IVault.sol";
-import {Service} from "../Service.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { CreditService } from "../CreditService.sol";
+import { IService } from "../../interfaces/IService.sol";
+import { IVault } from "../../interfaces/IVault.sol";
+import { Service } from "../Service.sol";
 
 /// @title    Fixed Yield contract
 /// @author   Ithil
@@ -20,13 +20,15 @@ contract FixedYieldService is CreditService {
 
     uint256 public immutable yield;
 
-    constructor(address _manager, uint256 _yield, uint256 _deadline)
-        Service("Fixed Yield Service", "FIXED-YIELD-SERVICE", _manager, _deadline)
-    {
+    constructor(
+        address _manager,
+        uint256 _yield,
+        uint256 _deadline
+    ) Service("Fixed Yield Service", "FIXED-YIELD-SERVICE", _manager, _deadline) {
         yield = _yield;
     }
 
-    function _open(IService.Agreement memory agreement, bytes memory /*data*/ ) internal virtual override {
+    function _open(IService.Agreement memory agreement, bytes memory /*data*/) internal virtual override {
         address vaultAddress = manager.vaults(agreement.loans[0].token);
         if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount) {
             IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
@@ -38,11 +40,7 @@ contract FixedYieldService is CreditService {
         agreement.collaterals[0].amount = shares;
     }
 
-    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data)
-        internal
-        virtual
-        override
-    {
+    function _close(uint256 tokenID, IService.Agreement memory agreement, bytes memory data) internal virtual override {
         // gas savings
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
         address owner = ownerOf(tokenID);
@@ -75,15 +73,14 @@ contract FixedYieldService is CreditService {
         IERC20(agreement.loans[0].token).transfer(owner, toTransfer);
     }
 
-    function dueAmount(IService.Agreement memory agreement, bytes memory /*data*/ )
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function dueAmount(
+        IService.Agreement memory agreement,
+        bytes memory /*data*/
+    ) public view virtual override returns (uint256) {
         // loan * (1 + yield * time)
-        return agreement.loans[0].amount
-            + (((agreement.loans[0].amount * yield) / 1e18) * (block.timestamp - agreement.createdAt)) / (86400 * 365);
+        return
+            agreement.loans[0].amount +
+            (((agreement.loans[0].amount * yield) / 1e18) * (block.timestamp - agreement.createdAt)) /
+            (86400 * 365);
     }
 }

@@ -14,8 +14,8 @@
 
 pragma solidity =0.8.18;
 
-import {FixedPoint} from "./FixedPoint.sol";
-import {Math} from "./Math.sol";
+import { FixedPoint } from "./FixedPoint.sol";
+import { Math } from "./Math.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 
@@ -44,11 +44,10 @@ library WeightedMath {
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
-    function _calculateInvariant(uint256[] memory normalizedWeights, uint256[] memory balances)
-        internal
-        pure
-        returns (uint256 invariant)
-    {
+    function _calculateInvariant(
+        uint256[] memory normalizedWeights,
+        uint256[] memory balances
+    ) internal pure returns (uint256 invariant) {
         /**
          *
          *     // invariant               _____                                                             //
@@ -235,8 +234,9 @@ library WeightedMath {
         uint256 invariantRatioWithoutFees = 0;
         for (uint256 i = 0; i < balances.length; i++) {
             balanceRatiosWithoutFee[i] = balances[i].sub(amountsOut[i]).divUp(balances[i]);
-            invariantRatioWithoutFees =
-                invariantRatioWithoutFees.add(balanceRatiosWithoutFee[i].mulUp(normalizedWeights[i]));
+            invariantRatioWithoutFees = invariantRatioWithoutFees.add(
+                balanceRatiosWithoutFee[i].mulUp(normalizedWeights[i])
+            );
         }
 
         uint256 invariantRatio = FixedPoint.ONE;
@@ -305,11 +305,11 @@ library WeightedMath {
         return nonTaxableAmount.add(taxableAmount.mulDown(swapFee.complement()));
     }
 
-    function _calcTokensOutGivenExactBptIn(uint256[] memory balances, uint256 bptAmountIn, uint256 totalBPT)
-        internal
-        pure
-        returns (uint256[] memory)
-    {
+    function _calcTokensOutGivenExactBptIn(
+        uint256[] memory balances,
+        uint256 bptAmountIn,
+        uint256 totalBPT
+    ) internal pure returns (uint256[] memory) {
         /**
          *
          *     // exactBPTInForTokensOut                                                                    //
@@ -343,7 +343,8 @@ library WeightedMath {
     ) internal pure returns (uint256) {
         /**
          *
-         *     /*  protocolSwapFeePercentage * balanceToken * ( 1 - (previousInvariant / currentInvariant) ^ (1 / weightToken))
+         *     /*  protocolSwapFeePercentage * balanceToken *
+         * ( 1 - (previousInvariant / currentInvariant) ^ (1 / weightToken))
          *
          */
 

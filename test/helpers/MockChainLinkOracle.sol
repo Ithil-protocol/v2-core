@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {AggregatorV3Interface} from "../../src/interfaces/external/chainlink/AggregatorV3Interface.sol";
+import { AggregatorV3Interface } from "../../src/interfaces/external/chainlink/AggregatorV3Interface.sol";
 
 contract MockChainLinkOracle is AggregatorV3Interface {
     uint8 internal immutable dec;
@@ -27,7 +27,9 @@ contract MockChainLinkOracle is AggregatorV3Interface {
         return 1;
     }
 
-    function getRoundData(uint80 _roundId)
+    function getRoundData(
+        uint80 _roundId
+    )
         external
         view
         override

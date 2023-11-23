@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity =0.8.18;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title    Interface of Balancer Vault core contract
 interface IBalancerVault {
@@ -280,10 +280,10 @@ interface IBalancerVault {
      *
      * `assetManager` is the Pool's token Asset Manager.
      */
-    function getPoolTokenInfo(bytes32 poolId, IERC20 token)
-        external
-        view
-        returns (uint256 cash, uint256 managed, uint256 lastChangeBlock, address assetManager);
+    function getPoolTokenInfo(
+        bytes32 poolId,
+        IERC20 token
+    ) external view returns (uint256 cash, uint256 managed, uint256 lastChangeBlock, address assetManager);
 
     /**
      * @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of
@@ -299,10 +299,9 @@ interface IBalancerVault {
      * the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo`
      * instead.
      */
-    function getPoolTokens(bytes32 poolId)
-        external
-        view
-        returns (address[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
+    function getPoolTokens(
+        bytes32 poolId
+    ) external view returns (address[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
 
     /**
      * @dev Called by users to join a Pool, which transfers tokens from `sender` into the Pool's balance. This will
@@ -336,9 +335,12 @@ interface IBalancerVault {
      *
      * Emits a `PoolBalanceChanged` event.
      */
-    function joinPool(bytes32 poolId, address sender, address recipient, JoinPoolRequest memory request)
-        external
-        payable;
+    function joinPool(
+        bytes32 poolId,
+        address sender,
+        address recipient,
+        JoinPoolRequest memory request
+    ) external payable;
 
     struct JoinPoolRequest {
         address[] assets;
@@ -382,8 +384,12 @@ interface IBalancerVault {
      *
      * Emits a `PoolBalanceChanged` event.
      */
-    function exitPool(bytes32 poolId, address sender, address payable recipient, ExitPoolRequest memory request)
-        external;
+    function exitPool(
+        bytes32 poolId,
+        address sender,
+        address payable recipient,
+        ExitPoolRequest memory request
+    ) external;
 
     struct ExitPoolRequest {
         address[] assets;
@@ -473,10 +479,12 @@ interface IBalancerVault {
      *
      * Emits a `Swap` event.
      */
-    function swap(SingleSwap memory singleSwap, FundManagement memory funds, uint256 limit, uint256 deadline)
-        external
-        payable
-        returns (uint256);
+    function swap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline
+    ) external payable returns (uint256);
 
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
@@ -557,7 +565,11 @@ interface IBalancerVault {
      * @dev Emitted for each individual swap performed by `swap` or `batchSwap`.
      */
     event Swap(
-        bytes32 indexed poolId, IERC20 indexed tokenIn, IERC20 indexed tokenOut, uint256 amountIn, uint256 amountOut
+        bytes32 indexed poolId,
+        IERC20 indexed tokenIn,
+        IERC20 indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
     );
 
     /**

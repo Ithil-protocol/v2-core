@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {AngleService} from "../../src/services/debit/AngleService.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {BaseIntegrationServiceTest} from "./BaseIntegrationServiceTest.sol";
-import {OrderHelper} from "../helpers/OrderHelper.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { AngleService } from "../../src/services/debit/AngleService.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract AngleServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;

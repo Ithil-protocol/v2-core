@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import { IERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 interface IService is IERC721Enumerable {
     // Owed is forcefully ERC20: the Manager only deals with ERC20/ERC4626
@@ -49,10 +49,9 @@ interface IService is IERC721Enumerable {
 
     function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data) external;
 
-    function getAgreement(uint256 tokenID)
-        external
-        view
-        returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status);
+    function getAgreement(
+        uint256 tokenID
+    ) external view returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status);
 
     function getUserAgreements() external view returns (Agreement[] memory, uint256[] memory);
 

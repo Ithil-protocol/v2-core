@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {AaveService} from "../../src/services/debit/AaveService.sol";
+import { Test } from "forge-std/Test.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { AaveService } from "../../src/services/debit/AaveService.sol";
 
 contract AaveScenarioTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
@@ -34,7 +34,7 @@ contract AaveScenarioTest is Test, IERC721Receiver {
         vaults[0] = IVault(0x6b416C9727fb248C3097b5c1D10c39a7EBDFf239);
         vm.selectFork(forkId);
         vm.prank(admin);
-        (bool success,) = address(aaveService).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
+        (bool success, ) = address(aaveService).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
         require(success, "toggleWhitelistFlag failed");
     }
 
@@ -44,10 +44,12 @@ contract AaveScenarioTest is Test, IERC721Receiver {
         IERC20(loanTokens[0]).approve(address(aaveService), type(uint256).max);
     }
 
-    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
+    ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 

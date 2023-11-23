@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IPool} from "../../src/interfaces/external/wizardex/IPool.sol";
-import {IFactory} from "../../src/interfaces/external/wizardex/IFactory.sol";
-import {IOracle} from "../../src/interfaces/IOracle.sol";
-import {Oracle} from "../../src/Oracle.sol";
-import {MockChainLinkOracle} from "../helpers/MockChainLinkOracle.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {Ithil} from "../../src/Ithil.sol";
-import {CallOption} from "../../src/services/credit/CallOption.sol";
-import {FeeCollectorService} from "../../src/services/neutral/FeeCollectorService.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {AaveService} from "../../src/services/debit/AaveService.sol";
-import {GmxService} from "../../src/services/debit/GmxService.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Test } from "forge-std/Test.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IPool } from "../../src/interfaces/external/wizardex/IPool.sol";
+import { IFactory } from "../../src/interfaces/external/wizardex/IFactory.sol";
+import { IOracle } from "../../src/interfaces/IOracle.sol";
+import { Oracle } from "../../src/Oracle.sol";
+import { MockChainLinkOracle } from "../helpers/MockChainLinkOracle.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { Ithil } from "../../src/Ithil.sol";
+import { CallOption } from "../../src/services/credit/CallOption.sol";
+import { FeeCollectorService } from "../../src/services/neutral/FeeCollectorService.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { AaveService } from "../../src/services/debit/AaveService.sol";
+import { GmxService } from "../../src/services/debit/GmxService.sol";
 
 contract DebitCreditTest is Test, IERC721Receiver {
     // test in which we add Aave, feeCollector and call option
@@ -164,11 +164,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.stopPrank();
     }
 
-    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
-        external
-        pure
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
+    ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -184,8 +185,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         loans[0] = IService.Loan(address(usdc), loan, margin, 1e17);
         IService.Collateral[] memory collaterals = new IService.Collateral[](1);
         collaterals[0] = IService.Collateral(IService.ItemType.ERC20, aUsdc, 0, minCollateral);
-        IService.Agreement memory agreement =
-            IService.Agreement(loans, collaterals, block.timestamp, IService.Status.OPEN);
+        IService.Agreement memory agreement = IService.Agreement(
+            loans,
+            collaterals,
+            block.timestamp,
+            IService.Status.OPEN
+        );
         IService.Order memory order = IService.Order(agreement, abi.encode(""));
         aaveService.open(order);
     }
@@ -196,8 +201,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         IService.Collateral[] memory collaterals = new IService.Collateral[](2);
         collaterals[0] = IService.Collateral(IService.ItemType.ERC20, manager.vaults(usdc), 0, 0);
         collaterals[1] = IService.Collateral(IService.ItemType.ERC20, address(ithil), 0, 0);
-        IService.Agreement memory agreement =
-            IService.Agreement(loans, collaterals, block.timestamp, IService.Status.OPEN);
+        IService.Agreement memory agreement = IService.Agreement(
+            loans,
+            collaterals,
+            block.timestamp,
+            IService.Status.OPEN
+        );
         IService.Order memory order = IService.Order(agreement, abi.encode(monthsLocked));
         callOptionService.open(order);
     }
@@ -206,8 +215,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         IService.Loan[] memory loans = new IService.Loan[](1);
         loans[0] = IService.Loan(address(ithil), 0, margin, 1e18);
         IService.Collateral[] memory collaterals = new IService.Collateral[](1); // uninitialized
-        IService.Agreement memory agreement =
-            IService.Agreement(loans, collaterals, block.timestamp, IService.Status.OPEN);
+        IService.Agreement memory agreement = IService.Agreement(
+            loans,
+            collaterals,
+            block.timestamp,
+            IService.Status.OPEN
+        );
         IService.Order memory order = IService.Order(agreement, abi.encode(monthsLocked));
         feeCollectorService.open(order);
     }
@@ -224,7 +237,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.stopPrank();
 
         uint256 initialPrice = callOptionService.currentPrice();
-        (, IService.Collateral[] memory collaterals,,) = callOptionService.getAgreement(0);
+        (, IService.Collateral[] memory collaterals, , ) = callOptionService.getAgreement(0);
         // no fees, thus deposited amount and collaterals[0] are the same (vault 1:1 with underlying)
         assertEq(collaterals[0].amount, depositedAmount);
         // due to the bump in the option price, we expect actual amount to be less than the virtual amount
@@ -326,7 +339,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // 100k Ithil locked for 6 months
         ithil.approve(address(feeCollectorService), 1e5 * 1e18);
         _openFeeCollectorPosition(1e5 * 1e18, 5);
-        (, collaterals,,) = feeCollectorService.getAgreement(0);
+        (, collaterals, , ) = feeCollectorService.getAgreement(0);
         assertEq(collaterals[0].amount, (1e5 * 1e18 * (_rewards[5] * uint256(1.1e18))) / 1e36);
         vm.stopPrank();
 
@@ -353,7 +366,8 @@ contract DebitCreditTest is Test, IERC721Receiver {
         assertGe(IERC20(usdc).balanceOf(automator), amounts[0]);
         // and the resulting weth are introduced into the feeCollector contract
         assertEq(
-            IERC20(weth).balanceOf(address(feeCollectorService)), amounts[0].mulDiv(1e18, prices[0], Math.Rounding.Up)
+            IERC20(weth).balanceOf(address(feeCollectorService)),
+            amounts[0].mulDiv(1e18, prices[0], Math.Rounding.Up)
         );
         // if we try to harvest fees again, we would fail (we must wait for another repay)
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("Throttled()"))));
@@ -368,7 +382,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         _openFeeCollectorPosition(1e5 * 1e18, 7);
         // new deposit does not affect withdrawable of the other user (beyond rounding error)
         _equalWithTolerance(feeCollectorService.withdrawable(0), initialWithdrawable, 1);
-        (, collaterals,,) = feeCollectorService.getAgreement(1);
+        (, collaterals, , ) = feeCollectorService.getAgreement(1);
         assertEq(collaterals[0].amount, (1e5 * 1e18 * (_rewards[7] * uint256(1.1e18))) / 1e36);
 
         // Although there are weth in the service, the new depositor can only withdraw 0

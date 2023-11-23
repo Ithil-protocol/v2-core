@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Test} from "forge-std/Test.sol";
-import {IVault, Vault} from "../src/Vault.sol";
-import {GeneralMath} from "./helpers/GeneralMath.sol";
-import {SignUtils} from "./helpers/SignUtils.sol";
-import {PermitToken} from "./helpers/PermitToken.sol";
+import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Test } from "forge-std/Test.sol";
+import { IVault, Vault } from "../src/Vault.sol";
+import { GeneralMath } from "./helpers/GeneralMath.sol";
+import { SignUtils } from "./helpers/SignUtils.sol";
+import { PermitToken } from "./helpers/PermitToken.sol";
 
 /// @dev Vault native state:
 /// - Native:
@@ -166,7 +166,15 @@ contract VaultTest is Test {
         vm.prank(tokenSink);
         token.transfer(address(vault), balanceOf - initialBalance);
 
-        _originalStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        _originalStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
         return (feeUnlockTime, currentProfits);
     }
 
@@ -181,7 +189,13 @@ contract VaultTest is Test {
         uint256 feeUnlockTimeSet
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
         if (feeUnlockTimeSet < 30 || feeUnlockTimeSet > 7 days) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("FeeUnlockTimeOutOfRange()"))));
@@ -192,7 +206,15 @@ contract VaultTest is Test {
             feeUnlockTime = feeUnlockTimeSet;
         }
         // Recheck the remaining state is unchanged (except feeUnlockTime but it's already reassigned)
-        _originalStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        _originalStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
     }
 
     function testSweep(
@@ -206,7 +228,13 @@ contract VaultTest is Test {
         uint256 spuriousAmount
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         spuriousToken.mint(address(vault), spuriousAmount);
@@ -217,7 +245,15 @@ contract VaultTest is Test {
         assertTrue(spuriousToken.balanceOf(anyAddress) == spuriousAmount);
 
         // Recheck the remaining state is unchanged (except feeUnlockTime)
-        _originalStateCheck(feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses);
+        _originalStateCheck(
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
+        );
     }
 
     function testDeposit(
@@ -231,7 +267,13 @@ contract VaultTest is Test {
         uint256 deposited
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         uint256 initialReceiverShares = vault.balanceOf(receiver);
@@ -274,12 +316,17 @@ contract VaultTest is Test {
         address signer = vm.addr(signerPrivateKey);
         vm.deal(signer, 1 ether);
 
-        SignUtils.Permit memory permit =
-            SignUtils.Permit({owner: signer, spender: address(vault), value: amount, nonce: 0, deadline: 1 seconds});
+        SignUtils.Permit memory permit = SignUtils.Permit({
+            owner: signer,
+            spender: address(vault),
+            value: amount,
+            nonce: 0,
+            deadline: 1 seconds
+        });
         bytes32 digest = utils.getTypedDataHash(permit);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
 
-        deal({token: address(token), to: signer, give: amount});
+        deal({ token: address(token), to: signer, give: amount });
         vm.prank(signer);
         uint256 shares = vault.depositWithPermit(permit.value, receiver, permit.deadline, v, r, s);
         assertTrue(vault.balanceOf(address(receiver)) == shares);
@@ -296,7 +343,13 @@ contract VaultTest is Test {
         uint256 minted
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         uint256 initialReceiverShares = vault.balanceOf(receiver);
@@ -350,7 +403,13 @@ contract VaultTest is Test {
         uint256 withdrawn
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         // At this stage receiver has the entirety of the supply
@@ -396,7 +455,13 @@ contract VaultTest is Test {
         uint256 redeemed
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         // At this stage receiver has the entirety of the supply
@@ -444,7 +509,13 @@ contract VaultTest is Test {
         uint256 loan
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         vm.assume(borrowed < vault.freeLiquidity());
@@ -478,18 +549,28 @@ contract VaultTest is Test {
         uint256 repaid
     ) public {
         (feeUnlockTime, currentProfits) = _setupArbitraryState(
-            feeUnlockTime, totalSupply, balanceOf, netLoans, latestRepay, currentProfits, currentLosses
+            feeUnlockTime,
+            totalSupply,
+            balanceOf,
+            netLoans,
+            latestRepay,
+            currentProfits,
+            currentLosses
         );
 
         uint256 newTimestamp = latestRepay.safeAdd(timePast);
         vm.warp(newTimestamp);
         uint256 lockedProfits;
         uint256 lockedLosses;
-        (lockedProfits, lockedLosses,,) = vault.getFeeStatus();
-        lockedProfits =
-            lockedProfits.mulDiv(feeUnlockTime - Math.min(block.timestamp - latestRepay, feeUnlockTime), feeUnlockTime);
-        lockedLosses =
-            lockedLosses.mulDiv(feeUnlockTime - Math.min(block.timestamp - latestRepay, feeUnlockTime), feeUnlockTime);
+        (lockedProfits, lockedLosses, , ) = vault.getFeeStatus();
+        lockedProfits = lockedProfits.mulDiv(
+            feeUnlockTime - Math.min(block.timestamp - latestRepay, feeUnlockTime),
+            feeUnlockTime
+        );
+        lockedLosses = lockedLosses.mulDiv(
+            feeUnlockTime - Math.min(block.timestamp - latestRepay, feeUnlockTime),
+            feeUnlockTime
+        );
         if (repaid > token.balanceOf(repayer)) {
             vm.assume(repaid - token.balanceOf(repayer) <= token.balanceOf(tokenSink));
             vm.startPrank(tokenSink);

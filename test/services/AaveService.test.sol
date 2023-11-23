@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {IAToken} from "../../src/interfaces/external/aave/IAToken.sol";
-import {AaveService} from "../../src/services/debit/AaveService.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {BaseIntegrationServiceTest} from "./BaseIntegrationServiceTest.sol";
-import {OrderHelper} from "../helpers/OrderHelper.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { IAToken } from "../../src/interfaces/external/aave/IAToken.sol";
+import { AaveService } from "../../src/services/debit/AaveService.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
 
 contract AaveServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
@@ -46,7 +46,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         uint256 initialBalance = IAToken(collateralTokens[0]).balanceOf(address(service));
         service.open(order);
 
-        (, IService.Collateral[] memory collaterals,,) = service.getAgreement(0);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         assertEq(service.totalAllowance(collateralTokens[0]), initialAllowance + collaterals[0].amount);
         assertEq(IAToken(collateralTokens[0]).balanceOf(address(service)), initialBalance + collaterals[0].amount);
         // In AaveV3 it's not 1:1, but it has at most a single unit of error
@@ -70,7 +70,11 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             IERC20(loanTokens[0]).approve(aavePool, supplyAmount);
             aavePool.call(
                 abi.encodeWithSignature(
-                    "supply(address,uint256,address,uint16)", loanTokens[0], supplyAmount, whales[loanTokens[0]], 0
+                    "supply(address,uint256,address,uint16)",
+                    loanTokens[0],
+                    supplyAmount,
+                    whales[loanTokens[0]],
+                    0
                 )
             );
             vm.warp(block.timestamp + 10000);
@@ -106,7 +110,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
 
         bytes memory data = abi.encode(minAmountsOutDai);
 
-        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals,,) = service.getAgreement(0);
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         if (collaterals[0].amount < minAmountsOutDai) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
@@ -116,13 +120,15 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
             uint256 initialServiceBalance = IERC20(collateralTokens[0]).balanceOf(address(service));
             uint256 initialAllowance = service.totalAllowance(collateralTokens[0]);
             uint256 toRedeem = IERC20(collateralTokens[0]).balanceOf(address(service)).safeMulDiv(
-                collaterals[0].amount, initialAllowance
+                collaterals[0].amount,
+                initialAllowance
             );
             service.close(0, data);
             assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
             assertEq(service.totalAllowance(collateralTokens[0]), initialAllowance - collaterals[0].amount);
             assertEq(
-                IERC20(collateralTokens[0]).balanceOf(address(service)), initialServiceBalance - collaterals[0].amount
+                IERC20(collateralTokens[0]).balanceOf(address(service)),
+                initialServiceBalance - collaterals[0].amount
             );
         }
     }

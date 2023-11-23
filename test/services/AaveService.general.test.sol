@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {AaveService} from "../../src/services/debit/AaveService.sol";
+import { Test } from "forge-std/Test.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { AaveService } from "../../src/services/debit/AaveService.sol";
 
 contract AaveGeneralTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
@@ -66,22 +66,24 @@ contract AaveGeneralTest is Test, IERC721Receiver {
             vm.stopPrank();
         }
         vm.prank(admin);
-        (bool success,) = address(service).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
+        (bool success, ) = address(service).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
         require(success, "toggleWhitelistFlag failed");
     }
 
-    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
-        external
-        pure
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
+    ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function _prepareVaultAndUser(uint256 vaultAmount, uint256 loan, uint256 margin)
-        internal
-        returns (uint256, uint256)
-    {
+    function _prepareVaultAndUser(
+        uint256 vaultAmount,
+        uint256 loan,
+        uint256 margin
+    ) internal returns (uint256, uint256) {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         if (whaleBalance == 0) return (0, 0);
         // if we are here, whaleBalance > 0
@@ -112,8 +114,12 @@ contract AaveGeneralTest is Test, IERC721Receiver {
             (, uint256 currentBase) = service.latestAndBase(loanTokens[0]).unpackUint();
             uint256 maxLoan = freeLiquidity.safeMulDiv(GeneralMath.RESOLUTION - currentBase, GeneralMath.RESOLUTION);
             loan = maxLoan == 0 ? 0 : loan % maxLoan;
-            (uint256 baseRate, uint256 spread) =
-                service.computeBaseRateAndSpread(loanTokens[0], loan, margin, freeLiquidity);
+            (uint256 baseRate, uint256 spread) = service.computeBaseRateAndSpread(
+                loanTokens[0],
+                loan,
+                margin,
+                freeLiquidity
+            );
             loans[0] = IService.Loan(loanTokens[0], loan, margin, GeneralMath.packInUint(baseRate, spread));
             collaterals[0] = IService.Collateral(IService.ItemType.ERC20, collateralTokens[0], 0, 1);
             order = IService.Order(
@@ -140,7 +146,7 @@ contract AaveGeneralTest is Test, IERC721Receiver {
     }
 
     function _getInterestAndSpread(uint256 tokenID) internal returns (uint256, uint256) {
-        (IService.Loan[] memory actualLoans,,,) = service.getAgreement(tokenID);
+        (IService.Loan[] memory actualLoans, , , ) = service.getAgreement(tokenID);
         uint256 interestAndSpread = actualLoans[0].interestAndSpread;
         return (interestAndSpread >> 128, interestAndSpread % (1 << 128));
     }
@@ -204,14 +210,19 @@ contract AaveGeneralTest is Test, IERC721Receiver {
             modify %= 1e13; // Max 10m
             vm.startPrank(whales[loanTokens[0]]);
             IERC20(loanTokens[0]).approve(aavePool, modify);
-            (bool success,) = aavePool.call(
+            (bool success, ) = aavePool.call(
                 abi.encodeWithSignature(
-                    "supply(address,uint256,address,uint16)", loanTokens[0], modify, whales[loanTokens[0]], 0
+                    "supply(address,uint256,address,uint16)",
+                    loanTokens[0],
+                    modify,
+                    whales[loanTokens[0]],
+                    0
                 )
             );
             require(success || modify == 0, "Supply failed");
             IERC20(collateralTokens[0]).transfer(
-                address(service), IERC20(collateralTokens[0]).balanceOf(whales[loanTokens[0]])
+                address(service),
+                IERC20(collateralTokens[0]).balanceOf(whales[loanTokens[0]])
             );
             vm.stopPrank();
         } else {
@@ -241,15 +252,16 @@ contract AaveGeneralTest is Test, IERC721Receiver {
 
     function testInterestRateChange(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) public {
         _openOrder(vaultAmount, loan, margin, warp);
-        (uint256 interest1,) = _getInterestAndSpread(0);
+        (uint256 interest1, ) = _getInterestAndSpread(0);
         // Open a new order: time is already warped by "warp" after first one
         _openOrder(vaultAmount, loan, margin, 0);
         // there is a chance that latest order was not open due to margin constraint
         // I add this check to avoid index out of bounds
         if (service.id() > 1) {
-            (uint256 interest2,) = _getInterestAndSpread(1);
+            (uint256 interest2, ) = _getInterestAndSpread(1);
             uint256 rateDecay = warp < 2 * service.halvingTime(loanTokens[0])
-                ? (interest1 * (2 * service.halvingTime(loanTokens[0]) - warp)) / (2 * service.halvingTime(loanTokens[0]))
+                ? (interest1 * (2 * service.halvingTime(loanTokens[0]) - warp)) /
+                    (2 * service.halvingTime(loanTokens[0]))
                 : 0;
             assertGe(interest2, rateDecay);
         }
