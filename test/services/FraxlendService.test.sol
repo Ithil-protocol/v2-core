@@ -101,7 +101,9 @@ contract FraxlendServiceTest is BaseIntegrationServiceTest {
         uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(this));
 
         service.close(0, abi.encode(0));
-
-        assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), initialBalance + quoted[0] - loan[0].amount);
+        uint256 expected = loan[0].amount > initialBalance + quoted[0]
+            ? 0
+            : initialBalance + quoted[0] - loan[0].amount;
+        assertEq(IERC20(loanTokens[0]).balanceOf(address(this)), expected);
     }
 }
