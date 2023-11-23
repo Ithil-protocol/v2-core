@@ -46,13 +46,16 @@ contract AngleServiceTest is BaseIntegrationServiceTest {
         if (transformedMargin == 0) transformedMargin++;
 
         uint256 initialBalance = stEurToken.balanceOf(address(service));
-        uint256 collateralOut = stEurToken.convertToShares(agEurAmount);
 
-        IService.Order memory order =
-            _openOrder1(agEurAmount, agEurLoan, agEurMargin, collateralOut, block.timestamp, "");
+        IService.Order memory order = _openOrder1(agEurAmount, agEurLoan, agEurMargin, 0, block.timestamp, "");
+
+        order.agreement.collaterals[0].amount = stEurToken.convertToShares(
+            order.agreement.loans[0].amount + order.agreement.loans[0].margin
+        );
+
         service.open(order);
 
-        (, IService.Collateral[] memory collaterals,,) = service.getAgreement(0);
+        (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
         assertEq(stEurToken.balanceOf(address(service)), initialBalance + collaterals[0].amount);
     }
 
@@ -66,15 +69,15 @@ contract AngleServiceTest is BaseIntegrationServiceTest {
 
         bytes memory data = abi.encode(minAmountsOut);
 
-        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals,,) = service.getAgreement(0);
-        if (collaterals[0].amount < minAmountsOut) {
+        uint256 initialServiceBalance = stEurToken.balanceOf(address(service));
+        uint256 toRedeem = stEurToken.convertToAssets(stEurToken.balanceOf(address(service)));
+        (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        if (toRedeem < minAmountsOut) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
             service.close(0, data);
         } else {
             uint256 initialBalance = agEurToken.balanceOf(address(this));
-            uint256 initialServiceBalance = stEurToken.balanceOf(address(service));
-            uint256 toRedeem = stEurToken.convertToAssets(stEurToken.balanceOf(address(service)));
             service.close(0, data);
             assertEq(agEurToken.balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
             assertEq(stEurToken.balanceOf(address(service)), initialServiceBalance - collaterals[0].amount);

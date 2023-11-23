@@ -44,8 +44,7 @@ contract AngleService is Whitelisted, AuctionRateModel, DebitService {
 
     function _close(uint256, /*tokenID*/ Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
-
-        uint256 amountIn = stEur.withdraw(agreement.collaterals[0].amount, address(this), address(this));
+        uint256 amountIn = stEur.redeem(agreement.collaterals[0].amount, address(this), address(this));
         if (amountIn < minimumAmountOut) revert InsufficientAmountOut();
     }
 
