@@ -10,9 +10,11 @@ library PriceConverter {
         int256 decimals = int256(10 ** uint256(_decimals));
         (
             ,
-            /*uint80 roundId*/ int256 basePrice,
+            /*uint80 roundId*/
+            int256 basePrice,
             ,
-            /*uint256 startedAt*/ uint256 updatedAt /*uint80 answeredInRound*/,
+            /*uint256 startedAt*/
+            uint256 updatedAt /*uint80 answeredInRound*/,
 
         ) = AggregatorV3Interface(_base).latestRoundData();
         if (updatedAt < block.timestamp - 1 days) revert StaleOracleData();
@@ -22,9 +24,11 @@ library PriceConverter {
 
         (
             ,
-            /*uint80 roundId*/ int256 quotePrice,
+            /*uint80 roundId*/
+            int256 quotePrice,
             ,
-            /*uint256 startedAt*/ uint256 timestamp /*uint80 answeredInRound*/,
+            /*uint256 startedAt*/
+            uint256 timestamp /*uint80 answeredInRound*/,
 
         ) = AggregatorV3Interface(_quote).latestRoundData();
         if (timestamp < block.timestamp - 1 days) revert StaleOracleData();

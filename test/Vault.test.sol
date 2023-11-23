@@ -46,13 +46,13 @@ contract VaultTest is Test {
     constructor() {
         token = new PermitToken("test", "TEST");
         vault = new Vault(IERC20Metadata(address(token)));
-        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
-        notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
-        anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
-        depositor = address(uint160(uint(keccak256(abi.encodePacked("Depositor")))));
-        receiver = address(uint160(uint(keccak256(abi.encodePacked("Receiver")))));
-        repayer = address(uint160(uint(keccak256(abi.encodePacked("Repayer")))));
-        borrower = address(uint160(uint(keccak256(abi.encodePacked("Borrower")))));
+        tokenSink = address(uint160(uint256(keccak256(abi.encodePacked("Sink")))));
+        notOwner = address(uint160(uint256(keccak256(abi.encodePacked("Not Owner")))));
+        anyAddress = address(uint160(uint256(keccak256(abi.encodePacked("Any Address")))));
+        depositor = address(uint160(uint256(keccak256(abi.encodePacked("Depositor")))));
+        receiver = address(uint160(uint256(keccak256(abi.encodePacked("Receiver")))));
+        repayer = address(uint160(uint256(keccak256(abi.encodePacked("Repayer")))));
+        borrower = address(uint160(uint256(keccak256(abi.encodePacked("Borrower")))));
         spuriousToken = new ERC20PresetMinterPauser("spurious", "SPURIOUS");
     }
 
@@ -359,8 +359,9 @@ contract VaultTest is Test {
         uint256 initialVaultTotalSupply = vault.totalSupply();
 
         // Necessary to avoid overflow
-        if (vault.totalAssets() > 0 && vault.totalSupply() > 0)
+        if (vault.totalAssets() > 0 && vault.totalSupply() > 0) {
             vm.assume(minted / vault.totalSupply() < (type(uint256).max / vault.totalAssets()));
+        }
         uint256 deposited = vault.previewMint(minted);
 
         // Necessary assumption because token totalSupply is fixed

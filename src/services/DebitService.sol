@@ -14,6 +14,7 @@ abstract contract DebitService is Service, BaseRiskModel {
     address public liquidator;
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
+
     error MarginTooLow();
     error OnlyLiquidator();
     error LossByArbitraryAddress();
@@ -93,8 +94,9 @@ abstract contract DebitService is Service, BaseRiskModel {
         Agreement memory agreement = agreements[tokenID];
         address agreementOwner = ownerOf(tokenID);
         uint256 score = liquidationScore(tokenID);
-        if (agreementOwner != msg.sender && score == 0 && agreement.createdAt + deadline > block.timestamp)
+        if (agreementOwner != msg.sender && score == 0 && agreement.createdAt + deadline > block.timestamp) {
             revert RestrictedToOwner();
+        }
 
         uint256[] memory obtained = new uint256[](agreement.loans.length);
         for (uint256 index = 0; index < agreement.loans.length; index++) {
@@ -130,8 +132,11 @@ abstract contract DebitService is Service, BaseRiskModel {
             // This is blocked even for the agreementOwner, which could otherwise accept a loss for a gain elsewhere
             // We instead allow the user to liquidate its own position without vault loss
             // Because it is not a vulnerability even if the user manipulated the quoter on purpose to experience a loss
-            if (obtained[index] < agreement.loans[index].amount && msg.sender != liquidator && liquidator != address(0))
+            if (
+                obtained[index] < agreement.loans[index].amount && msg.sender != liquidator && liquidator != address(0)
+            ) {
                 revert LossByArbitraryAddress();
+            }
 
             // repay the vault
             uint256 repaidAmount = obtained[index] > dueFees[index] + agreement.loans[index].amount

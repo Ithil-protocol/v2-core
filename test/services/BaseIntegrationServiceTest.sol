@@ -13,7 +13,7 @@ import { Oracle } from "../../src/Oracle.sol";
 import { MockDex } from "../helpers/MockDex.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
-    address internal constant admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
+    address internal constant admin = address(uint160(uint256(keccak256(abi.encodePacked("admin")))));
     IManager internal immutable manager;
     Oracle internal immutable oracle;
     MockDex internal immutable dex;
@@ -38,12 +38,12 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     }
 
     function setUp() public virtual {
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             IERC20(loanTokens[i]).approve(serviceAddress, type(uint256).max);
 
             vm.deal(whales[loanTokens[i]], 1 ether);
         }
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             if (manager.vaults(loanTokens[i]) == address(0)) {
                 vm.prank(whales[loanTokens[i]]);
                 IERC20(loanTokens[i]).transfer(admin, 1);
@@ -62,10 +62,10 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     }
 
     function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
     ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
@@ -87,7 +87,9 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             vm.stopPrank();
             // amount is modified, so we return new value
             return amount;
-        } else return 0;
+        } else {
+            return 0;
+        }
     }
 
     /// Fills the user
@@ -113,7 +115,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         uint256 time,
         bytes memory data
     ) internal returns (IService.Order memory) {
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             amounts[i] = _depositAmountInVault(loanTokens[i], amounts[i], true);
             margins[i] = _giveMarginToUser(loanTokens[i], margins[i], true);
             // amounts are bumped so the following never reverts
@@ -143,7 +145,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         uint256 time,
         bytes memory data
     ) internal returns (IService.Order memory) {
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             loans[i] = _giveMarginToUser(loanTokens[i], loans[i], true);
         }
 

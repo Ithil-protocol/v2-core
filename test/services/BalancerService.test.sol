@@ -210,8 +210,9 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
             ""
         );
         uint256[] memory amountsIn = new uint256[](loanLength);
-        for (uint256 i = 0; i < loanLength; i++)
+        for (uint256 i = 0; i < loanLength; i++) {
             amountsIn[i] = order.agreement.loans[i].amount + order.agreement.loans[i].margin;
+        }
         (, uint256[] memory balances, ) = IBalancerVault(balancerVault).getPoolTokens(balancerPoolID);
         uint256 expectedTokens = _calculateExpectedBPTFromJoin(balances, amountsIn);
         service.open(order);
@@ -243,7 +244,9 @@ contract BalancerServiceWeightedTriPool is BaseIntegrationServiceTest {
         minAmountsOut2 = minAmountsOut2 % (1 + totalBalances[2] / 2);
 
         uint256[] memory initialBalances = new uint256[](loanLength);
-        for (uint256 i = 0; i < loanLength; i++) initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
+        for (uint256 i = 0; i < loanLength; i++) {
+            initialBalances[i] = IERC20(loanTokens[i]).balanceOf(address(service));
+        }
 
         uint256 bptTotalSupply = IERC20(collateralTokens[0]).totalSupply();
         (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);

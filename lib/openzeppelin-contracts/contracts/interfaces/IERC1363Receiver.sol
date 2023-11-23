@@ -23,10 +23,7 @@ interface IERC1363Receiver {
      * @return `bytes4(keccak256("onTransferReceived(address,address,uint256,bytes)"))`
      *  unless throwing
      */
-    function onTransferReceived(
-        address operator,
-        address from,
-        uint256 value,
-        bytes memory data
-    ) external returns (bytes4);
+    function onTransferReceived(address operator, address from, uint256 value, bytes memory data)
+        external
+        returns (bytes4);
 }

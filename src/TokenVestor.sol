@@ -74,14 +74,14 @@ contract TokenVestor is ERC20 {
         }
     }
 
-    function transfer(address /*recipient*/, uint256 /*amount*/) public virtual override returns (bool) {
+    function transfer(address, /*recipient*/ uint256 /*amount*/) public virtual override returns (bool) {
         revert TransferNotSupported();
     }
 
     function transferFrom(
-        address /*sender*/,
-        address /*recipient*/,
-        uint256 /*amount*/
+        address,
+        /*sender*/ address,
+        /*recipient*/ uint256 /*amount*/
     ) public virtual override returns (bool) {
         revert TransferNotSupported();
     }

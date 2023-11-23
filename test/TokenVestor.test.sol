@@ -10,8 +10,8 @@ import { Ithil } from "../src/Ithil.sol";
 contract TokenVestorTest is Test {
     Ithil internal immutable token;
     TokenVestor internal immutable tokenVestor;
-    address internal constant user1 = address(uint160(uint(keccak256(abi.encodePacked("User1")))));
-    address internal constant user2 = address(uint160(uint(keccak256(abi.encodePacked("User2")))));
+    address internal constant user1 = address(uint160(uint256(keccak256(abi.encodePacked("User1")))));
+    address internal constant user2 = address(uint160(uint256(keccak256(abi.encodePacked("User2")))));
 
     uint256 internal minimumAmount = 100e18;
 

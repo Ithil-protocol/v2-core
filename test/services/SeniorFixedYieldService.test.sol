@@ -55,7 +55,9 @@ contract FixedYieldServiceTest is BaseIntegrationServiceTest {
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(0));
-        } else service.close(0, abi.encode(0));
+        } else {
+            service.close(0, abi.encode(0));
+        }
     }
 
     function testFYSClosePositionWithLoss(uint256 daiAmount, uint256 daiLoan) public {
@@ -69,6 +71,8 @@ contract FixedYieldServiceTest is BaseIntegrationServiceTest {
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(0));
-        } else service.close(0, abi.encode(0));
+        } else {
+            service.close(0, abi.encode(0));
+        }
     }
 }

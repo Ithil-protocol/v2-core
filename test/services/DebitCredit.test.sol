@@ -29,24 +29,25 @@ contract DebitCreditTest is Test, IERC721Receiver {
 
     using Math for uint256;
     // The owner of the manager and all services
-    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
+
+    address internal immutable admin = address(uint160(uint256(keccak256(abi.encodePacked("admin")))));
     // who liquidates debit positions and also harvest fees (no need of two addresses)
-    address internal immutable automator = address(uint160(uint(keccak256(abi.encodePacked("automator")))));
+    address internal immutable automator = address(uint160(uint256(keccak256(abi.encodePacked("automator")))));
     // vanilla depositor to the Vault
     address internal immutable liquidityProvider =
-        address(uint160(uint(keccak256(abi.encodePacked("liquidityProvider")))));
+        address(uint160(uint256(keccak256(abi.encodePacked("liquidityProvider")))));
     // depositor of the call option: locks some capital and may exercise at maturity
     address internal immutable callOptionSigner =
-        address(uint160(uint(keccak256(abi.encodePacked("callOptionSigner")))));
+        address(uint160(uint256(keccak256(abi.encodePacked("callOptionSigner")))));
     // user of Aave service: posts margin and takes loan
-    address internal immutable aaveUser = address(uint160(uint(keccak256(abi.encodePacked("aaveUser")))));
+    address internal immutable aaveUser = address(uint160(uint256(keccak256(abi.encodePacked("aaveUser")))));
     // depositor of the fee collector service: wants to obtain fees from Ithil
     address internal immutable feeCollectorDepositor =
-        address(uint160(uint(keccak256(abi.encodePacked("feeCollectorDepositor")))));
+        address(uint160(uint256(keccak256(abi.encodePacked("feeCollectorDepositor")))));
     // another depositor should not be able to snatch fees from the first one
     address internal immutable feeCollectorDepositor2 =
-        address(uint160(uint(keccak256(abi.encodePacked("feeCollectorDepositor2")))));
-    address internal immutable treasury = address(uint160(uint(keccak256(abi.encodePacked("treasury")))));
+        address(uint160(uint256(keccak256(abi.encodePacked("feeCollectorDepositor2")))));
+    address internal immutable treasury = address(uint160(uint256(keccak256(abi.encodePacked("treasury")))));
 
     IManager internal immutable manager;
 
@@ -164,10 +165,10 @@ contract DebitCreditTest is Test, IERC721Receiver {
     }
 
     function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
     ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }

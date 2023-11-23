@@ -96,7 +96,7 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         if (pool.gauge != address(0)) IGauge(pool.gauge).deposit(agreement.collaterals[0].amount);
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
+    function _close(uint256, /*tokenID*/ Agreement memory agreement, bytes memory data) internal override {
         PoolData memory pool = pools[agreement.collaterals[0].token];
 
         // TODO: add check on fees to be sure amountOut is not too little
@@ -194,8 +194,9 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         uint256[] memory scalingFactors = new uint256[](length);
 
         for (uint8 i = 0; i < length; i++) {
-            if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0)
+            if (IERC20(poolTokens[i]).allowance(address(this), address(balancerVault)) == 0) {
                 IERC20(poolTokens[i]).approve(address(balancerVault), type(uint256).max);
+            }
             if (weights[i] > weights[maxWeightTokenIndex]) maxWeightTokenIndex = i;
             scalingFactors[i] = 10 ** (18 - IERC20Metadata(poolTokens[i]).decimals());
         }
@@ -248,7 +249,9 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
     ) internal view {
         PoolData memory pool = pools[poolAddress];
 
-        for (uint256 i = 0; i < pool.length; i++) balances[i] *= pool.scalingFactors[i];
+        for (uint256 i = 0; i < pool.length; i++) {
+            balances[i] *= pool.scalingFactors[i];
+        }
 
         uint256[] memory dueProtocolFeeAmounts = new uint256[](pool.length);
         dueProtocolFeeAmounts[pool.maximumWeightIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
@@ -272,7 +275,9 @@ contract BalancerService is Whitelisted, AuctionRateModel, DebitService {
         uint256[] memory normalizedWeights = IBalancerPool(poolAddress).getNormalizedWeights();
         _modifyBalancesWithFees(poolAddress, balances, normalizedWeights);
 
-        for (uint256 i = 0; i < pool.length; i++) amountsOut[i] *= pool.scalingFactors[i];
+        for (uint256 i = 0; i < pool.length; i++) {
+            amountsOut[i] *= pool.scalingFactors[i];
+        }
 
         uint256 expectedBpt = WeightedMath._calcBptInGivenExactTokensOut(
             balances,

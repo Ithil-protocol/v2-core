@@ -109,7 +109,9 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(1e17));
-        } else service.close(0, abi.encode(1e17));
+        } else {
+            service.close(0, abi.encode(1e17));
+        }
     }
 
     function testSCOClosePositionWithLoss(uint256 daiAmount, uint256 daiLoan) public {
@@ -124,6 +126,8 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(1e17));
-        } else service.close(0, abi.encode(1e17));
+        } else {
+            service.close(0, abi.encode(1e17));
+        }
     }
 }

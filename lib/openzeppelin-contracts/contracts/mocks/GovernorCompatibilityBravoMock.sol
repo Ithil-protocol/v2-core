@@ -71,21 +71,20 @@ contract GovernorCompatibilityBravoMock is
         return super.propose(targets, values, calldatas, description);
     }
 
-    function queue(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) public override(IGovernorTimelock, GovernorTimelockCompound) returns (uint256) {
+    function queue(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        public
+        override(IGovernorTimelock, GovernorTimelockCompound)
+        returns (uint256)
+    {
         return super.queue(targets, values, calldatas, salt);
     }
 
-    function execute(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) public payable override(IGovernor, Governor) returns (uint256) {
+    function execute(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        public
+        payable
+        override(IGovernor, Governor)
+        returns (uint256)
+    {
         return super.execute(targets, values, calldatas, salt);
     }
 
@@ -103,21 +102,18 @@ contract GovernorCompatibilityBravoMock is
      * @notice WARNING: this is for mock purposes only. Ability to the _cancel function should be restricted for live
      * deployments.
      */
-    function cancel(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) public returns (uint256 proposalId) {
+    function cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        public
+        returns (uint256 proposalId)
+    {
         return _cancel(targets, values, calldatas, salt);
     }
 
-    function _cancel(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 salt
-    ) internal override(Governor, GovernorTimelockCompound) returns (uint256 proposalId) {
+    function _cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 salt)
+        internal
+        override(Governor, GovernorTimelockCompound)
+        returns (uint256 proposalId)
+    {
         return super._cancel(targets, values, calldatas, salt);
     }
 

@@ -22,7 +22,7 @@ library StringEncoder {
         bytes memory ss = bytes(s);
         assert(ss.length % 2 == 0); // length must be even
         bytes memory r = new bytes(ss.length / 2);
-        for (uint i = 0; i < ss.length / 2; ++i) {
+        for (uint256 i = 0; i < ss.length / 2; ++i) {
             r[i] = bytes1(fromHexChar(uint8(ss[2 * i])) * 16 + fromHexChar(uint8(ss[2 * i + 1])));
         }
         return r;

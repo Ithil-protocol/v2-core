@@ -9,6 +9,7 @@ contract Oracle is IOracle, Ownable {
     mapping(address => address) public oracles; // token -> feed
 
     event PriceFeedWasUpdated(address indexed token, address indexed feed);
+
     error TokenNotSupported();
 
     function setPriceFeed(address token, address feed) external onlyOwner {

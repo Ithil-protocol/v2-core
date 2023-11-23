@@ -34,10 +34,10 @@ contract SFYScenarioTest is Test, IERC721Receiver {
     }
 
     function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
     ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }

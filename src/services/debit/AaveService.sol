@@ -53,7 +53,7 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
             computedCollateral;
     }
 
-    function _close(uint256 /*tokenID*/, Agreement memory agreement, bytes memory data) internal override {
+    function _close(uint256, /*tokenID*/ Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
         // Recall totalAllowance > 0 if there is at least one open agreement
         uint256 toRedeem = (IAToken(agreement.collaterals[0].token).balanceOf(address(this)) *

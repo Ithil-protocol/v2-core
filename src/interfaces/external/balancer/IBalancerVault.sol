@@ -99,7 +99,7 @@ interface IBalancerVault {
 
     /**
      * @dev Data for `manageUserBalance` operations, which include the possibility for ETH to be sent and received
-     without manual WETH wrapping or unwrapping.
+     *  without manual WETH wrapping or unwrapping.
      */
     struct UserBalanceOp {
         UserBalanceOpKind kind;

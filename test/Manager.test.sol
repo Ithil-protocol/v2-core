@@ -37,7 +37,7 @@ contract ManagerTest is Test {
         firstToken = new ERC20PresetMinterPauser("firstToken", "FIRSTTOKEN");
         secondToken = new ERC20PresetMinterPauser("secondToken", "SECONDTOKEN");
         spuriousToken = new ERC20PresetMinterPauser("spuriousToken", "THIRDTOKEN");
-        tokenSink = address(uint160(uint(keccak256(abi.encodePacked("Sink")))));
+        tokenSink = address(uint160(uint256(keccak256(abi.encodePacked("Sink")))));
         firstToken.mint(tokenSink, type(uint256).max);
         secondToken.mint(tokenSink, type(uint256).max);
         spuriousToken.mint(tokenSink, type(uint256).max);
@@ -52,11 +52,11 @@ contract ManagerTest is Test {
     function setUp() public {
         firstVault = manager.create(address(firstToken));
         secondVault = manager.create(address(secondToken));
-        notOwner = address(uint160(uint(keccak256(abi.encodePacked("Not Owner")))));
-        anyAddress = address(uint160(uint(keccak256(abi.encodePacked("Any Address")))));
-        debitCustody = address(uint160(uint(keccak256(abi.encodePacked("Debit Custody")))));
-        debitServiceOne = address(uint160(uint(keccak256(abi.encodePacked("debitServiceOne")))));
-        debitServiceTwo = address(uint160(uint(keccak256(abi.encodePacked("debitServiceTwo")))));
+        notOwner = address(uint160(uint256(keccak256(abi.encodePacked("Not Owner")))));
+        anyAddress = address(uint160(uint256(keccak256(abi.encodePacked("Any Address")))));
+        debitCustody = address(uint160(uint256(keccak256(abi.encodePacked("Debit Custody")))));
+        debitServiceOne = address(uint160(uint256(keccak256(abi.encodePacked("debitServiceOne")))));
+        debitServiceTwo = address(uint160(uint256(keccak256(abi.encodePacked("debitServiceTwo")))));
     }
 
     function testBase() public {

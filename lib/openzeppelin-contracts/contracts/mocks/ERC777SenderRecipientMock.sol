@@ -64,15 +64,7 @@ contract ERC777SenderRecipientMock is Context, IERC777Sender, IERC777Recipient, 
         uint256 toBalance = token.balanceOf(to);
 
         emit TokensToSendCalled(
-            operator,
-            from,
-            to,
-            amount,
-            userData,
-            operatorData,
-            address(token),
-            fromBalance,
-            toBalance
+            operator, from, to, amount, userData, operatorData, address(token), fromBalance, toBalance
         );
     }
 
@@ -95,15 +87,7 @@ contract ERC777SenderRecipientMock is Context, IERC777Sender, IERC777Recipient, 
         uint256 toBalance = token.balanceOf(to);
 
         emit TokensReceivedCalled(
-            operator,
-            from,
-            to,
-            amount,
-            userData,
-            operatorData,
-            address(token),
-            fromBalance,
-            toBalance
+            operator, from, to, amount, userData, operatorData, address(token), fromBalance, toBalance
         );
     }
 
@@ -141,21 +125,12 @@ contract ERC777SenderRecipientMock is Context, IERC777Sender, IERC777Recipient, 
         _shouldRevertReceive = shouldRevert;
     }
 
-    function send(
-        IERC777 token,
-        address to,
-        uint256 amount,
-        bytes memory data
-    ) public {
+    function send(IERC777 token, address to, uint256 amount, bytes memory data) public {
         // This is 777's send function, not the Solidity send function
         token.send(to, amount, data); // solhint-disable-line check-send-result
     }
 
-    function burn(
-        IERC777 token,
-        uint256 amount,
-        bytes memory data
-    ) public {
+    function burn(IERC777 token, uint256 amount, bytes memory data) public {
         token.burn(amount, data);
     }
 }

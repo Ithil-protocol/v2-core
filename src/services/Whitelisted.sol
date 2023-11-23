@@ -11,6 +11,7 @@ abstract contract Whitelisted is Ownable {
 
     event WhitelistAccessFlagWasToggled();
     event WhitelistedStatusWasChanged(address indexed user, bool status);
+
     error UserIsNotWhitelisted();
 
     constructor() {

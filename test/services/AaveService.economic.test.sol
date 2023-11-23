@@ -12,8 +12,9 @@ import { AaveService } from "../../src/services/debit/AaveService.sol";
 
 contract AaveEconomicTest is Test, IERC721Receiver {
     using GeneralMath for uint256;
-    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
-    address internal immutable liquidator = address(uint160(uint(keccak256(abi.encodePacked("liquidator")))));
+
+    address internal immutable admin = address(uint160(uint256(keccak256(abi.encodePacked("admin")))));
+    address internal immutable liquidator = address(uint160(uint256(keccak256(abi.encodePacked("liquidator")))));
     IManager internal immutable manager;
 
     AaveService internal immutable service;
@@ -44,12 +45,12 @@ contract AaveEconomicTest is Test, IERC721Receiver {
     }
 
     function setUp() public virtual {
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             IERC20(loanTokens[i]).approve(address(service), type(uint256).max);
 
             vm.deal(whales[loanTokens[i]], 1 ether);
         }
-        for (uint i = 0; i < loanLength; i++) {
+        for (uint256 i = 0; i < loanLength; i++) {
             // Create Vault: DAI
             vm.prank(whales[loanTokens[i]]);
             IERC20(loanTokens[i]).transfer(admin, 1);
@@ -68,10 +69,10 @@ contract AaveEconomicTest is Test, IERC721Receiver {
     }
 
     function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
     ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }

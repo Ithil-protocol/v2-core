@@ -17,6 +17,7 @@ contract FixedYieldService is CreditService {
     error SlippageExceeded();
     // The yield of this service, with 1e18 corresponding to 100% annually
     // Here 1 year is defined as to be 365 * 86400 seconds
+
     uint256 public immutable yield;
 
     constructor(
@@ -29,8 +30,9 @@ contract FixedYieldService is CreditService {
 
     function _open(IService.Agreement memory agreement, bytes memory /*data*/) internal virtual override {
         address vaultAddress = manager.vaults(agreement.loans[0].token);
-        if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount)
+        if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount) {
             IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);
+        }
         // Deposit tokens to the relevant vault and register obtained amount
         uint256 shares = IVault(vaultAddress).deposit(agreement.loans[0].amount, address(this));
         // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue

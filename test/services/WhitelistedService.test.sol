@@ -32,9 +32,9 @@ contract WhitelistedTest is Test, IERC721Receiver {
     Manager internal immutable manager;
     TestService internal immutable service;
     ERC20PresetMinterPauser internal immutable token;
-    address internal immutable admin = address(uint160(uint(keccak256(abi.encodePacked("admin")))));
-    address internal constant whitelistedUser = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted")))));
-    address internal constant whitelistedUser2 = address(uint160(uint(keccak256(abi.encodePacked("Whitelisted2")))));
+    address internal immutable admin = address(uint160(uint256(keccak256(abi.encodePacked("admin")))));
+    address internal constant whitelistedUser = address(uint160(uint256(keccak256(abi.encodePacked("Whitelisted")))));
+    address internal constant whitelistedUser2 = address(uint160(uint256(keccak256(abi.encodePacked("Whitelisted2")))));
     uint256 internal constant collateral = 1e18;
     uint256 internal constant loan = 10 * 1e18;
     uint256 internal constant margin = 1e18;
@@ -109,10 +109,10 @@ contract WhitelistedTest is Test, IERC721Receiver {
     }
 
     function onERC721Received(
-        address /*operator*/,
-        address /*from*/,
-        uint256 /*tokenId*/,
-        bytes calldata /*data*/
+        address,
+        /*operator*/ address,
+        /*from*/ uint256,
+        /*tokenId*/ bytes calldata /*data*/
     ) external returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }

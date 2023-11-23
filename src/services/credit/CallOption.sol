@@ -139,8 +139,9 @@ contract CallOption is CreditService {
         uint256 collateral = ((agreement.loans[0].amount * _rewards[durationsLocked]) / (initialPrice + latestSpread));
 
         uint256 shares = IVault(_vaultAddress).convertToShares(agreement.loans[0].amount);
-        if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount)
+        if (collateral < agreement.collaterals[1].amount || shares < agreement.collaterals[0].amount) {
             revert SlippageExceeded();
+        }
 
         agreement.collaterals[0].amount = shares;
         agreement.collaterals[1].amount = collateral;
@@ -178,8 +179,9 @@ contract CallOption is CreditService {
         uint256 toBorrow;
         uint256 freeLiquidity;
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
-        if (toRedeem < agreement.collaterals[0].amount)
+        if (toRedeem < agreement.collaterals[0].amount) {
             vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
+        }
         // redeem the user's tokens and give the proceedings back to the user
         vault.redeem(
             toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
