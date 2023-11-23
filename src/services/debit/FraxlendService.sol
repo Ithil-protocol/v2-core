@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {AuctionRateModel} from "../../irmodels/AuctionRateModel.sol";
-import {DebitService} from "../DebitService.sol";
-import {Service} from "../Service.sol";
-import {Whitelisted} from "../Whitelisted.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
+import { DebitService } from "../DebitService.sol";
+import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    FraxlendService contract
 /// @author   Ithil
@@ -22,15 +22,17 @@ contract FraxlendService is Whitelisted, AuctionRateModel, DebitService {
     error InsufficientAmountOut();
     error ZeroCollateral();
 
-    constructor(address _manager, address _fraxLend, uint256 _deadline)
-        Service("FraxlendService", "FRAXLEND-SERVICE", _manager, _deadline)
-    {
+    constructor(
+        address _manager,
+        address _fraxLend,
+        uint256 _deadline
+    ) Service("FraxlendService", "FRAXLEND-SERVICE", _manager, _deadline) {
         fraxLend = IERC4626(_fraxLend);
         frax = IERC20(fraxLend.asset());
         frax.approve(address(fraxLend), type(uint256).max);
     }
 
-    function _open(Agreement memory agreement, bytes memory /*data*/ ) internal override onlyWhitelisted {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
         if (agreement.loans[0].token != address(frax)) revert IncorrectProvidedToken();
         if (agreement.collaterals[0].token != address(fraxLend)) revert IncorrectObtainedToken();
 
@@ -45,7 +47,7 @@ contract FraxlendService is Whitelisted, AuctionRateModel, DebitService {
     function _close(uint256, /*tokenID*/ Agreement memory agreement, bytes memory data) internal override {
         uint256 minimumAmountOut = abi.decode(data, (uint256));
 
-        uint256 amountIn = fraxLend.withdraw(agreement.collaterals[0].amount, address(this), address(this));
+        uint256 amountIn = fraxLend.redeem(agreement.collaterals[0].amount, address(this), address(this));
         if (amountIn < minimumAmountOut) revert InsufficientAmountOut();
     }
 

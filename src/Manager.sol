@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IVault} from "./interfaces/IVault.sol";
-import {IManager} from "./interfaces/IManager.sol";
-import {Vault} from "./Vault.sol";
-import {RESOLUTION} from "./Constants.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { IManager } from "./interfaces/IManager.sol";
+import { Vault } from "./Vault.sol";
+import { RESOLUTION } from "./Constants.sol";
 
 contract Manager is IManager, Ownable {
     using Math for uint256;
@@ -32,8 +32,11 @@ contract Manager is IManager, Ownable {
     function create(address token) external onlyOwner returns (address) {
         assert(vaults[token] == address(0));
 
-        address vault =
-            Create2.deploy(0, salt, abi.encodePacked(type(Vault).creationCode, abi.encode(IERC20Metadata(token))));
+        address vault = Create2.deploy(
+            0,
+            salt,
+            abi.encodePacked(type(Vault).creationCode, abi.encode(IERC20Metadata(token)))
+        );
         vaults[token] = vault;
         // deposit 1 token unit to avoid the typical ERC4626 issue
         // by placing the resulting iToken in the manager, it becomes unredeemable
@@ -46,11 +49,12 @@ contract Manager is IManager, Ownable {
         return vault;
     }
 
-    function setCap(address service, address token, uint256 percentageCap, uint256 absoluteCap)
-        external
-        override
-        onlyOwner
-    {
+    function setCap(
+        address service,
+        address token,
+        uint256 percentageCap,
+        uint256 absoluteCap
+    ) external override onlyOwner {
         caps[service][token].percentageCap = percentageCap;
         caps[service][token].absoluteCap = absoluteCap;
 
@@ -76,13 +80,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function borrow(address token, uint256 amount, uint256 loan, address receiver)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-        returns (uint256, uint256)
-    {
+    function borrow(
+        address token,
+        uint256 amount,
+        uint256 loan,
+        address receiver
+    ) external override supported(token) vaultExists(token) returns (uint256, uint256) {
         // Example with USDC: investmentCap = 2e17 (20%)
         // initial freeLiquidity = 1e13 (10 million USDC), initial netLoans = 3e12 (3 million USDC)
         // we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
@@ -104,12 +107,12 @@ contract Manager is IManager, Ownable {
     }
 
     /// @inheritdoc IManager
-    function repay(address token, uint256 amount, uint256 debt, address repayer)
-        external
-        override
-        supported(token)
-        vaultExists(token)
-    {
+    function repay(
+        address token,
+        uint256 amount,
+        uint256 debt,
+        address repayer
+    ) external override supported(token) vaultExists(token) {
         uint256 exposure = caps[msg.sender][token].exposure;
         caps[msg.sender][token].exposure = exposure < debt ? 0 : exposure - debt;
         IVault(vaults[token]).repay(amount, debt, repayer);

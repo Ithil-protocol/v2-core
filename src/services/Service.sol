@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ERC721, ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import {IService} from "../interfaces/IService.sol";
-import {IManager} from "../interfaces/IManager.sol";
-import {Vault} from "../Vault.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import { IService } from "../interfaces/IService.sol";
+import { IManager } from "../interfaces/IManager.sol";
+import { Vault } from "../Vault.sol";
 
 abstract contract Service is IService, ERC721Enumerable, Ownable {
     IManager public immutable manager;
@@ -18,9 +18,12 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     event PositionOpened(uint256 indexed id, address indexed user, Agreement agreement);
     event PositionClosed(uint256 indexed id, address indexed user, Agreement agreement);
 
-    constructor(string memory _name, string memory _symbol, address _manager, uint256 _deadline)
-        ERC721(_name, _symbol)
-    {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        address _manager,
+        uint256 _deadline
+    ) ERC721(_name, _symbol) {
         manager = IManager(_manager);
         locked = false;
         id = 0;
@@ -98,13 +101,10 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @notice closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param data extra custom data required by the specific service
-    function close(uint256 tokenID, bytes calldata data)
-        public
-        virtual
-        override
-        editable(tokenID)
-        returns (uint256[] memory)
-    {
+    function close(
+        uint256 tokenID,
+        bytes calldata data
+    ) public virtual override editable(tokenID) returns (uint256[] memory) {
         Agreement memory agreement = agreements[tokenID];
 
         // Body
@@ -122,20 +122,15 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service
-    function edit(uint256 tokenID, Agreement calldata agreement, bytes calldata data)
-        public
-        virtual
-        override
-        unlocked
-        editable(tokenID)
-    {}
+    function edit(
+        uint256 tokenID,
+        Agreement calldata agreement,
+        bytes calldata data
+    ) public virtual override unlocked editable(tokenID) {}
 
-    function getAgreement(uint256 tokenID)
-        public
-        view
-        override
-        returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status)
-    {
+    function getAgreement(
+        uint256 tokenID
+    ) public view override returns (IService.Loan[] memory, IService.Collateral[] memory, uint256, IService.Status) {
         Agreement memory agreement = agreements[tokenID];
         return (agreement.loans, agreement.collaterals, agreement.createdAt, agreement.status);
     }

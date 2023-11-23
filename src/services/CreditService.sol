@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IVault} from "../interfaces/IVault.sol";
-import {Service} from "./Service.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IVault } from "../interfaces/IVault.sol";
+import { Service } from "./Service.sol";
 
 abstract contract CreditService is Service {
     using SafeERC20 for IERC20;
@@ -18,12 +18,14 @@ abstract contract CreditService is Service {
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             address vaultAddress = manager.vaults(agreement.loans[index].token);
             if (
-                agreement.collaterals[index].itemType != ItemType.ERC20
-                    || agreement.collaterals[index].token != vaultAddress
+                agreement.collaterals[index].itemType != ItemType.ERC20 ||
+                agreement.collaterals[index].token != vaultAddress
             ) revert InvalidInput();
             // Transfer tokens to this
             IERC20(agreement.loans[index].token).safeTransferFrom(
-                msg.sender, address(this), agreement.loans[index].amount
+                msg.sender,
+                address(this),
+                agreement.loans[index].amount
             );
         }
 

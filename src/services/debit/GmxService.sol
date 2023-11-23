@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
     IRewardRouter,
     IRewardRouterV2,
@@ -9,10 +9,10 @@ import {
     IUsdgVault,
     IRewardTracker
 } from "../../interfaces/external/gmx/IGmx.sol";
-import {AuctionRateModel} from "../../irmodels/AuctionRateModel.sol";
-import {DebitService} from "../DebitService.sol";
-import {Service} from "../Service.sol";
-import {Whitelisted} from "../Whitelisted.sol";
+import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
+import { DebitService } from "../DebitService.sol";
+import { Service } from "../Service.sol";
+import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    GmxService contract
 /// @author   Ithil
@@ -40,9 +40,12 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
     error InvalidToken();
     error ZeroGlpSupply();
 
-    constructor(address _manager, address _router, address _routerV2, uint256 _deadline)
-        Service("GmxService", "GMX-SERVICE", _manager, _deadline)
-    {
+    constructor(
+        address _manager,
+        address _router,
+        address _routerV2,
+        uint256 _deadline
+    ) Service("GmxService", "GMX-SERVICE", _manager, _deadline) {
         router = IRewardRouter(_router);
         routerV2 = IRewardRouterV2(_routerV2);
         glp = IERC20(routerV2.glp());
@@ -69,7 +72,9 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         // This check is here to protect the msg.sender from slippage, therefore reentrancy is not an issue
         if (totalCollateral == 0) revert ZeroGlpSupply();
         // we assign a virtual deposit of v * A / S, __afterwards__ we update the total deposits
-        virtualDeposit[id] = (agreement.collaterals[0].amount * (totalRewards + totalVirtualDeposits)) / totalCollateral;
+        virtualDeposit[id] =
+            (agreement.collaterals[0].amount * (totalRewards + totalVirtualDeposits)) /
+            totalCollateral;
         totalVirtualDeposits += virtualDeposit[id];
     }
 
@@ -77,7 +82,10 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         uint256 minAmountOut = abi.decode(data, (uint256));
 
         routerV2.unstakeAndRedeemGlp(
-            agreement.loans[0].token, agreement.collaterals[0].amount, minAmountOut, address(this)
+            agreement.loans[0].token,
+            agreement.collaterals[0].amount,
+            minAmountOut,
+            address(this)
         );
 
         uint256 initialBalance = weth.balanceOf(address(this));
@@ -86,8 +94,8 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         uint256 finalBalance = weth.balanceOf(address(this));
         uint256 newRewards = totalRewards + (finalBalance - initialBalance);
         // calculate share of rewards to give to the user
-        uint256 totalWithdraw =
-            ((newRewards + totalVirtualDeposits) * agreement.collaterals[0].amount) / totalCollateral;
+        uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * agreement.collaterals[0].amount) /
+            totalCollateral;
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
         // Due to integer arithmetic, we may get underflow if we do not make checks
         uint256 toTransfer = totalWithdraw >= virtualDeposit[tokenID]
@@ -125,7 +133,11 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         uint256 usdgDelta = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
 
         uint256 feeBasisPoints = usdgVault.getFeeBasisPoints(
-            agreement.loans[0].token, usdgDelta, usdgVault.swapFeeBasisPoints(), usdgVault.taxBasisPoints(), false
+            agreement.loans[0].token,
+            usdgDelta,
+            usdgVault.swapFeeBasisPoints(),
+            usdgVault.taxBasisPoints(),
+            false
         );
         results[0] = (usdgDelta * (10000 - feeBasisPoints)) / 10000;
 

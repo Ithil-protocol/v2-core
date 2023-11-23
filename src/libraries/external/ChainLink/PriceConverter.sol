@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity =0.8.18;
 
-import {AggregatorV3Interface} from "../../../interfaces/external/chainlink/AggregatorV3Interface.sol";
+import { AggregatorV3Interface } from "../../../interfaces/external/chainlink/AggregatorV3Interface.sol";
 
 library PriceConverter {
     error StaleOracleData();

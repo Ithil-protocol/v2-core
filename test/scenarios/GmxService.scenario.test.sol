@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {GmxService} from "../../src/services/debit/GmxService.sol";
+import { Test } from "forge-std/Test.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { GmxService } from "../../src/services/debit/GmxService.sol";
 
 // import { console2 } from "forge-std/console2.sol";
 
@@ -40,7 +40,7 @@ contract GmxScenarioTest is Test, IERC721Receiver {
         vaults[0] = IVault(0x8b002cf7380403329627149aA3D730E633BF1D33);
         vm.selectFork(forkId);
         vm.prank(admin);
-        (bool success,) = address(gmxService).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
+        (bool success, ) = address(gmxService).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
         require(success, "toggleWhitelistFlag failed");
     }
 

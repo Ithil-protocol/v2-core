@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IService} from "../../src/interfaces/IService.sol";
+import { IService } from "../../src/interfaces/IService.sol";
 
 library OrderHelper {
     function createSimpleERC20Order(
@@ -25,9 +25,17 @@ library OrderHelper {
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
 
-        return createAdvancedOrder(
-            tokens, amounts, margins, itemTypes, collateralTokens, collateralAmounts, block.timestamp, ""
-        );
+        return
+            createAdvancedOrder(
+                tokens,
+                amounts,
+                margins,
+                itemTypes,
+                collateralTokens,
+                collateralAmounts,
+                block.timestamp,
+                ""
+            );
     }
 
     // tokens.length = amounts.length = margins.length
@@ -57,9 +65,13 @@ library OrderHelper {
             collateral[i].amount = collateralAmounts[i];
         }
 
-        IService.Agreement memory agreement =
-            IService.Agreement({loans: loan, collaterals: collateral, createdAt: time, status: IService.Status.OPEN});
-        IService.Order memory order = IService.Order({agreement: agreement, data: data});
+        IService.Agreement memory agreement = IService.Agreement({
+            loans: loan,
+            collaterals: collateral,
+            createdAt: time,
+            status: IService.Status.OPEN
+        });
+        IService.Order memory order = IService.Order({ agreement: agreement, data: data });
 
         return order;
     }
@@ -89,9 +101,13 @@ library OrderHelper {
         collaterals[0].token = collateralToken;
         collaterals[0].amount = collateralAmount;
 
-        IService.Agreement memory agreement =
-            IService.Agreement({loans: loans, collaterals: collaterals, createdAt: time, status: IService.Status.OPEN});
-        return IService.Order({agreement: agreement, data: data});
+        IService.Agreement memory agreement = IService.Agreement({
+            loans: loans,
+            collaterals: collaterals,
+            createdAt: time,
+            status: IService.Status.OPEN
+        });
+        return IService.Order({ agreement: agreement, data: data });
     }
 
     // function createERC20Order1Collateral2Tokens(

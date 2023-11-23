@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IVault} from "../../src/interfaces/IVault.sol";
-import {IService} from "../../src/interfaces/IService.sol";
-import {IManager, Manager} from "../../src/Manager.sol";
-import {OrderHelper} from "../helpers/OrderHelper.sol";
-import {GeneralMath} from "../helpers/GeneralMath.sol";
-import {Oracle} from "../../src/Oracle.sol";
-import {MockDex} from "../helpers/MockDex.sol";
+import { Test } from "forge-std/Test.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IVault } from "../../src/interfaces/IVault.sol";
+import { IService } from "../../src/interfaces/IService.sol";
+import { IManager, Manager } from "../../src/Manager.sol";
+import { OrderHelper } from "../helpers/OrderHelper.sol";
+import { GeneralMath } from "../helpers/GeneralMath.sol";
+import { Oracle } from "../../src/Oracle.sol";
+import { MockDex } from "../helpers/MockDex.sol";
 
 contract BaseIntegrationServiceTest is Test, IERC721Receiver {
     address internal constant admin = address(uint160(uint256(keccak256(abi.encodePacked("admin")))));
@@ -58,7 +58,7 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
             vm.stopPrank();
         }
         vm.prank(admin);
-        (bool success,) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
+        (bool success, ) = serviceAddress.call(abi.encodeWithSignature("toggleWhitelistFlag()"));
     }
 
     function onERC721Received(
@@ -126,9 +126,17 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
 
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = collateralAmount;
-        return OrderHelper.createAdvancedOrder(
-            loanTokens, loans, margins, itemTypes, collateralTokens, collateralAmounts, time, data
-        );
+        return
+            OrderHelper.createAdvancedOrder(
+                loanTokens,
+                loans,
+                margins,
+                itemTypes,
+                collateralTokens,
+                collateralAmounts,
+                time,
+                data
+            );
     }
 
     function _vectorizedOpenOrderForCredit(
@@ -148,15 +156,24 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
 
         uint256[] memory collateralAmounts = new uint256[](2);
         collateralAmounts[0] = collateralAmount;
-        return OrderHelper.createAdvancedOrder(
-            loanTokens, loans, new uint256[](1), itemTypes, collateralTokens, collateralAmounts, time, data
-        );
+        return
+            OrderHelper.createAdvancedOrder(
+                loanTokens,
+                loans,
+                new uint256[](1),
+                itemTypes,
+                collateralTokens,
+                collateralAmounts,
+                time,
+                data
+            );
     }
 
-    function _openOrder0(uint256 collateralAmount, uint256 time, bytes memory data)
-        internal
-        returns (IService.Order memory order)
-    {
+    function _openOrder0(
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory order) {
         uint256[] memory amounts = new uint256[](loanLength);
         uint256[] memory loans = new uint256[](loanLength);
         uint256[] memory margins = new uint256[](loanLength);
@@ -180,10 +197,12 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);
     }
 
-    function _openOrder1ForCredit(uint256 loan0, uint256 collateralAmount, uint256 time, bytes memory data)
-        internal
-        returns (IService.Order memory order)
-    {
+    function _openOrder1ForCredit(
+        uint256 loan0,
+        uint256 collateralAmount,
+        uint256 time,
+        bytes memory data
+    ) internal returns (IService.Order memory order) {
         uint256[] memory loans = new uint256[](loanLength);
         loans[0] = loan0;
         return _vectorizedOpenOrderForCredit(loans, collateralAmount, time, data);
@@ -227,16 +246,19 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         uint256[] memory loans = new uint256[](loanLength);
         uint256[] memory margins = new uint256[](loanLength);
         // amount calculation is necessary to avoid a stack too deep
-        amounts[0] = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]])
-            - (margin0 % IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]));
+        amounts[0] =
+            IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]) -
+            (margin0 % IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]));
         loans[0] = loan0;
         margins[0] = margin0;
-        amounts[1] = IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]])
-            - (margin1 % (IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]])));
+        amounts[1] =
+            IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]]) -
+            (margin1 % (IERC20(loanTokens[1]).balanceOf(whales[loanTokens[1]])));
         loans[1] = loan1;
         margins[1] = margin1;
-        amounts[2] = IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])
-            - (margin2 % (IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])));
+        amounts[2] =
+            IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]]) -
+            (margin2 % (IERC20(loanTokens[2]).balanceOf(whales[loanTokens[2]])));
         loans[2] = loan2;
         margins[2] = margin2;
         return _vectorizedOpenOrder(amounts, loans, margins, collateralAmount, time, data);

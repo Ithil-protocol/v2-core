@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Service} from "./Service.sol";
-import {BaseRiskModel} from "./BaseRiskModel.sol";
-import {RESOLUTION, ONE_YEAR} from "../Constants.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Service } from "./Service.sol";
+import { BaseRiskModel } from "./BaseRiskModel.sol";
+import { RESOLUTION, ONE_YEAR } from "../Constants.sol";
 
 abstract contract DebitService is Service, BaseRiskModel {
     using SafeERC20 for IERC20;
@@ -28,12 +28,11 @@ abstract contract DebitService is Service, BaseRiskModel {
     }
 
     /// @dev Defaults to amount + margin * (ir + riskSpread) / 1e18
-    function _liquidationThreshold(uint256 amount, uint256 margin, uint256 interestAndSpread)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _liquidationThreshold(
+        uint256 amount,
+        uint256 margin,
+        uint256 interestAndSpread
+    ) internal view virtual returns (uint256) {
         (uint256 interestRate, uint256 riskSpread) = (interestAndSpread >> 128, interestAndSpread % (1 << 128));
         // Any good interest rate model must have interestRate + riskSpread < RESOLUTION
         // otherwise a position may be instantly liquidable
@@ -52,7 +51,9 @@ abstract contract DebitService is Service, BaseRiskModel {
         for (uint256 index = 0; index < quotes.length; index++) {
             // minimumQuote = liquidationThreshold + fees
             uint256 minimumQuote = _liquidationThreshold(
-                agreement.loans[index].amount, agreement.loans[index].margin, agreement.loans[index].interestAndSpread
+                agreement.loans[index].amount,
+                agreement.loans[index].margin,
+                agreement.loans[index].interestAndSpread
             ) + fees[index];
             // The score is the sum of percentage negative displacements from the minimumQuotes
             score = minimumQuote > quotes[index]
@@ -69,13 +70,15 @@ abstract contract DebitService is Service, BaseRiskModel {
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             if (agreement.loans[index].margin < minMargin[agreement.loans[index].token]) revert MarginTooLow();
             IERC20(agreement.loans[index].token).safeTransferFrom(
-                msg.sender, address(this), agreement.loans[index].margin
+                msg.sender,
+                address(this),
+                agreement.loans[index].margin
             );
             // No need to launch borrow if amount is zero
             uint256 freeLiquidity;
             // this call does not constitute reentrancy, since transferring additional margin
             // has the same effect as opening a single position with the sum of the two margins
-            (freeLiquidity,) = manager.borrow(
+            (freeLiquidity, ) = manager.borrow(
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
                 agreement.loans[index].amount,
@@ -87,12 +90,7 @@ abstract contract DebitService is Service, BaseRiskModel {
         Service.open(order);
     }
 
-    function close(uint256 tokenID, bytes calldata data)
-        public
-        virtual
-        override
-        returns (uint256[] memory amountsOut)
-    {
+    function close(uint256 tokenID, bytes calldata data) public virtual override returns (uint256[] memory amountsOut) {
         Agreement memory agreement = agreements[tokenID];
         address agreementOwner = ownerOf(tokenID);
         uint256 score = liquidationScore(tokenID);
@@ -168,10 +166,13 @@ abstract contract DebitService is Service, BaseRiskModel {
     function computeDueFees(Agreement memory agreement) public view virtual returns (uint256[] memory) {
         uint256[] memory dueFees = new uint256[](agreement.loans.length);
         for (uint256 i = 0; i < agreement.loans.length; i++) {
-            (uint256 base, uint256 spread) =
-                (agreement.loans[i].interestAndSpread >> 128, agreement.loans[i].interestAndSpread % (1 << 128));
-            dueFees[i] = (agreement.loans[i].amount * ((base + spread) * (block.timestamp - agreement.createdAt)))
-                / (RESOLUTION * ONE_YEAR);
+            (uint256 base, uint256 spread) = (
+                agreement.loans[i].interestAndSpread >> 128,
+                agreement.loans[i].interestAndSpread % (1 << 128)
+            );
+            dueFees[i] =
+                (agreement.loans[i].amount * ((base + spread) * (block.timestamp - agreement.createdAt))) /
+                (RESOLUTION * ONE_YEAR);
         }
         return dueFees;
     }
