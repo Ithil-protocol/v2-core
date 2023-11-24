@@ -7,85 +7,85 @@ import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/pre
 import { IVault } from "../../src/interfaces/IVault.sol";
 import { IService } from "../../src/interfaces/IService.sol";
 import { IManager, Manager } from "../../src/Manager.sol";
-import { AngleService } from "../../src/services/debit/AngleService.sol";
+import { FraxlendService } from "../../src/services/debit/FraxlendService.sol";
 import { GeneralMath } from "../helpers/GeneralMath.sol";
 import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-contract AngleServiceTest is BaseIntegrationServiceTest {
+contract FraxlendServiceTest is BaseIntegrationServiceTest {
     using GeneralMath for uint256;
 
-    AngleService internal immutable service;
-    address internal constant agEur = 0xFA5Ed56A203466CbBC2430a43c66b9D8723528E7;
-    address internal constant stEur = 0x004626A008B1aCdC4c74ab51644093b155e59A23;
-    IERC20 internal constant agEurToken = IERC20(agEur);
-    IERC4626 internal constant stEurToken = IERC4626(stEur);
+    FraxlendService internal immutable service;
+    address internal constant frax = 0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F;
+    address internal constant fraxLend = 0x2D0483FefAbA4325c7521539a3DFaCf94A19C472;
+    IERC20 internal constant fraxToken = IERC20(frax);
+    IERC4626 internal constant fraxLendToken = IERC4626(fraxLend);
 
     string internal constant rpcUrl = "ARBITRUM_RPC_URL";
     uint256 internal constant blockNumber = 151776455;
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new AngleService(address(manager), stEur, 30 * 86400);
+        service = new FraxlendService(address(manager), fraxLend, 30 * 86400);
 
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
-        loanTokens[0] = agEur;
-        whales[loanTokens[0]] = 0xE4D9FaDDd9bcA5D8393BeE915dC56E916AB94d27;
-        collateralTokens[0] = stEur;
+        loanTokens[0] = frax;
+        whales[loanTokens[0]] = 0x367a739ccC69940aF740590a7D533Ef8f96f282a;
+        collateralTokens[0] = fraxLend;
         serviceAddress = address(service);
     }
 
-    function testAngleIntegrationOpenPosition(uint256 agEurAmount, uint256 agEurLoan, uint256 agEurMargin) public {
+    function testFraxlendIntegrationOpenPosition(uint256 amount, uint256 loan, uint256 margin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        uint256 transformedAmount = agEurAmount % whaleBalance;
+        uint256 transformedAmount = amount % whaleBalance;
         if (transformedAmount == 0) transformedAmount++;
 
-        uint256 transformedMargin = (agEurMargin % (whaleBalance - transformedAmount));
+        uint256 transformedMargin = (margin % (whaleBalance - transformedAmount));
         if (transformedMargin == 0) transformedMargin++;
 
-        uint256 initialBalance = stEurToken.balanceOf(address(service));
+        uint256 initialBalance = fraxLendToken.balanceOf(address(service));
 
-        IService.Order memory order = _openOrder1(agEurAmount, agEurLoan, agEurMargin, 0, block.timestamp, "");
+        IService.Order memory order = _openOrder1(amount, loan, margin, 0, block.timestamp, "");
 
-        order.agreement.collaterals[0].amount = stEurToken.convertToShares(
+        order.agreement.collaterals[0].amount = fraxLendToken.convertToShares(
             order.agreement.loans[0].amount + order.agreement.loans[0].margin
         );
 
         service.open(order);
 
         (, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
-        assertEq(stEurToken.balanceOf(address(service)), initialBalance + collaterals[0].amount);
+        assertEq(fraxLendToken.balanceOf(address(service)), initialBalance + collaterals[0].amount);
     }
 
-    function testAngleIntegrationClosePosition(
-        uint256 agEurAmount,
-        uint256 agEurLoan,
-        uint256 agEurMargin,
+    function testFraxlendIntegrationClosePosition(
+        uint256 amount,
+        uint256 loan,
+        uint256 margin,
         uint256 minAmountsOut
     ) public {
-        testAngleIntegrationOpenPosition(agEurAmount, agEurLoan, agEurMargin);
+        testFraxlendIntegrationOpenPosition(amount, loan, margin);
 
         bytes memory data = abi.encode(minAmountsOut);
 
-        uint256 initialServiceBalance = stEurToken.balanceOf(address(service));
-        uint256 toRedeem = stEurToken.convertToAssets(stEurToken.balanceOf(address(service)));
         (IService.Loan[] memory actualLoans, IService.Collateral[] memory collaterals, , ) = service.getAgreement(0);
+        uint256 initialServiceBalance = fraxLendToken.balanceOf(address(service));
+        uint256 toRedeem = fraxLendToken.convertToAssets(fraxLendToken.balanceOf(address(service)));
         if (toRedeem < minAmountsOut) {
             // Slippage check
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientAmountOut()"))));
             service.close(0, data);
         } else {
-            uint256 initialBalance = agEurToken.balanceOf(address(this));
+            uint256 initialBalance = fraxToken.balanceOf(address(this));
             service.close(0, data);
-            assertEq(agEurToken.balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
-            assertEq(stEurToken.balanceOf(address(service)), initialServiceBalance - collaterals[0].amount);
+            assertEq(fraxToken.balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
+            assertEq(fraxLendToken.balanceOf(address(service)), initialServiceBalance - collaterals[0].amount);
         }
     }
 
-    function testAngleIntegrationQuoter(uint256 agEurAmount, uint256 agEurLoan, uint256 agEurMargin) public {
-        testAngleIntegrationOpenPosition(agEurAmount, agEurLoan, agEurMargin);
+    function testFraxlendIntegrationQuoter(uint256 amount, uint256 loanTaken, uint256 margin) public {
+        testFraxlendIntegrationOpenPosition(amount, loanTaken, margin);
 
         (
             IService.Loan[] memory loan,
@@ -101,7 +101,6 @@ contract AngleServiceTest is BaseIntegrationServiceTest {
         uint256 initialBalance = IERC20(loanTokens[0]).balanceOf(address(this));
 
         service.close(0, abi.encode(0));
-
         uint256 expected = loan[0].amount > initialBalance + quoted[0]
             ? 0
             : initialBalance + quoted[0] - loan[0].amount;
