@@ -80,6 +80,10 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
 
     function _close(uint256 tokenID, Agreement memory agreement, bytes memory data) internal override {
         uint256 minAmountOut = abi.decode(data, (uint256));
+        uint256 userVirtualDeposit = virtualDeposit[tokenID];
+        // delete virtual deposits
+        delete virtualDeposit[tokenID];
+        totalVirtualDeposits -= userVirtualDeposit;
 
         routerV2.unstakeAndRedeemGlp(
             agreement.loans[0].token,
@@ -98,14 +102,11 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
             totalCollateral;
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
         // Due to integer arithmetic, we may get underflow if we do not make checks
-        uint256 toTransfer = totalWithdraw >= virtualDeposit[tokenID]
-            ? totalWithdraw - virtualDeposit[tokenID] <= finalBalance
-                ? totalWithdraw - virtualDeposit[tokenID]
+        uint256 toTransfer = totalWithdraw >= userVirtualDeposit
+            ? totalWithdraw - userVirtualDeposit <= finalBalance
+                ? totalWithdraw - userVirtualDeposit
                 : finalBalance
             : 0;
-        // delete virtual deposits
-        totalVirtualDeposits -= virtualDeposit[tokenID];
-        delete virtualDeposit[tokenID];
         // update totalRewards and totalCollateral
         totalRewards = newRewards - toTransfer;
         totalCollateral -= agreement.collaterals[0].amount;
