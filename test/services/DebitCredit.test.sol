@@ -264,16 +264,16 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // lock period did not pass yet
         uint256 calledPortion = 0;
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("LockPeriodStillActive()"))));
-        callOptionService.close(0, abi.encode(calledPortion));
+        callOptionService.close(0, abi.encode(calledPortion, 0));
         // we must warp the months locked
         vm.warp(block.timestamp + (monthsLocked + 1) * 30 * 86400);
         // since there is no sufficient liquidity, if the user withdraws we expect it to revert
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
-        callOptionService.close(0, abi.encode(calledPortion));
+        callOptionService.close(0, abi.encode(calledPortion, 0));
         // if instead the caller exercises the option, even partially (more than 50%) no problem
         calledPortion = 9e17;
         uint256 initialCallerBalance = IERC20(usdc).balanceOf(callOptionSigner);
-        callOptionService.close(0, abi.encode(calledPortion));
+        callOptionService.close(0, abi.encode(calledPortion, 0));
         // call option signer has expected ITHIL balance
         assertEq(ithil.balanceOf(callOptionSigner), (collaterals[1].amount * calledPortion) / 1e18);
         // call option signer has withdrawn the remaining part of assets
@@ -324,12 +324,12 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // lock period did not pass yet
         calledPortion = 0;
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("LockPeriodStillActive()"))));
-        callOptionService.close(1, abi.encode(calledPortion));
+        callOptionService.close(1, abi.encode(calledPortion, 0));
         // we must warp the months locked
         vm.warp(block.timestamp + (monthsLocked + 1) * 30 * 86400);
         // since there is no sufficient liquidity, if the user withdraws we expect it to revert
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
-        callOptionService.close(1, abi.encode(calledPortion));
+        callOptionService.close(1, abi.encode(calledPortion, 0));
         vm.stopPrank();
 
         // Before closing, we open a fee collector position
@@ -394,7 +394,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
 
         // let us now close the call option with all liquidity withdrawn
         vm.startPrank(callOptionSigner);
-        callOptionService.close(1, abi.encode(0));
+        callOptionService.close(1, abi.encode(0, 0));
         vm.stopPrank();
 
         // and let us withdraw fees and close the position
