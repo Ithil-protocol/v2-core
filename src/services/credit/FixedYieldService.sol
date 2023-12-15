@@ -25,12 +25,13 @@ contract FixedYieldService is CreditService {
         uint256 _yield,
         uint256 _deadline
     ) Service("Fixed Yield Service", "FIXED-YIELD-SERVICE", _manager, _deadline) {
+        if (_manager == address(0)) revert InvalidParams();
         yield = _yield;
     }
 
     function _open(IService.Agreement memory agreement, bytes memory /*data*/) internal virtual override {
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 2) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 2) revert InvalidParams();
 
         address vaultAddress = manager.vaults(agreement.loans[0].token);
         if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount) {
