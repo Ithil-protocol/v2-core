@@ -13,6 +13,7 @@ interface IService is IERC721Enumerable {
     }
 
     enum ItemType {
+        UNDEFINED,
         ERC20,
         ERC721,
         ERC1155
