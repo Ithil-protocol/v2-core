@@ -57,6 +57,9 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
+        if (agreement.loans.length != 1) revert InvalidArguments();
+        if (agreement.collaterals.length != 1) revert InvalidArguments();
+
         if (IERC20(agreement.loans[0].token).allowance(address(this), address(glpManager)) == 0) {
             IERC20(agreement.loans[0].token).approve(address(glpManager), type(uint256).max);
         }

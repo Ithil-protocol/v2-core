@@ -33,6 +33,8 @@ contract FraxlendService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
+        if (agreement.loans.length != 1) revert InvalidArguments();
+        if (agreement.collaterals.length != 1) revert InvalidArguments();
         if (agreement.loans[0].token != address(frax)) revert IncorrectProvidedToken();
         if (agreement.collaterals[0].token != address(fraxLend)) revert IncorrectObtainedToken();
 

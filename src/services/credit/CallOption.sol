@@ -100,8 +100,9 @@ contract CallOption is CreditService {
     }
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
-        // This is a credit service with one extra token, Ithil
-        // therefore, the collateral length is 2
+        // This is a credit service with one extra token (Ithil) therefore the collateral length is 2
+        if (agreement.loans.length != 1) revert InvalidArguments();
+        if (agreement.collaterals.length != 2) revert InvalidArguments();
 
         if (agreement.loans[0].token != address(underlying)) revert InvalidUnderlyingToken();
         if (agreement.collaterals[1].token != address(ithil)) revert InvalidIthilToken();
