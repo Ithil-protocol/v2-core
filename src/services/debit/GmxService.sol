@@ -12,12 +12,11 @@ import {
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    GmxService contract
 /// @author   Ithil
 /// @notice   A service to perform margin trading on the GLP token
-contract GmxService is Whitelisted, AuctionRateModel, DebitService {
+contract GmxService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 
     IRewardRouter public immutable router;

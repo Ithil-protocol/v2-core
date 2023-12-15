@@ -6,12 +6,11 @@ import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    FraxlendService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking of FRAX on Fraxlend
-contract FraxlendService is Whitelisted, AuctionRateModel, DebitService {
+contract FraxlendService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 
     IERC4626 public immutable fraxLend;
@@ -32,7 +31,7 @@ contract FraxlendService is Whitelisted, AuctionRateModel, DebitService {
         frax.approve(address(fraxLend), type(uint256).max);
     }
 
-    function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         if (agreement.loans.length != 1) revert InvalidArguments();
         if (agreement.collaterals.length != 1) revert InvalidArguments();
         if (agreement.loans[0].token != address(frax)) revert IncorrectProvidedToken();
