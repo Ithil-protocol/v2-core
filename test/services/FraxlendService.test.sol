@@ -37,6 +37,10 @@ contract FraxlendServiceTest is BaseIntegrationServiceTest {
         serviceAddress = address(service);
     }
 
+    function safeSub(uint256 a, uint256 b) internal returns (uint256) {
+        return b < a ? a - b : 0;
+    }
+
     function testFraxlendIntegrationOpenPosition(uint256 amount, uint256 loan, uint256 margin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = amount % whaleBalance;
@@ -79,8 +83,8 @@ contract FraxlendServiceTest is BaseIntegrationServiceTest {
         } else {
             uint256 initialBalance = fraxToken.balanceOf(address(this));
             service.close(0, data);
-            assertEq(fraxToken.balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
-            assertEq(fraxLendToken.balanceOf(address(service)), initialServiceBalance - collaterals[0].amount);
+            assertEq(fraxToken.balanceOf(address(this)), safeSub(initialBalance + toRedeem, actualLoans[0].amount));
+            assertEq(fraxLendToken.balanceOf(address(service)), safeSub(initialServiceBalance, collaterals[0].amount));
         }
     }
 

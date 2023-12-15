@@ -61,6 +61,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // Minimum 30 seconds, maximum 7 days
         // This also avoids division by zero in _calculateLockedProfits()
         if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert FeeUnlockTimeOutOfRange();
+        currentProfits = _calculateLockedProfits();
+        currentLosses = _calculateLockedLosses();
+        latestRepay = block.timestamp;
         feeUnlockTime = _feeUnlockTime;
 
         emit DegradationCoefficientWasUpdated(feeUnlockTime);
