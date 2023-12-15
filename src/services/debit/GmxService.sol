@@ -105,8 +105,8 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         uint256 toTransfer = totalWithdraw >= userVirtualDeposit
             ? totalWithdraw - userVirtualDeposit <= finalBalance ? totalWithdraw - userVirtualDeposit : finalBalance
             : 0;
-        // update totalRewards and totalCollateral
-        totalRewards = newRewards - toTransfer;
+        // update totalRewards and totalCollateral with an extra check to avoid integer arithmetic underflows
+        totalRewards = toTransfer < newRewards ? newRewards - toTransfer : 0;
         totalCollateral -= agreement.collaterals[0].amount;
         // Transfer weth: since toTransfer <= totalWithdraw
         weth.safeTransfer(msg.sender, toTransfer);
