@@ -29,6 +29,9 @@ contract FixedYieldService is CreditService {
     }
 
     function _open(IService.Agreement memory agreement, bytes memory /*data*/) internal virtual override {
+        if (agreement.loans.length != 1) revert InvalidArguments();
+        if (agreement.collaterals.length != 2) revert InvalidArguments();
+
         address vaultAddress = manager.vaults(agreement.loans[0].token);
         if (IERC20(agreement.loans[0].token).allowance(address(this), vaultAddress) < agreement.loans[0].amount) {
             IERC20(agreement.loans[0].token).approve(vaultAddress, type(uint256).max);

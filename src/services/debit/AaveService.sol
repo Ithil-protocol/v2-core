@@ -32,6 +32,9 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
+        if (agreement.loans.length != 1) revert InvalidArguments();
+        if (agreement.collaterals.length != 1) revert InvalidArguments();
+
         IAToken aToken = IAToken(agreement.collaterals[0].token);
         if (aToken.UNDERLYING_ASSET_ADDRESS() != agreement.loans[0].token) revert IncorrectObtainedToken();
         // The following is necessary, otherwise Aave could throw an INVALID_AMOUNT error when withdrawing
