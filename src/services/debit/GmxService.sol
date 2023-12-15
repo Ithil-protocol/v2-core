@@ -103,9 +103,7 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
         // Due to integer arithmetic, we may get underflow if we do not make checks
         uint256 toTransfer = totalWithdraw >= userVirtualDeposit
-            ? totalWithdraw - userVirtualDeposit <= finalBalance
-                ? totalWithdraw - userVirtualDeposit
-                : finalBalance
+            ? totalWithdraw - userVirtualDeposit <= finalBalance ? totalWithdraw - userVirtualDeposit : finalBalance
             : 0;
         // update totalRewards and totalCollateral
         totalRewards = newRewards - toTransfer;
