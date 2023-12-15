@@ -18,6 +18,7 @@ abstract contract CreditService is Service {
         for (uint256 index = 0; index < agreement.loans.length; index++) {
             address vaultAddress = manager.vaults(agreement.loans[index].token);
             if (
+                vaultAddress == address(0) ||
                 agreement.collaterals[index].itemType != ItemType.ERC20 ||
                 agreement.collaterals[index].token != vaultAddress
             ) revert InvalidInput();
