@@ -124,7 +124,7 @@ contract VaultTest is Test {
         uint256 latestRepay,
         uint256 currentProfits,
         uint256 currentLosses
-    ) internal returns (uint256, uint256) {
+    ) internal returns (uint256, uint256, uint256) {
         // Force fee unlock time to be within range
         feeUnlockTime = Math.min((feeUnlockTime % (7 days)) + 30 seconds, 7 days);
         vault.setFeeUnlockTime(feeUnlockTime);
@@ -138,6 +138,8 @@ contract VaultTest is Test {
         vm.stopPrank();
 
         // Set latestRepay
+        // Force latest repay not to be in the future
+        latestRepay = Math.max(block.timestamp, latestRepay);
         vm.warp(latestRepay);
         vault.repay(0, 0, repayer);
 
@@ -175,7 +177,7 @@ contract VaultTest is Test {
             currentProfits,
             currentLosses
         );
-        return (feeUnlockTime, currentProfits);
+        return (feeUnlockTime, latestRepay, currentProfits);
     }
 
     function testFeeUnlockTime(
@@ -188,7 +190,7 @@ contract VaultTest is Test {
         uint256 currentLosses,
         uint256 feeUnlockTimeSet
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -227,7 +229,7 @@ contract VaultTest is Test {
         uint256 currentLosses,
         uint256 spuriousAmount
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -266,7 +268,7 @@ contract VaultTest is Test {
         uint256 currentLosses,
         uint256 deposited
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -342,7 +344,7 @@ contract VaultTest is Test {
         uint256 currentLosses,
         uint256 minted
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -402,7 +404,7 @@ contract VaultTest is Test {
         uint256 currentLosses,
         uint256 withdrawn
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -454,7 +456,7 @@ contract VaultTest is Test {
         uint256 currentLosses,
         uint256 redeemed
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -508,7 +510,7 @@ contract VaultTest is Test {
         uint256 borrowed,
         uint256 loan
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
@@ -548,7 +550,7 @@ contract VaultTest is Test {
         uint256 debt,
         uint256 repaid
     ) public {
-        (feeUnlockTime, currentProfits) = _setupArbitraryState(
+        (feeUnlockTime, latestRepay, currentProfits) = _setupArbitraryState(
             feeUnlockTime,
             totalSupply,
             balanceOf,
