@@ -132,14 +132,15 @@ contract AaveGeneralTest is Test, IERC721Receiver {
         return order;
     }
 
-    function _openOrder(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) internal {
+    function _openOrder(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) internal returns (bool) {
         warp = warp % (365 * 86400); // Warp 1y maximum
         (loan, margin) = _prepareVaultAndUser(vaultAmount, loan, margin);
         IService.Order memory order = _prepareOrder(loan, margin);
         // No need to check invariants: they are already checked in other tests
-        if (order.agreement.loans[0].margin < 1e6) return;
+        if (order.agreement.loans[0].margin < 1e6) return false;
         service.open(order);
         vm.warp(block.timestamp + warp);
+        return true;
     }
 
     function _getInterestAndSpread(uint256 tokenID) internal returns (uint256, uint256) {
@@ -248,14 +249,16 @@ contract AaveGeneralTest is Test, IERC721Receiver {
     }
 
     function testInterestRateChange(uint256 vaultAmount, uint256 loan, uint256 margin, uint64 warp) public {
-        _openOrder(vaultAmount, loan, margin, warp);
-        (uint256 interest1, ) = _getInterestAndSpread(0);
+        uint256 interest1;
+        uint256 interest2;
+        bool opened = _openOrder(vaultAmount, loan, margin, warp);
+        if (opened) (interest1, ) = _getInterestAndSpread(0);
         // Open a new order: time is already warped by "warp" after first one
-        _openOrder(vaultAmount, loan, margin, 0);
+        opened = _openOrder(vaultAmount, loan, margin, 0);
         // there is a chance that latest order was not open due to margin constraint
         // I add this check to avoid index out of bounds
         if (service.id() > 1) {
-            (uint256 interest2, ) = _getInterestAndSpread(1);
+            if (opened) (interest2, ) = _getInterestAndSpread(1);
             uint256 rateDecay = warp < 2 * service.halvingTime(loanTokens[0])
                 ? (interest1 * (2 * service.halvingTime(loanTokens[0]) - warp)) /
                     (2 * service.halvingTime(loanTokens[0]))
