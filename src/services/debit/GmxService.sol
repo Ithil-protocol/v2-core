@@ -87,9 +87,7 @@ contract GmxService is AuctionRateModel, DebitService {
     function _close(uint256 tokenID, Agreement memory agreement, bytes memory data) internal override {
         uint256 minAmountOut = abi.decode(data, (uint256));
         uint256 userVirtualDeposit = virtualDeposit[tokenID];
-        // delete virtual deposits
         delete virtualDeposit[tokenID];
-        totalVirtualDeposits -= userVirtualDeposit;
 
         routerV2.unstakeAndRedeemGlp(
             agreement.loans[0].token,
@@ -103,14 +101,18 @@ contract GmxService is AuctionRateModel, DebitService {
         // register rewards
         uint256 finalBalance = weth.balanceOf(address(this));
         uint256 newRewards = totalRewards + (finalBalance - initialBalance);
-        // calculate share of rewards to give to the user
-        uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * agreement.collaterals[0].amount) /
-            totalCollateral;
-        // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
-        // Due to integer arithmetic, we may get underflow if we do not make checks
-        uint256 toTransfer = totalWithdraw >= userVirtualDeposit
-            ? totalWithdraw - userVirtualDeposit <= finalBalance ? totalWithdraw - userVirtualDeposit : finalBalance
-            : 0;
+
+        uint256 toTransfer = _wethReward(
+            agreement.collaterals[0].amount,
+            userVirtualDeposit,
+            newRewards,
+            totalVirtualDeposits,
+            totalCollateral,
+            finalBalance
+        );
+
+        // delete virtual deposits here since _wethReward already subtracts user deposit from total
+        totalVirtualDeposits -= userVirtualDeposit;
         // update totalRewards and totalCollateral with an extra check to avoid integer arithmetic underflows
         totalRewards = toTransfer < newRewards ? newRewards - toTransfer : 0;
         totalCollateral -= agreement.collaterals[0].amount;
@@ -119,12 +121,17 @@ contract GmxService is AuctionRateModel, DebitService {
     }
 
     function wethReward(uint256 tokenID) public view returns (uint256) {
-        uint256 collateral = agreements[tokenID].collaterals[0].amount;
-        uint256 newRewards = totalRewards + rewardTracker.claimableReward(address(this));
-        // calculate share of rewards to give to the user
-        uint256 totalWithdraw = ((newRewards + totalVirtualDeposits) * collateral) / totalCollateral;
-        // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
-        return totalWithdraw - virtualDeposit[tokenID];
+        uint256 claimableReward = rewardTracker.claimableReward(address(this));
+        uint256 finalBalance = weth.balanceOf(address(this)) + claimableReward;
+        return
+            _wethReward(
+                agreements[tokenID].collaterals[0].amount,
+                virtualDeposit[tokenID],
+                totalRewards + claimableReward,
+                totalVirtualDeposits,
+                totalCollateral,
+                finalBalance
+            );
     }
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
@@ -147,5 +154,24 @@ contract GmxService is AuctionRateModel, DebitService {
         results[0] = (usdgDelta * (10000 - feeBasisPoints)) / 10000;
 
         return results;
+    }
+
+    function _wethReward(
+        uint256 collateral,
+        uint256 userVirtualDeposit,
+        uint256 totalRewards,
+        uint256 totalVirtualDeposits,
+        uint256 totalCollateral,
+        uint256 finalBalance
+    ) internal pure returns (uint256) {
+        // calculate share of rewards to give to the user
+        uint256 totalWithdraw = ((totalRewards + totalVirtualDeposits - userVirtualDeposit) * collateral) /
+            totalCollateral;
+        return
+            // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
+            // Due to integer arithmetic, we may get underflow if we do not make checks
+            totalWithdraw >= userVirtualDeposit
+                ? totalWithdraw - userVirtualDeposit <= finalBalance ? totalWithdraw - userVirtualDeposit : finalBalance
+                : 0;
     }
 }
