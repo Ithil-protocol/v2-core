@@ -147,6 +147,16 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return ERC4626.deposit(_assets, receiver);
     }
 
+    function maxDeposit(address) public view override(IERC4626, ERC4626) returns (uint256) {
+        if (isLocked) return 0;
+        return type(uint256).max;
+    }
+
+    function maxMint(address) public view override(IERC4626, ERC4626) returns (uint256) {
+        if (isLocked) return 0;
+        return type(uint256).max;
+    }
+
     function depositWithPermit(
         uint256 assets,
         address receiver,
@@ -170,7 +180,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     ) public override(ERC4626, IERC4626) returns (uint256) {
         // assets cannot be more than the current free liquidity
         uint256 freeLiq = freeLiquidity();
-        if (assets >= freeLiq) revert InsufficientLiquidity();
+        if (assets > freeLiq) revert InsufficientLiquidity();
 
         // super.withdraw but we leverage the fact of having already computed freeLiq
         uint256 supply = totalSupply();
@@ -194,7 +204,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 supply = totalSupply();
 
         uint256 assets = shares.mulDiv(totalAssetsCache, supply);
-        if (assets >= freeLiq) revert InsufficientLiquidity();
+        if (assets > freeLiq) revert InsufficientLiquidity();
         // redeem, now all data have been computed
         _withdraw(msg.sender, receiver, owner, assets, shares);
 
