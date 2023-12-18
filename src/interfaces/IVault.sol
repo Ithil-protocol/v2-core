@@ -37,10 +37,11 @@ interface IVault is IERC4626 {
     function isLocked() external view returns (bool);
 
     // Events
-    event DegradationCoefficientWasUpdated(uint256 degradationCoefficient);
     event Borrowed(address indexed receiver, uint256 assets);
     event Repaid(address indexed repayer, uint256 amount, uint256 debt);
     event LockToggled(bool isLocked);
+    event FeeUnlockTimeWasUpdated(uint256 feeUnlockTime);
+    event TokenSwept(address indexed to, address indexed token, uint256 amount);
 
     error InsufficientLiquidity();
     error InsufficientFreeLiquidity();

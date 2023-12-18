@@ -10,11 +10,6 @@ import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 /// Rate model in which baseIR is based on a Dutch auction
 /// 1e18 corresponds to 1, i.e. an interest rate of 100%
 abstract contract AuctionRateModel is Ownable, BaseRiskModel {
-    error InvalidInitParams();
-    error InterestRateOverflow();
-    error AboveRiskThreshold();
-    error ZeroMarginLoan();
-
     /**
      * @dev gas saving trick
      * latest is a timestamp and base < 1e18, they all fit in uint256
@@ -24,11 +19,19 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     mapping(address => uint256) public riskSpreads;
     mapping(address => uint256) public latestAndBase;
 
+    event RiskParamsUpdated(address indexed token, uint256 riskSpread, uint256 baseRate, uint256 halfTime);
+    error InvalidInitParams();
+    error InterestRateOverflow();
+    error AboveRiskThreshold();
+    error ZeroMarginLoan();
+
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
         if (token == address(0) || baseRate > 1e18 || riskSpread > 1e18 || halfTime == 0) revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
         latestAndBase[token] = (block.timestamp << 128) + baseRate;
         halvingTime[token] = halfTime;
+
+        emit RiskParamsUpdated(token, riskSpread, baseRate, halfTime);
     }
 
     /// @dev Defaults to riskSpread = baseRiskSpread * amount / margin

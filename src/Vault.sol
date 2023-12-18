@@ -66,14 +66,17 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         latestRepay = block.timestamp;
         feeUnlockTime = _feeUnlockTime;
 
-        emit DegradationCoefficientWasUpdated(feeUnlockTime);
+        emit FeeUnlockTimeWasUpdated(feeUnlockTime);
     }
 
     function sweep(address to, address token) external onlyOwner {
         assert(token != asset());
 
         IERC20 spuriousToken = IERC20(token);
-        spuriousToken.safeTransfer(to, spuriousToken.balanceOf(address(this)));
+        uint256 amount = spuriousToken.balanceOf(address(this));
+        spuriousToken.safeTransfer(to, amount);
+
+        emit TokenSwept(to, token, amount);
     }
 
     function getFeeStatus() external view override returns (uint256, uint256, uint256, uint256) {

@@ -40,6 +40,9 @@ contract CallOption is CreditService {
     uint64[] internal _rewards;
     address internal immutable _vaultAddress;
 
+    event IthilTokenAllocated(uint256 amount);
+    event IthilTokenSwept(uint256 amount);
+
     error ZeroAmount();
     error LockPeriodStillActive();
     error MaxLockExceeded();
@@ -231,6 +234,8 @@ contract CallOption is CreditService {
     function allocateIthil(uint256 amount) external {
         totalAllocation += amount;
         ithil.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit IthilTokenAllocated(amount);
     }
 
     function sweepIthil() external onlyOwner {
@@ -239,5 +244,7 @@ contract CallOption is CreditService {
         uint256 initialAllocation = totalAllocation;
         totalAllocation = 0;
         ithil.safeTransfer(msg.sender, initialAllocation);
+
+        emit IthilTokenSwept(initialAllocation);
     }
 }
