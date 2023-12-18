@@ -43,7 +43,6 @@ contract CallOption is CreditService {
     event IthilTokenAllocated(uint256 amount);
     event IthilTokenSwept(uint256 amount);
 
-    error ZeroAmount();
     error LockPeriodStillActive();
     error MaxLockExceeded();
     error MaxPurchaseExceeded();
@@ -61,6 +60,7 @@ contract CallOption is CreditService {
         address _manager,
         address _ithil,
         uint256 _initialPrice,
+        uint256 _minLoan,
         uint256 _halvingTime,
         uint256 _tenorDuration,
         uint256 _initialVesting,
@@ -83,6 +83,7 @@ contract CallOption is CreditService {
         underlying = IERC20(_underlying);
         ithil = IERC20(_ithil);
         halvingTime = _halvingTime;
+        minLoan = _minLoan;
         tenorDuration = _tenorDuration;
         vestingTime = _initialVesting + block.timestamp;
 
@@ -114,7 +115,6 @@ contract CallOption is CreditService {
 
         if (agreement.loans[0].token != address(underlying)) revert InvalidUnderlyingToken();
         if (agreement.collaterals[1].token != address(ithil)) revert InvalidIthilToken();
-        if (agreement.loans[0].amount == 0) revert ZeroAmount();
 
         uint256 price = _currentPrice();
         // Apply reward based on lock
