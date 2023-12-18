@@ -30,7 +30,7 @@ contract Manager is IManager, Ownable {
     }
 
     function create(address token) external onlyOwner returns (address) {
-        assert(vaults[token] == address(0));
+        if (vaults[token] != address(0)) revert VaultAlreadyExists();
 
         address vault = Create2.deploy(
             0,
@@ -61,21 +61,20 @@ contract Manager is IManager, Ownable {
         emit CapWasUpdated(service, token, percentageCap, absoluteCap);
     }
 
-    function setFeeUnlockTime(address vaultToken, uint256 feeUnlockTime) external override onlyOwner {
-        assert(vaults[vaultToken] != address(0));
-
+    function setFeeUnlockTime(
+        address vaultToken,
+        uint256 feeUnlockTime
+    ) external override vaultExists(vaultToken) onlyOwner {
         IVault(vaults[vaultToken]).setFeeUnlockTime(feeUnlockTime);
     }
 
-    function sweep(address vaultToken, address spuriousToken, address to) external onlyOwner {
-        assert(vaults[vaultToken] != address(0));
+    function sweep(address vaultToken, address spuriousToken, address to) external vaultExists(vaultToken) onlyOwner {
+        if (to == address(0)) revert InvalidParams();
 
         IVault(vaults[vaultToken]).sweep(to, spuriousToken);
     }
 
-    function toggleVaultLock(address vaultToken) external onlyOwner {
-        assert(vaults[vaultToken] != address(0));
-
+    function toggleVaultLock(address vaultToken) external vaultExists(vaultToken) onlyOwner {
         IVault(vaults[vaultToken]).toggleLock();
     }
 

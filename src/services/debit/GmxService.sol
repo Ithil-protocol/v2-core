@@ -46,6 +46,10 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
         address _routerV2,
         uint256 _deadline
     ) Service("GmxService", "GMX-SERVICE", _manager, _deadline) {
+        if (_manager == address(0)) revert InvalidParams();
+        if (_router == address(0)) revert InvalidParams();
+        if (_routerV2 == address(0)) revert InvalidParams();
+
         router = IRewardRouter(_router);
         routerV2 = IRewardRouterV2(_routerV2);
         glp = IERC20(routerV2.glp());
@@ -57,8 +61,8 @@ contract GmxService is Whitelisted, AuctionRateModel, DebitService {
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 1) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 1) revert InvalidParams();
 
         if (IERC20(agreement.loans[0].token).allowance(address(this), address(glpManager)) == 0) {
             IERC20(agreement.loans[0].token).approve(address(glpManager), type(uint256).max);

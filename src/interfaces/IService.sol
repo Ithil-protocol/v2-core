@@ -64,5 +64,5 @@ interface IService is IERC721Enumerable {
     error RestrictedToOwner();
     error RestrictedAccess();
     error InvalidStatus();
-    error InvalidArguments();
+    error InvalidParams();
 }

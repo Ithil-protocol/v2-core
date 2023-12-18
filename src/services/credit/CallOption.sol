@@ -70,7 +70,11 @@ contract CallOption is CreditService {
             13 * 30 * 86400
         )
     {
-        assert(_initialPrice > 0);
+        if (_initialPrice == 0) revert InvalidParams();
+        if (_manager == address(0)) revert InvalidParams();
+        if (_ithil == address(0)) revert InvalidParams();
+        if (_initialPrice == 0) revert InvalidParams();
+        if (_underlying == address(0)) revert InvalidParams();
 
         initialPrice = _initialPrice;
         underlying = IERC20(_underlying);
@@ -102,8 +106,8 @@ contract CallOption is CreditService {
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
         // This is a credit service with one extra token (Ithil) therefore the collateral length is 2
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 2) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 2) revert InvalidParams();
 
         if (agreement.loans[0].token != address(underlying)) revert InvalidUnderlyingToken();
         if (agreement.collaterals[1].token != address(ithil)) revert InvalidIthilToken();

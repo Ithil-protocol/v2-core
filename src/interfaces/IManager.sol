@@ -31,10 +31,12 @@ interface IManager {
     event CapWasUpdated(address indexed service, address indexed token, uint256 percentageCap, uint256 absoluteCap);
     event TokenWasRemovedFromService(address indexed service, address indexed token);
 
+    error VaultAlreadyExists();
     error VaultMissing();
     error RestrictedToWhitelisted();
     error RestrictedToOwner();
     error InvestmentCapExceeded(uint256 investedPortion);
     error AbsoluteCapExceeded(uint256 exposure);
     error MaxAmountExceeded();
+    error InvalidParams();
 }
