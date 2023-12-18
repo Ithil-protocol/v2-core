@@ -55,6 +55,8 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
     ///// Admin functions /////
 
     function setGuardian(address _guardian) external onlyOwner {
+        if (_guardian == address(0)) revert InvalidParams();
+
         guardian = _guardian;
 
         emit GuardianWasUpdated(guardian);
@@ -93,9 +95,9 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
 
         _saveAgreement(agreement);
 
-        _safeMint(msg.sender, id++);
+        _safeMint(msg.sender, id);
 
-        emit PositionOpened(id, msg.sender, agreement);
+        emit PositionOpened(id++, msg.sender, agreement);
     }
 
     /// @notice closes an existing service agreement

@@ -26,14 +26,17 @@ contract AngleService is AuctionRateModel, DebitService {
         address _steur,
         uint256 _deadline
     ) Service("AngleService", "ANGLE-SERVICE", _manager, _deadline) {
+        if (_manager == address(0)) revert InvalidParams();
+        if (_steur == address(0)) revert InvalidParams();
+
         stEur = IERC4626(_steur);
         agEur = IERC20(stEur.asset());
         agEur.approve(address(stEur), type(uint256).max);
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 1) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 1) revert InvalidParams();
         if (agreement.loans[0].token != address(agEur)) revert IncorrectProvidedToken();
         if (agreement.collaterals[0].token != address(stEur)) revert IncorrectObtainedToken();
 

@@ -27,12 +27,14 @@ contract AaveService is AuctionRateModel, DebitService {
         address _aave,
         uint256 _deadline
     ) Service("AaveService", "AAVE-SERVICE", _manager, _deadline) {
+        if (_manager == address(0)) revert InvalidParams();
+        if (_aave == address(0)) revert InvalidParams();
         aave = IPool(_aave);
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 1) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 1) revert InvalidParams();
 
         IAToken aToken = IAToken(agreement.collaterals[0].token);
         if (aToken.UNDERLYING_ASSET_ADDRESS() != agreement.loans[0].token) revert IncorrectObtainedToken();

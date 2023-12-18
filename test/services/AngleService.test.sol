@@ -37,6 +37,10 @@ contract AngleServiceTest is BaseIntegrationServiceTest {
         serviceAddress = address(service);
     }
 
+    function safeSub(uint256 a, uint256 b) internal returns (uint256) {
+        return b < a ? a - b : 0;
+    }
+
     function testAngleIntegrationOpenPosition(uint256 agEurAmount, uint256 agEurLoan, uint256 agEurMargin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
         uint256 transformedAmount = agEurAmount % whaleBalance;
@@ -79,8 +83,8 @@ contract AngleServiceTest is BaseIntegrationServiceTest {
         } else {
             uint256 initialBalance = agEurToken.balanceOf(address(this));
             service.close(0, data);
-            assertEq(agEurToken.balanceOf(address(this)), initialBalance + toRedeem - actualLoans[0].amount);
-            assertEq(stEurToken.balanceOf(address(service)), initialServiceBalance - collaterals[0].amount);
+            assertEq(agEurToken.balanceOf(address(this)), safeSub(initialBalance + toRedeem, actualLoans[0].amount));
+            assertEq(stEurToken.balanceOf(address(service)), safeSub(initialServiceBalance, collaterals[0].amount));
         }
     }
 

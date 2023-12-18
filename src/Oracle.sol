@@ -11,8 +11,12 @@ contract Oracle is IOracle, Ownable {
     event PriceFeedWasUpdated(address indexed token, address indexed feed);
 
     error TokenNotSupported();
+    error InvalidParams();
 
     function setPriceFeed(address token, address feed) external onlyOwner {
+        if (token == address(0)) revert InvalidParams();
+        if (feed == address(0)) revert InvalidParams();
+
         oracles[token] = feed;
 
         emit PriceFeedWasUpdated(token, feed);

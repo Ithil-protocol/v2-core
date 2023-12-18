@@ -55,8 +55,12 @@ contract FeeCollectorService is Service {
         address _oracle,
         address _dex
     ) Service("FeeCollector", "FEE-COLLECTOR", _manager, 13 * 30 * 86400) {
-        veToken = new VeIthil();
+        if (_manager == address(0)) revert InvalidParams();
+        if (_weth == address(0)) revert InvalidParams();
+        if (_oracle == address(0)) revert InvalidParams();
+        if (_dex == address(0)) revert InvalidParams();
 
+        veToken = new VeIthil();
         weth = IERC20(_weth);
         oracle = IOracle(_oracle);
         dex = IFactory(_dex);
@@ -91,7 +95,7 @@ contract FeeCollectorService is Service {
         if (agreement.loans[0].margin == 0) revert ZeroAmount();
         if (weights[agreement.loans[0].token] == 0) revert UnsupportedToken();
         // gas savings
-        uint256 totalAssets = totalAssets();
+        uint256 totalAssetsCache = totalAssets();
         // Apply reward based on lock
         uint256 monthsLocked = abi.decode(data, (uint256));
         if (monthsLocked > 11) revert MaxLockExceeded();
@@ -108,9 +112,9 @@ contract FeeCollectorService is Service {
             1e36;
 
         // we assign a virtual deposit of v * A / S, __afterwards__ we update the total deposits
-        virtualDeposit[id] = totalAssets == 0
+        virtualDeposit[id] = totalAssetsCache == 0
             ? agreement.collaterals[0].amount
-            : (agreement.collaterals[0].amount * totalAssets) / veToken.totalSupply();
+            : (agreement.collaterals[0].amount * totalAssetsCache) / veToken.totalSupply();
         totalVirtualDeposits += virtualDeposit[id];
 
         veToken.mint(msg.sender, agreement.collaterals[0].amount);
@@ -159,10 +163,10 @@ contract FeeCollectorService is Service {
     function withdrawable(uint256 tokenId) public view returns (uint256) {
         Agreement memory agreement = agreements[tokenId];
         // gas savings
-        uint256 totalAssets = totalAssets();
+        uint256 totalAssetsCache = totalAssets();
         uint256 totalSupply = veToken.totalSupply();
         // This is the total withdrawable, consisting of weth + virtual deposit
-        uint256 totalWithdraw = (totalAssets * agreement.collaterals[0].amount) / totalSupply;
+        uint256 totalWithdraw = (totalAssetsCache * agreement.collaterals[0].amount) / totalSupply;
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
         return totalWithdraw - virtualDeposit[tokenId];
     }

@@ -47,6 +47,7 @@ contract CallOption is CreditService {
     error InvalidIthilToken();
     error InvalidUnderlyingToken();
     error InvalidCalledPortion();
+    error RedeemedTooLow();
     error SlippageExceeded();
     error StillVested();
 
@@ -69,7 +70,11 @@ contract CallOption is CreditService {
             13 * 30 * 86400
         )
     {
-        assert(_initialPrice > 0);
+        if (_initialPrice == 0) revert InvalidParams();
+        if (_manager == address(0)) revert InvalidParams();
+        if (_ithil == address(0)) revert InvalidParams();
+        if (_initialPrice == 0) revert InvalidParams();
+        if (_underlying == address(0)) revert InvalidParams();
 
         initialPrice = _initialPrice;
         underlying = IERC20(_underlying);
@@ -101,8 +106,8 @@ contract CallOption is CreditService {
 
     function _open(Agreement memory agreement, bytes memory data) internal override {
         // This is a credit service with one extra token (Ithil) therefore the collateral length is 2
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 2) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 2) revert InvalidParams();
 
         if (agreement.loans[0].token != address(underlying)) revert InvalidUnderlyingToken();
         if (agreement.collaterals[1].token != address(ithil)) revert InvalidIthilToken();
@@ -162,10 +167,13 @@ contract CallOption is CreditService {
         if (block.timestamp < agreement.createdAt + deadline - tenorDuration) revert LockPeriodStillActive();
         // The portion of the loan amount we want to call
         // If the position is liquidable, we enforce the option not to be exercised
-        uint256 calledPortion = abi.decode(data, (uint256));
+        // We also add a slippage check to protect signers from liquidity crunch attacks
+        (uint256 calledPortion, uint256 minRedeemed) = abi.decode(data, (uint256, uint256));
         address ownerAddress = ownerOf(tokenID);
         if (calledPortion > 1e18 || (msg.sender != ownerAddress && calledPortion > 0)) revert InvalidCalledPortion();
 
+        uint256 toBorrow;
+        uint256 freeLiquidity;
         // redeem mechanism
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
         // calculate the amount of shares to redeem to get dueAmount
@@ -174,28 +182,26 @@ contract CallOption is CreditService {
         totalAllocation += (agreement.collaterals[1].amount - toCall);
         uint256 toTransfer = dueAmount(agreement, data);
         uint256 toRedeem = vault.convertToShares(toTransfer);
-        uint256 transfered = vault.convertToAssets(
-            toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount
-        );
-        uint256 toBorrow;
-        uint256 freeLiquidity;
+
         // If the called portion is not 100%, there are residual tokens which are transferred to the treasury
         if (toRedeem < agreement.collaterals[0].amount) {
             vault.safeTransfer(owner(), agreement.collaterals[0].amount - toRedeem);
         }
         // redeem the user's tokens and give the proceedings back to the user
-        vault.redeem(
+        uint256 redeemed = vault.redeem(
             toRedeem < agreement.collaterals[0].amount ? toRedeem : agreement.collaterals[0].amount,
             ownerAddress,
             address(this)
         );
-        if (toTransfer > transfered) {
+        if (redeemed < minRedeemed) revert RedeemedTooLow();
+
+        if (toTransfer > redeemed) {
             // Since this service is senior, we need to pay the user even if withdraw amount is too low
             // To do this, we take liquidity from the vault and register the loss
             // If we incur a loss and the freeLiquidity is not enough, we cannot make the exit fail
             // Otherwise we would have positions impossible to close: thus we withdraw what we can
             freeLiquidity = vault.freeLiquidity() - 1;
-            toBorrow = toTransfer - transfered > freeLiquidity ? freeLiquidity : toTransfer - transfered;
+            toBorrow = toTransfer - redeemed > freeLiquidity ? freeLiquidity : toTransfer - redeemed;
         }
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
         ithil.safeTransfer(ownerAddress, toCall);
@@ -216,7 +222,7 @@ contract CallOption is CreditService {
 
     function dueAmount(Agreement memory agreement, bytes memory data) public view virtual override returns (uint256) {
         // The portion of the loan amount we want to call
-        uint256 calledPortion = abi.decode(data, (uint256));
+        (uint256 calledPortion, ) = abi.decode(data, (uint256, uint256));
 
         // The non-called portion is capital to give back to the user
         return (agreement.loans[0].amount * (1e18 - calledPortion)) / 1e18;

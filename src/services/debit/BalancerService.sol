@@ -58,6 +58,12 @@ contract BalancerService is AuctionRateModel, DebitService {
         address _bal,
         uint256 _deadline
     ) Service("BalancerService", "BALANCER-SERVICE", _manager, _deadline) {
+        if (_manager == address(0)) revert InvalidParams();
+        if (_oracle == address(0)) revert InvalidParams();
+        if (_factory == address(0)) revert InvalidParams();
+        if (_balancerVault == address(0)) revert InvalidParams();
+        if (_bal == address(0)) revert InvalidParams();
+
         oracle = IOracle(_oracle);
         dex = IFactory(_factory);
         balancerVault = IBalancerVault(_balancerVault);

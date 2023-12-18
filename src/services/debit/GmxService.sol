@@ -45,6 +45,10 @@ contract GmxService is AuctionRateModel, DebitService {
         address _routerV2,
         uint256 _deadline
     ) Service("GmxService", "GMX-SERVICE", _manager, _deadline) {
+        if (_manager == address(0)) revert InvalidParams();
+        if (_router == address(0)) revert InvalidParams();
+        if (_routerV2 == address(0)) revert InvalidParams();
+
         router = IRewardRouter(_router);
         routerV2 = IRewardRouterV2(_routerV2);
         glp = IERC20(routerV2.glp());
@@ -56,8 +60,8 @@ contract GmxService is AuctionRateModel, DebitService {
     }
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
-        if (agreement.loans.length != 1) revert InvalidArguments();
-        if (agreement.collaterals.length != 1) revert InvalidArguments();
+        if (agreement.loans.length != 1) revert InvalidParams();
+        if (agreement.collaterals.length != 1) revert InvalidParams();
 
         if (IERC20(agreement.loans[0].token).allowance(address(this), address(glpManager)) == 0) {
             IERC20(agreement.loans[0].token).approve(address(glpManager), type(uint256).max);
@@ -82,6 +86,10 @@ contract GmxService is AuctionRateModel, DebitService {
 
     function _close(uint256 tokenID, Agreement memory agreement, bytes memory data) internal override {
         uint256 minAmountOut = abi.decode(data, (uint256));
+        uint256 userVirtualDeposit = virtualDeposit[tokenID];
+        // delete virtual deposits
+        delete virtualDeposit[tokenID];
+        totalVirtualDeposits -= userVirtualDeposit;
 
         routerV2.unstakeAndRedeemGlp(
             agreement.loans[0].token,
@@ -100,16 +108,11 @@ contract GmxService is AuctionRateModel, DebitService {
             totalCollateral;
         // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
         // Due to integer arithmetic, we may get underflow if we do not make checks
-        uint256 toTransfer = totalWithdraw >= virtualDeposit[tokenID]
-            ? totalWithdraw - virtualDeposit[tokenID] <= finalBalance
-                ? totalWithdraw - virtualDeposit[tokenID]
-                : finalBalance
+        uint256 toTransfer = totalWithdraw >= userVirtualDeposit
+            ? totalWithdraw - userVirtualDeposit <= finalBalance ? totalWithdraw - userVirtualDeposit : finalBalance
             : 0;
-        // delete virtual deposits
-        totalVirtualDeposits -= virtualDeposit[tokenID];
-        delete virtualDeposit[tokenID];
-        // update totalRewards and totalCollateral
-        totalRewards = newRewards - toTransfer;
+        // update totalRewards and totalCollateral with an extra check to avoid integer arithmetic underflows
+        totalRewards = toTransfer < newRewards ? newRewards - toTransfer : 0;
         totalCollateral -= agreement.collaterals[0].amount;
         // Transfer weth: since toTransfer <= totalWithdraw
         weth.safeTransfer(msg.sender, toTransfer);

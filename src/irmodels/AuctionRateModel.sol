@@ -25,7 +25,7 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     mapping(address => uint256) public latestAndBase;
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
-        if (baseRate > 1e18 || riskSpread > 1e18 || halfTime == 0) revert InvalidInitParams();
+        if (token == address(0) || baseRate > 1e18 || riskSpread > 1e18 || halfTime == 0) revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
         latestAndBase[token] = (block.timestamp << 128) + baseRate;
         halvingTime[token] = halfTime;
