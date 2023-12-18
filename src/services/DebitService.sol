@@ -14,6 +14,8 @@ abstract contract DebitService is Service, BaseRiskModel {
     address public liquidator;
 
     event LiquidationTriggered(uint256 indexed id, address token, address indexed liquidator, uint256 payoff);
+    event MinMarginUpdated(address indexed token, uint256 margin);
+    event LiquidatorUpdated(address indexed liquidator);
 
     error MarginTooLow();
     error OnlyLiquidator();
@@ -21,10 +23,14 @@ abstract contract DebitService is Service, BaseRiskModel {
 
     function setMinMargin(address token, uint256 margin) external onlyOwner {
         minMargin[token] = margin;
+
+        emit MinMarginUpdated(token, margin);
     }
 
     function setLiquidator(address _liquidator) external onlyOwner {
         liquidator = _liquidator;
+
+        emit LiquidatorUpdated(_liquidator);
     }
 
     /// @dev Defaults to amount + margin * (ir + riskSpread) / 1e18

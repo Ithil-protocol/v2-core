@@ -30,6 +30,7 @@ interface IManager {
     event SpreadWasUpdated(address indexed service, address indexed token, uint256 spread);
     event CapWasUpdated(address indexed service, address indexed token, uint256 percentageCap, uint256 absoluteCap);
     event TokenWasRemovedFromService(address indexed service, address indexed token);
+    event VaultCreated(address indexed token, address indexed vault);
 
     error VaultAlreadyExists();
     error VaultMissing();

@@ -46,6 +46,8 @@ contract Manager is IManager, Ownable {
         tkn.approve(vault, 1);
         IVault(vault).deposit(1, address(this));
 
+        emit VaultCreated(token, vault);
+
         return vault;
     }
 
