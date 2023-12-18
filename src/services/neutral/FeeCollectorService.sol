@@ -8,7 +8,6 @@ import { IVault } from "../../interfaces/IVault.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { IFactory } from "../../interfaces/external/wizardex/IFactory.sol";
 import { IPool } from "../../interfaces/external/wizardex/IPool.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 import { Service } from "../Service.sol";
 import { VeIthil } from "../../VeIthil.sol";
 

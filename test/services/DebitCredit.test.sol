@@ -125,11 +125,6 @@ contract DebitCreditTest is Test, IERC721Receiver {
         callOptionService.allocateIthil(1e7 * 1e18);
         callOptionService.transferOwnership(treasury);
 
-        // whitelist user for Aave and Gmx
-        address[] memory whitelistedUsers = new address[](1);
-        whitelistedUsers[0] = aaveUser;
-        aaveService.addToWhitelist(whitelistedUsers);
-
         // whitelist Aave strategy for 20% exposure in USDC
         manager.setCap(address(aaveService), address(usdc), 2e17, type(uint256).max);
         // we also need to whitelist call option and fee collector

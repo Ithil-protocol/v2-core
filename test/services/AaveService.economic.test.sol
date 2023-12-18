@@ -63,9 +63,6 @@ contract AaveEconomicTest is Test, IERC721Receiver {
             service.setRiskParams(loanTokens[0], 5e15, 1e16, 365 * 30);
             vm.stopPrank();
         }
-        vm.prank(admin);
-        (bool success, ) = address(service).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
-        require(success, "toggleWhitelistFlag failed");
     }
 
     function onERC721Received(

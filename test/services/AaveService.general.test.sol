@@ -65,9 +65,6 @@ contract AaveGeneralTest is Test, IERC721Receiver {
             service.setMinMargin(loanTokens[0], 1e6); // Minimum 1 DAI
             vm.stopPrank();
         }
-        vm.prank(admin);
-        (bool success, ) = address(service).call(abi.encodeWithSignature("toggleWhitelistFlag()"));
-        require(success, "toggleWhitelistFlag failed");
     }
 
     function onERC721Received(

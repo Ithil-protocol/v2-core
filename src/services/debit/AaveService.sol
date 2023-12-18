@@ -7,12 +7,11 @@ import { IAToken } from "../../interfaces/external/aave/IAToken.sol";
 import { AuctionRateModel } from "../../irmodels/AuctionRateModel.sol";
 import { DebitService } from "../DebitService.sol";
 import { Service } from "../Service.sol";
-import { Whitelisted } from "../Whitelisted.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
 /// @notice   A service to perform leveraged staking on any Aave markets
-contract AaveService is Whitelisted, AuctionRateModel, DebitService {
+contract AaveService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 
     IPool public immutable aave;
@@ -33,7 +32,7 @@ contract AaveService is Whitelisted, AuctionRateModel, DebitService {
         aave = IPool(_aave);
     }
 
-    function _open(Agreement memory agreement, bytes memory /*data*/) internal override onlyWhitelisted {
+    function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         if (agreement.loans.length != 1) revert InvalidParams();
         if (agreement.collaterals.length != 1) revert InvalidParams();
 
