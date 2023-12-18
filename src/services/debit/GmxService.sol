@@ -136,7 +136,7 @@ contract GmxService is AuctionRateModel, DebitService {
 
     function quote(Agreement memory agreement) public view override returns (uint256[] memory) {
         uint256[] memory results = new uint256[](1);
-        uint256 aumInUsdg = glpManager.getAumInUsdg(false);
+        uint256 aumInUsdg = glpManager.getAumInUsdg(true);
         uint256 glpSupply = glp.totalSupply();
 
         if (glpSupply == 0) revert ZeroGlpSupply();
@@ -146,7 +146,7 @@ contract GmxService is AuctionRateModel, DebitService {
 
         uint256 feeBasisPoints = usdgVault.getFeeBasisPoints(
             agreement.loans[0].token,
-            usdgDelta,
+            usdgAmount,
             usdgVault.swapFeeBasisPoints(),
             usdgVault.taxBasisPoints(),
             false

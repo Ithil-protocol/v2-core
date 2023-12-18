@@ -53,8 +53,8 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
     }
 
     function _equalityWithTolerance(uint256 amount1, uint256 amount2, uint256 tolerance) internal {
-        assertGe(amount1 + tolerance, amount2);
-        assertGe(amount2 + tolerance, amount1);
+        assertGe(amount1 + tolerance, amount2, "amount1 + tolerance >= amount2 failed");
+        assertGe(amount2 + tolerance, amount1, "amount2 + tolerance >= amount1 failed");
     }
 
     function setUp() public override {
@@ -185,13 +185,9 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
             .getAgreement(0);
 
         IService.Agreement memory agreement = IService.Agreement(loan, collaterals, createdAt, IService.Status.OPEN);
-
+        uint256 quoted = service.quote(agreement)[0];
         service.close(0, abi.encode(uint256(1)));
-        _equalityWithTolerance(
-            usdc.balanceOf(address(this)),
-            initial + service.quote(agreement)[0] - loan[0].amount,
-            1
-        );
+        _equalityWithTolerance(usdc.balanceOf(address(this)), initial + quoted - loan[0].amount, 1);
     }
 
     // setting to private since it becomes too heavy
