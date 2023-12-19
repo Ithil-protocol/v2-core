@@ -80,10 +80,7 @@ abstract contract DebitService is Service, BaseRiskModel {
                 address(this),
                 agreement.loans[index].margin
             );
-            // No need to launch borrow if amount is zero
             uint256 freeLiquidity;
-            // this call does not constitute reentrancy, since transferring additional margin
-            // has the same effect as opening a single position with the sum of the two margins
             (freeLiquidity, ) = manager.borrow(
                 agreement.loans[index].token,
                 agreement.loans[index].amount,
