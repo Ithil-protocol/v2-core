@@ -101,7 +101,6 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     // Free liquidity available to withdraw or borrow
     // Locked profits are locked for every operation
     // We do not consider negative profits since they are not true liquidity
-    // We subtract 1 because there is always 1 token deposited at the beginning: this will never be taken
     function freeLiquidity() public view override returns (uint256) {
         return super.totalAssets() - _calculateLockedProfits();
     }
@@ -113,8 +112,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 supply = totalSupply();
         uint256 shares = balanceOf(owner);
         // super.maxWithdraw but we leverage the fact of having already computed freeLiq which contains balanceOf()
-        // notice that shares are always at least 1
-        return freeLiq.min(shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply));
+        // notice that shares and free liquidity are always at least 1, and freeLiq cannot be withdrawn
+        return (freeLiq - 1).min(shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply));
     }
 
     // Assets include netLoans but they are not available for withdraw
@@ -131,9 +130,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         // convertToShares using the already computed variables
         // if the assets the owner can theoretically withdraw are higher than the free liquidity
-        // we cap them with the convertToShares of the free liquidity
+        // we cap them with the convertToShares of the free liquidity - 1, which is always available
         if (assets >= freeLiquidityCache && assets > 0) {
-            maxRedeemCache = freeLiquidityCache.mulDiv(supply, totalAssetsCache);
+            maxRedeemCache = (freeLiquidityCache - 1).mulDiv(supply, totalAssetsCache);
         }
 
         return maxRedeemCache;
@@ -147,9 +146,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return ERC4626.deposit(_assets, receiver);
     }
 
-    function maxDeposit(address) public view override(IERC4626, ERC4626) returns (uint256) {
+    function maxDeposit(address dummy) public view override(IERC4626, ERC4626) returns (uint256) {
         if (isLocked) return 0;
-        return type(uint256).max;
+        return super.maxDeposit(dummy);
     }
 
     function maxMint(address) public view override(IERC4626, ERC4626) returns (uint256) {
