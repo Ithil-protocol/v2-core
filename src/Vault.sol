@@ -146,9 +146,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return ERC4626.deposit(_assets, receiver);
     }
 
-    function maxDeposit(address dummy) public view override(IERC4626, ERC4626) returns (uint256) {
+    function maxDeposit(address addr) public view override(IERC4626, ERC4626) returns (uint256) {
         if (isLocked) return 0;
-        return super.maxDeposit(dummy);
+        return super.maxDeposit(addr);
     }
 
     function maxMint(address) public view override(IERC4626, ERC4626) returns (uint256) {
