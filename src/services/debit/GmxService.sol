@@ -119,7 +119,7 @@ contract GmxService is AuctionRateModel, DebitService {
         totalRewards = toTransfer < newRewards ? newRewards - toTransfer : 0;
         totalCollateral -= agreement.collaterals[0].amount;
         // Transfer weth: since toTransfer <= totalWithdraw
-        weth.safeTransfer(msg.sender, toTransfer);
+        if (toTransfer > 0) weth.safeTransfer(msg.sender, toTransfer);
     }
 
     function wethReward(uint256 tokenID) public view returns (uint256) {

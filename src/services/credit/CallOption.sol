@@ -209,7 +209,7 @@ contract CallOption is CreditService {
             toBorrow = toTransfer - redeemed > freeLiquidity ? freeLiquidity : toTransfer - redeemed;
         }
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
-        ithil.safeTransfer(ownerAddress, toCall);
+        if (toCall > 0) ithil.safeTransfer(ownerAddress, toCall);
         // repay the user's losses
         if (toBorrow > 0 && freeLiquidity > 0) manager.borrow(agreement.loans[0].token, toBorrow, 0, ownerAddress);
     }

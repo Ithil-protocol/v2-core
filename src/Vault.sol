@@ -230,7 +230,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         currentLosses = _calculateLockedLosses() + (assets - loan);
         latestRepay = block.timestamp;
 
-        IERC20(asset()).safeTransfer(receiver, assets);
+        if (assets > 0) IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Borrowed(receiver, assets);
 
@@ -265,7 +265,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // the vault is not responsible for any payoff
         // slither-disable-next-line arbitrary-send-erc20
         // super.totalAssets() += assets and never overflows by definition
-        IERC20(asset()).safeTransferFrom(repayer, address(this), assets);
+        if (assets > 0) IERC20(asset()).safeTransferFrom(repayer, address(this), assets);
 
         emit Repaid(repayer, assets, debt);
     }
