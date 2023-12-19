@@ -87,6 +87,6 @@ contract FixedYieldService is CreditService {
         return
             agreement.loans[0].amount +
             (((agreement.loans[0].amount * yield) / 1e18) * (block.timestamp - agreement.createdAt)) /
-            (86400 * 365);
+            (365 days);
     }
 }

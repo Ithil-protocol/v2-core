@@ -201,7 +201,7 @@ contract FeeCollectorService is Service {
                     10;
                 prices[i] = price;
                 IERC20(tokens[i]).approve(address(pool), amount);
-                pool.createOrder(amount, price, address(this), block.timestamp + 3600);
+                pool.createOrder(amount, price, address(this), block.timestamp + 1 hours);
             }
         }
         return (amounts, prices);
