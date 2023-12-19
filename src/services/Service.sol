@@ -62,7 +62,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         emit GuardianWasUpdated(guardian);
     }
 
-    function toggleLock(bool _locked) external onlyGuardian {
+    function setLock(bool _locked) external onlyGuardian {
         locked = _locked;
 
         emit LockWasToggled(locked);
