@@ -56,7 +56,7 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         IERC20(loanTokens[0]).approve(address(manager), 1);
         manager.create(loanTokens[0]);
 
-        service = new CallOption(address(manager), address(ithil), 4e17, 86400 * 30, 86400 * 30, 0, loanTokens[0]);
+        service = new CallOption(address(manager), address(ithil), 4e17, 1, 86400 * 30, 86400 * 30, 0, loanTokens[0]);
 
         serviceAddress = address(service);
         ithil.approve(serviceAddress, 1e25);
