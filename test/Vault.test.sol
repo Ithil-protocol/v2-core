@@ -85,7 +85,7 @@ contract VaultTest is Test {
         assertTrue(token.balanceOf(tokenSink) == type(uint256).max);
     }
 
-    function testAccess(uint256 shares, uint256 assets, uint256 debt) public {
+    function testAccess(uint256 assets, uint256 debt) public {
         vm.startPrank(notOwner);
         vm.expectRevert(bytes4(keccak256(abi.encodePacked("RestrictedToOwner()"))));
         vault.setFeeUnlockTime(1000);
