@@ -9,6 +9,7 @@ import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 /// Rate model in which baseIR is based on a Dutch auction
 /// 1e18 corresponds to 1, i.e. an interest rate of 100%
 abstract contract AuctionRateModel is Ownable, BaseRiskModel {
+    uint256 constant MAX_RATE = 1e18;
     /**
      * @dev gas saving trick
      * latest is a timestamp and base < 1e18, they all fit in uint256
@@ -25,7 +26,8 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     error ZeroMarginLoan();
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
-        if (token == address(0) || baseRate > 1e18 || riskSpread > 1e18 || halfTime == 0) revert InvalidInitParams();
+        if (token == address(0) || baseRate > MAX_RATE || riskSpread > MAX_RATE || halfTime == 0)
+            revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
         latestAndBase[token] = (block.timestamp << 128) + baseRate;
         halvingTime[token] = halfTime;
@@ -74,7 +76,7 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
             freeLiquidity
         );
         // Reset new base and latest borrow, force IR stays below resolution
-        if (newBase + spread > 1e18) revert InterestRateOverflow();
+        if (newBase + spread > MAX_RATE) revert InterestRateOverflow();
         latestAndBase[loan.token] = (block.timestamp << 128) + newBase;
 
         return (newBase, spread);

@@ -8,6 +8,7 @@ import { Service } from "../Service.sol";
 import { IService } from "../../interfaces/IService.sol";
 import { IVault } from "../../interfaces/IVault.sol";
 import { Service } from "../Service.sol";
+import { RESOLUTION } from "../../Constants.sol";
 
 /// @title    Call option contract
 /// @author   Ithil
@@ -173,14 +174,15 @@ contract CallOption is CreditService {
         // We also add a slippage check to protect signers from liquidity crunch attacks
         (uint256 calledPortion, uint256 minRedeemed) = abi.decode(data, (uint256, uint256));
         address ownerAddress = ownerOf(tokenID);
-        if (calledPortion > 1e18 || (msg.sender != ownerAddress && calledPortion > 0)) revert InvalidCalledPortion();
+        if (calledPortion > RESOLUTION || (msg.sender != ownerAddress && calledPortion > 0))
+            revert InvalidCalledPortion();
 
         uint256 toBorrow;
         uint256 freeLiquidity;
         // redeem mechanism
         IVault vault = IVault(manager.vaults(agreement.loans[0].token));
         // calculate the amount of shares to redeem to get dueAmount
-        uint256 toCall = (agreement.collaterals[1].amount * calledPortion) / 1e18;
+        uint256 toCall = (agreement.collaterals[1].amount * calledPortion) / RESOLUTION;
         // The amount of ithil not called can be added back to the total allocation
         totalAllocation += (agreement.collaterals[1].amount - toCall);
         uint256 toTransfer = dueAmount(agreement, data);
@@ -228,7 +230,7 @@ contract CallOption is CreditService {
         (uint256 calledPortion, ) = abi.decode(data, (uint256, uint256));
 
         // The non-called portion is capital to give back to the user
-        return (agreement.loans[0].amount * (1e18 - calledPortion)) / 1e18;
+        return (agreement.loans[0].amount * (RESOLUTION - calledPortion)) / RESOLUTION;
     }
 
     function allocateIthil(uint256 amount) external {

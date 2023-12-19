@@ -19,6 +19,8 @@ import { Service } from "../Service.sol";
 contract GmxService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 
+    uint256 constant BASIS_POINTS_DIVISOR = 10000;
+
     IRewardRouter public immutable router;
     IRewardRouterV2 public immutable routerV2;
     IERC20 public immutable glp;
@@ -151,7 +153,7 @@ contract GmxService is AuctionRateModel, DebitService {
             usdgVault.taxBasisPoints(),
             false
         );
-        results[0] = (usdgDelta * (10000 - feeBasisPoints)) / 10000;
+        results[0] = (usdgDelta * (BASIS_POINTS_DIVISOR - feeBasisPoints)) / BASIS_POINTS_DIVISOR;
 
         return results;
     }
