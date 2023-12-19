@@ -34,7 +34,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     {
         manager = msg.sender;
         creationTime = block.timestamp;
-        feeUnlockTime = 21600; // six hours
+        feeUnlockTime = 6 hours;
     }
 
     modifier onlyOwner() {
