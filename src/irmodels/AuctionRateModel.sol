@@ -9,7 +9,7 @@ import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 /// Rate model in which baseIR is based on a Dutch auction
 /// 1e18 corresponds to 1, i.e. an interest rate of 100%
 abstract contract AuctionRateModel is Ownable, BaseRiskModel {
-    uint256 constant MAX_RATE = 1e18;
+    uint256 private constant MAX_RATE = 1e18;
     /**
      * @dev gas saving trick
      * latest is a timestamp and base < 1e18, they all fit in uint256

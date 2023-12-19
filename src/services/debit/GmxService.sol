@@ -19,7 +19,7 @@ import { Service } from "../Service.sol";
 contract GmxService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 
-    uint256 constant BASIS_POINTS_DIVISOR = 10000;
+    uint256 private constant BASIS_POINTS_DIVISOR = 10000;
 
     IRewardRouter public immutable router;
     IRewardRouterV2 public immutable routerV2;
