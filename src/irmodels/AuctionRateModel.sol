@@ -3,7 +3,6 @@ pragma solidity =0.8.18;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IService } from "../interfaces/IService.sol";
-import { DebitService } from "../services/DebitService.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 
 /// @dev IR = baseIR + spread
