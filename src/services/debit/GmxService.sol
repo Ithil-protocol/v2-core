@@ -61,7 +61,10 @@ contract GmxService is AuctionRateModel, DebitService {
 
     function _open(Agreement memory agreement, bytes memory /*data*/) internal override {
         if (agreement.loans.length != 1) revert InvalidParams();
-        if (agreement.collaterals.length != 1) revert InvalidParams();
+        // First collateral token is GLP
+        // Second collateral token is USDG
+        // There's no need to specify the collateral tokens since they are enforced in the code
+        if (agreement.collaterals.length != 2) revert InvalidParams();
 
         if (IERC20(agreement.loans[0].token).allowance(address(this), address(glpManager)) == 0) {
             IERC20(agreement.loans[0].token).approve(address(glpManager), type(uint256).max);
@@ -70,7 +73,7 @@ contract GmxService is AuctionRateModel, DebitService {
         agreement.collaterals[0].amount = routerV2.mintAndStakeGlp(
             agreement.loans[0].token,
             agreement.loans[0].amount + agreement.loans[0].margin,
-            0,
+            agreement.collaterals[1].amount,
             agreement.collaterals[0].amount
         );
 

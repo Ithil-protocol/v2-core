@@ -106,8 +106,9 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
 
-        address[] memory collateralTokens = new address[](1);
+        address[] memory collateralTokens = new address[](2);
         collateralTokens[0] = address(0);
+        collateralTokens[1] = address(0);
 
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = 0;
@@ -139,8 +140,9 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         IService.ItemType[] memory itemTypes = new IService.ItemType[](1);
         itemTypes[0] = IService.ItemType.ERC20;
 
-        address[] memory collateralTokens = new address[](1);
+        address[] memory collateralTokens = new address[](2);
         collateralTokens[0] = address(0);
+        collateralTokens[1] = address(0);
 
         uint256[] memory collateralAmounts = new uint256[](1);
         collateralAmounts[0] = ((loans[0] + margins[0]) * 99 * 1e12) / 100;
