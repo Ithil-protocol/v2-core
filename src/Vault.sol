@@ -8,6 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { ERC20, ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { IVault } from "./interfaces/IVault.sol";
+import { MINIMUM_FEE_UNLOCK_TIME, MAXIMUM_FEE_UNLOCK_TIME } from "./Constants.sol";
 
 // Since this vault inherits from ERC4626, it has the known vulnerability of the "donation attack"
 // In the Ithil framework this is fixed by deploying the Vault already with 1 token deposited
@@ -58,9 +59,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     }
 
     function setFeeUnlockTime(uint256 _feeUnlockTime) external override onlyOwner {
-        // Minimum 30 seconds, maximum 7 days
-        // This also avoids division by zero in _calculateLockedProfits()
-        if (_feeUnlockTime < 30 seconds || _feeUnlockTime > 7 days) revert FeeUnlockTimeOutOfRange();
+        if (_feeUnlockTime < MINIMUM_FEE_UNLOCK_TIME || _feeUnlockTime > MAXIMUM_FEE_UNLOCK_TIME)
+            revert FeeUnlockTimeOutOfRange();
         currentProfits = _calculateLockedProfits();
         currentLosses = _calculateLockedLosses();
         latestRepay = block.timestamp;
@@ -230,7 +230,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         currentLosses = _calculateLockedLosses() + (assets - loan);
         latestRepay = block.timestamp;
 
-        IERC20(asset()).safeTransfer(receiver, assets);
+        if (assets > 0) IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Borrowed(receiver, assets);
 
@@ -265,7 +265,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         // the vault is not responsible for any payoff
         // slither-disable-next-line arbitrary-send-erc20
         // super.totalAssets() += assets and never overflows by definition
-        IERC20(asset()).safeTransferFrom(repayer, address(this), assets);
+        if (assets > 0) IERC20(asset()).safeTransferFrom(repayer, address(this), assets);
 
         emit Repaid(repayer, assets, debt);
     }
