@@ -10,7 +10,7 @@ import { GeneralMath } from "./helpers/GeneralMath.sol";
 import { SignUtils } from "./helpers/SignUtils.sol";
 import { PermitToken } from "./helpers/PermitToken.sol";
 
-/// @dev Vault native state:
+/// Vault native state:
 /// - Native:
 /// address public immutable manager;
 /// uint256 public immutable override creationTime;
@@ -20,11 +20,11 @@ import { PermitToken } from "./helpers/PermitToken.sol";
 /// uint256 public override currentProfits;
 /// uint256 public override currentLosses;
 
-/// @dev Vault ERC4626 state
+/// Vault ERC4626 state
 /// - Vault is ERC4626: totalSupply(), balanceOf(address(this)), balanceOf(msg.sender),
 /// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
 
-/// @dev Vault underlying ERC20 state
+/// Vault underlying ERC20 state
 /// - ERC4626 -> constructor(IERC20 asset_): totalSupply(), balanceOf(address(this)), balanceOf(msg.sender),
 /// - balanceOf(owner), balanceOf(receiver) (deposit, withdraw, directMint, directBurn)
 

@@ -7,12 +7,14 @@ import { IService } from "../../interfaces/IService.sol";
 import { IVault } from "../../interfaces/IVault.sol";
 import { Service } from "../Service.sol";
 
-/// @title    Fixed Yield contract
-/// @author   Ithil
-/// @notice   A service to provide liquidity at a fixed yield
-/// @notice   Boosting is a particular case with yield = 0 (or in general lower than LPs' average)
-/// @notice   By putting a positive yield and a finite deadline, we obtain classical bonds
-/// @notice   In this implementation, fixed yield creditors are more guaranteed than vanilla LPs
+/**
+ * @title    Fixed Yield contract
+ * @author   Ithil
+ * @dev A service to provide liquidity at a fixed yield
+ * Boosting is a particular case with yield = 0 (or in general lower than LPs' average)
+ * By putting a positive yield and a finite deadline, we obtain classical bonds
+ * In this implementation, fixed yield creditors are more guaranteed than vanilla LPs
+ */
 contract FixedYieldService is CreditService {
     error SlippageExceeded();
     // The yield of this service, with 1e18 corresponding to 100% annually

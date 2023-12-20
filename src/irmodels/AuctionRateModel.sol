@@ -5,9 +5,11 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IService } from "../interfaces/IService.sol";
 import { BaseRiskModel } from "../services/BaseRiskModel.sol";
 
-/// @dev IR = baseIR + spread
-/// Rate model in which baseIR is based on a Dutch auction
-/// 1e18 corresponds to 1, i.e. an interest rate of 100%
+/**
+ * @dev IR = baseIR + spread
+ * Rate model in which baseIR is based on a Dutch auction
+ * 1e18 corresponds to 1, i.e. an interest rate of 100%
+ */
 abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     uint256 private constant MAX_RATE = 1e18;
     /**

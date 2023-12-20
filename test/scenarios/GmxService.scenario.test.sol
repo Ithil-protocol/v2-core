@@ -73,7 +73,7 @@ contract GmxScenarioTest is Test, IERC721Receiver {
         agreement = IService.Agreement(loans, collaterals, 0, IService.Status.OPEN);
         IService.Order memory order = IService.Order(agreement, abi.encode(0));
 
-        ///@dev Activate this to test!
+        /// Activate this to test!
         // gmxService.open(order);
     }
 }

@@ -13,7 +13,6 @@ import { VeIthil } from "../../VeIthil.sol";
 
 /// @title    FeeCollectorService contract
 /// @author   Ithil
-/// @notice   A service to perform leveraged staking on any Aave markets
 contract FeeCollectorService is Service {
     using SafeERC20 for IERC20;
 

@@ -15,7 +15,7 @@ import { Service } from "../Service.sol";
 
 /// @title    GmxService contract
 /// @author   Ithil
-/// @notice   A service to perform margin trading on the GLP token
+/// @dev A service to perform margin trading on the GLP token
 contract GmxService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 

@@ -10,7 +10,7 @@ import { Service } from "../Service.sol";
 
 /// @title    AaveService contract
 /// @author   Ithil
-/// @notice   A service to perform leveraged staking on any Aave markets
+/// @dev A service to perform leveraged staking on any Aave markets
 contract AaveService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 

@@ -5,6 +5,8 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IOracle } from "./interfaces/IOracle.sol";
 import { PriceConverter } from "./libraries/external/ChainLink/PriceConverter.sol";
 
+/// @title    Price oracles contract
+/// @author   Ithil
 contract Oracle is IOracle, Ownable {
     mapping(address => address) public oracles; // token -> feed
 
