@@ -7,7 +7,7 @@ interface IService is IERC721Enumerable {
     /// @dev Owed is forcefully ERC20: the Manager only deals with ERC20/ERC4626
 
     /**
-     * @dev Represents a loan from the vault to the service
+     * @dev Represents a loan from the vault to the service or viceversa
      * @param token The address of the ERC20 token
      * @param amount The amount of the loan
      * @param margin The margin posted for the loan
