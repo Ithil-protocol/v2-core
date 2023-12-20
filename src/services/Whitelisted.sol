@@ -18,7 +18,7 @@ abstract contract Whitelisted is Ownable {
         enabled = true;
     }
 
-    // This reverts if the msg.sender is not whitelisted and the enabled flag is true
+    /// @dev It reverts if the msg.sender is not whitelisted and the enabled flag is true
     modifier onlyWhitelisted() {
         if (enabled && !whitelisted[msg.sender]) revert UserIsNotWhitelisted();
         _;

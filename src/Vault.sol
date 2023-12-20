@@ -10,9 +10,13 @@ import { ERC4626, IERC4626 } from "@openzeppelin/contracts/token/ERC20/extension
 import { IVault } from "./interfaces/IVault.sol";
 import { MINIMUM_FEE_UNLOCK_TIME, MAXIMUM_FEE_UNLOCK_TIME } from "./Constants.sol";
 
-// Since this vault inherits from ERC4626, it has the known vulnerability of the "donation attack"
-// In the Ithil framework this is fixed by deploying the Vault already with 1 token deposited
-// This means that both the balance and the supply are at least 1 every time
+/**
+ * @title    Token Vault
+ * @author   Ithil
+ * @dev Since this vault inherits from ERC4626, it has the known vulnerability of the "donation attack"
+ * In the Ithil framework this is fixed by deploying the Vault already with 1 token deposited
+ * This means that both the balance and the supply are at least 1 every time
+ */
 contract Vault is IVault, ERC4626, ERC20Permit {
     using Math for uint256;
     using SafeERC20 for IERC20;

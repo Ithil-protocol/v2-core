@@ -11,6 +11,8 @@ import { IManager } from "./interfaces/IManager.sol";
 import { Vault } from "./Vault.sol";
 import { RESOLUTION } from "./Constants.sol";
 
+/// @title    Manager contract
+/// @author   Ithil
 contract Manager is IManager, Ownable {
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -80,23 +82,25 @@ contract Manager is IManager, Ownable {
         IVault(vaults[vaultToken]).toggleLock();
     }
 
-    /// @inheritdoc IManager
+    /**
+     * @dev Borrow from the vault to the service
+     * Example with USDC: investmentCap = 2e17 (20%)
+     * initial freeLiquidity = 1e13 (10 million USDC), initial netLoans = 3e12 (3 million USDC)
+     * we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
+     * assume currentExposure = 1.1e12 (1.1 million USDC) coming also from last 100k
+     * finally investedPortion = 1e18 * 1.1e12 / (9.9e12 + 3.1e12) = 85271317829457364 or about 8.53%
+     */
     function borrow(
         address token,
         uint256 amount,
         uint256 loan,
         address receiver
     ) external override supported(token) vaultExists(token) returns (uint256, uint256) {
-        // Example with USDC: investmentCap = 2e17 (20%)
-        // initial freeLiquidity = 1e13 (10 million USDC), initial netLoans = 3e12 (3 million USDC)
-        // we borrow 100k more, then freeLiquidity becomes 9.9e12 and netLoans = 3.1e12
-        // assume currentExposure = 1.1e12 (1.1 million USDC) coming also from last 100k
-        // finally investedPortion = 1e18 * 1.1e12 / (9.9e12 + 3.1e12) = 85271317829457364 or about 8.53%
         uint256 exposure = caps[msg.sender][token].exposure;
         if (exposure + loan > caps[msg.sender][token].absoluteCap) revert AbsoluteCapExceeded(exposure);
         caps[msg.sender][token].exposure += loan;
         (uint256 netLoans, uint256 freeLiquidity) = IVault(vaults[token]).getLoansAndLiquidity();
-        // therefore, the quantity freeLiquidity + netLoans - loan is invariant during the borrow
+        // the quantity freeLiquidity + netLoans - loan is invariant during the borrow
         // notice that since amount >= loan in general, we cannot make (freeLiquidity - amount)
         // otherwise credit services could be unclosable when experiencing a loss at high liquidity pressure
         uint256 investedPortion = RESOLUTION.mulDiv(exposure + loan, freeLiquidity + netLoans);
@@ -107,7 +111,6 @@ contract Manager is IManager, Ownable {
         return (freeLiquidity, netLoans + loan);
     }
 
-    /// @inheritdoc IManager
     function repay(
         address token,
         uint256 amount,

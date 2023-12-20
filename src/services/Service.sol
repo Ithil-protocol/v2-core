@@ -51,8 +51,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _;
     }
 
-    ///// Admin functions /////
-
     function setGuardian(address _guardian) external onlyOwner {
         if (_guardian == address(0)) revert InvalidParams();
 
@@ -67,7 +65,6 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         emit LockWasToggled(locked);
     }
 
-    ///// Service functions /////
     function _saveAgreement(Agreement memory agreement) internal {
         Agreement storage newAgreement = agreements.push();
         newAgreement.status = Status.OPEN;
@@ -83,7 +80,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         }
     }
 
-    /// @notice creates a new service agreement
+    /// @dev creates a new service agreement
     /// @param order a struct containing data on the agreement and extra params
     function open(Order calldata order) public virtual override {
         // Save agreement in memory to allow editing
@@ -99,7 +96,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         emit PositionOpened(id++, msg.sender, agreement);
     }
 
-    /// @notice closes an existing service agreement
+    /// @dev closes an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param data extra custom data required by the specific service
     function close(
@@ -119,7 +116,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         _burn(tokenID);
     }
 
-    /// @notice modifies an existing service agreement
+    /// @dev modifies an existing service agreement
     /// @param tokenID used to pull the agreement data and its owner
     /// @param agreement a struct containing new data on loan, collateral and item type
     /// @param data extra custom data required by the specific service

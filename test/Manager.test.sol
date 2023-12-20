@@ -8,12 +8,12 @@ import { Test } from "forge-std/Test.sol";
 import { IVault } from "../src/interfaces/IVault.sol";
 import { IManager, Manager } from "../src/Manager.sol";
 
-/// @dev Manager native state:
+/// Manager native state:
 /// bytes32 public constant override salt = "ithil";
 /// mapping(address => address) public override vaults;
 /// mapping(address => mapping(address => RiskParams)) public riskParams;
 
-/// @dev Manager underlying Vault state
+/// Manager underlying Vault state
 /// --> see Vault test
 
 contract ManagerTest is Test {

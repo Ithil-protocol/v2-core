@@ -16,7 +16,7 @@ import { BaseIntegrationServiceTest } from "./BaseIntegrationServiceTest.sol";
 import { StringEncoder } from "../helpers/StringEncoder.sol";
 import { OrderHelper } from "../helpers/OrderHelper.sol";
 
-/// @dev State study
+/// State study
 /// BalancerService native state:
 /// mapping(address => PoolData) public pools;
 /// IBalancerVault internal immutable balancerVault;
@@ -36,7 +36,7 @@ import { OrderHelper } from "../helpers/OrderHelper.sol";
 /// bool public locked;
 /// uint256 public id;
 
-/// @dev overrides (except first implementation of virtual functions)
+/// Overrides (except first implementation of virtual functions)
 ///
 
 // contract BalancerServiceWeightedOHMWETH is BalancerServiceWeightedDAIWETH {

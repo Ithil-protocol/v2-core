@@ -37,7 +37,7 @@ contract FraxlendServiceTest is BaseIntegrationServiceTest {
         serviceAddress = address(service);
     }
 
-    function safeSub(uint256 a, uint256 b) internal returns (uint256) {
+    function safeSub(uint256 a, uint256 b) internal pure returns (uint256) {
         return b < a ? a - b : 0;
     }
 

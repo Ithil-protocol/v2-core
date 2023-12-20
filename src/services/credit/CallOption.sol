@@ -12,7 +12,7 @@ import { RESOLUTION } from "../../Constants.sol";
 
 /// @title    Call option contract
 /// @author   Ithil
-/// @notice   A service to obtain a call option on ITHIL by boosting
+/// @dev A service to obtain a call option on ITHIL by boosting
 contract CallOption is CreditService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IVault;

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.18;
 
-/// @title    Interface of the Manager contract
-/// @author   Ithil
-/// @notice   Manages lending and borrowing from and to the ERC4626 vaults
 interface IManager {
+    /**
+     * @dev Represents the token-based limits of services
+     * @param percentageCap The percentage limit of a service
+     * @param absoluteCap The absolute token balance limit of a service
+     * @param exposure The current exposure to a specific token of a service
+     */
     struct CapsAndExposures {
         uint256 percentageCap;
         uint256 absoluteCap;
