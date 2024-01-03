@@ -161,21 +161,23 @@ contract GmxService is AuctionRateModel, DebitService {
     }
 
     function _wethReward(
-        uint256 collateral,
-        uint256 userVirtualDeposit,
-        uint256 totalRewards,
-        uint256 totalVirtualDeposits,
-        uint256 totalCollateral,
-        uint256 finalBalance
+        uint256 _collateral,
+        uint256 _userVirtualDeposit,
+        uint256 _totalRewards,
+        uint256 _totalVirtualDeposits,
+        uint256 _totalCollateral,
+        uint256 _finalBalance
     ) internal pure returns (uint256) {
         // calculate share of rewards to give to the user
-        uint256 totalWithdraw = ((totalRewards + totalVirtualDeposits - userVirtualDeposit) * collateral) /
-            totalCollateral;
+        uint256 totalWithdraw = ((_totalRewards + _totalVirtualDeposits - _userVirtualDeposit) * _collateral) /
+            _totalCollateral;
         return
             // Subtracting the virtual deposit we get the weth part: this is the weth the user is entitled to
             // Due to integer arithmetic, we may get underflow if we do not make checks
-            totalWithdraw >= userVirtualDeposit
-                ? totalWithdraw - userVirtualDeposit <= finalBalance ? totalWithdraw - userVirtualDeposit : finalBalance
+            totalWithdraw >= _userVirtualDeposit
+                ? totalWithdraw - _userVirtualDeposit <= _finalBalance
+                    ? totalWithdraw - _userVirtualDeposit
+                    : _finalBalance
                 : 0;
     }
 }
