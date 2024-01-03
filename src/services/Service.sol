@@ -23,6 +23,7 @@ abstract contract Service is IService, ERC721Enumerable, Ownable {
         address _manager,
         uint256 _deadline
     ) ERC721(_name, _symbol) {
+        assert(_manager != address(0));
         manager = IManager(_manager);
         locked = false;
         id = 0;
