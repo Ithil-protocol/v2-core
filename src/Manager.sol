@@ -13,6 +13,7 @@ import { RESOLUTION } from "./Constants.sol";
 
 /// @title    Manager contract
 /// @author   Ithil
+/// @custom:security-contact info@ithil.fi
 contract Manager is IManager, Ownable {
     using Math for uint256;
     using SafeERC20 for IERC20;

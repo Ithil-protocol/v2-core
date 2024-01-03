@@ -10,6 +10,7 @@ import { Service } from "../Service.sol";
 /// @title    FraxlendService contract
 /// @author   Ithil
 /// @dev A service to perform leveraged staking of FRAX on Fraxlend
+/// @custom:security-contact info@ithil.fi
 contract FraxlendService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 

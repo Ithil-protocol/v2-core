@@ -16,6 +16,7 @@ import { MINIMUM_FEE_UNLOCK_TIME, MAXIMUM_FEE_UNLOCK_TIME } from "./Constants.so
  * @dev Since this vault inherits from ERC4626, it has the known vulnerability of the "donation attack"
  * In the Ithil framework this is fixed by deploying the Vault already with 1 token deposited
  * This means that both the balance and the supply are at least 1 every time
+ * @custom:security-contact info@ithil.fi
  */
 contract Vault is IVault, ERC4626, ERC20Permit {
     using Math for uint256;
