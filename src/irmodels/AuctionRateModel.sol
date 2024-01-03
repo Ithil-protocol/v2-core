@@ -28,8 +28,7 @@ abstract contract AuctionRateModel is Ownable, BaseRiskModel {
     error ZeroMarginLoan();
 
     function setRiskParams(address token, uint256 riskSpread, uint256 baseRate, uint256 halfTime) external onlyOwner {
-        if (token == address(0) || baseRate > MAX_RATE || riskSpread > MAX_RATE || halfTime == 0)
-            revert InvalidInitParams();
+        if (token == address(0) || baseRate + riskSpread > MAX_RATE || halfTime == 0) revert InvalidInitParams();
         riskSpreads[token] = riskSpread;
         latestAndBase[token] = (block.timestamp << 128) + baseRate;
         halvingTime[token] = halfTime;
