@@ -147,7 +147,7 @@ contract GmxService is AuctionRateModel, DebitService {
         if (glpSupply == 0) revert ZeroGlpSupply();
         uint256 usdgAmount = (agreement.collaterals[0].amount * aumInUsdg) / glpSupply;
 
-        uint256 usdgDelta = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
+        uint256 redemptionAmount = usdgVault.getRedemptionAmount(agreement.loans[0].token, usdgAmount);
 
         uint256 feeBasisPoints = usdgVault.getFeeBasisPoints(
             agreement.loans[0].token,
@@ -156,7 +156,7 @@ contract GmxService is AuctionRateModel, DebitService {
             usdgVault.taxBasisPoints(),
             false
         );
-        results[0] = (usdgDelta * (BASIS_POINTS_DIVISOR - feeBasisPoints)) / BASIS_POINTS_DIVISOR;
+        results[0] = (redemptionAmount * (BASIS_POINTS_DIVISOR - feeBasisPoints)) / BASIS_POINTS_DIVISOR;
 
         return results;
     }
