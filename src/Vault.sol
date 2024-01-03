@@ -75,6 +75,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
     function sweep(address to, address token) external onlyOwner {
         assert(token != asset());
+        assert(to != address(0));
 
         IERC20 spuriousToken = IERC20(token);
         uint256 amount = spuriousToken.balanceOf(address(this));
