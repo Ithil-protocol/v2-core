@@ -20,6 +20,7 @@ import { DebitService } from "../DebitService.sol";
 /// @title    BalancerService contract
 /// @author   Ithil
 /// @dev A service to perform leveraged lping on any Balancer pool
+/// @custom:security-contact info@ithil.fi
 contract BalancerService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
     using SafeERC20 for IBalancerPool;

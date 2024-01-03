@@ -10,6 +10,7 @@ import { Service } from "../Service.sol";
 /// @title    AngleService contract
 /// @author   Ithil
 /// @dev A service to perform leveraged staking of agEur on Angle
+/// @custom:security-contact info@ithil.fi
 contract AngleService is AuctionRateModel, DebitService {
     using SafeERC20 for IERC20;
 

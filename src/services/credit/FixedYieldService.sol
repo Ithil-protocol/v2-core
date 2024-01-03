@@ -14,6 +14,7 @@ import { Service } from "../Service.sol";
  * Boosting is a particular case with yield = 0 (or in general lower than LPs' average)
  * By putting a positive yield and a finite deadline, we obtain classical bonds
  * In this implementation, fixed yield creditors are more guaranteed than vanilla LPs
+ * @custom:security-contact info@ithil.fi
  */
 contract FixedYieldService is CreditService {
     error SlippageExceeded();
