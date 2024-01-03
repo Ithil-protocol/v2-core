@@ -79,6 +79,9 @@ contract CallOption is CreditService {
         if (_ithil == address(0)) revert InvalidParams();
         if (_initialPrice == 0) revert InvalidParams();
         if (_underlying == address(0)) revert InvalidParams();
+        if (_minLoan == 0) revert InvalidParams();
+        if (_halvingTime == 0) revert InvalidParams();
+        if (_tenorDuration == 0) revert InvalidParams();
 
         initialPrice = _initialPrice;
         underlying = IERC20(_underlying);
@@ -89,6 +92,7 @@ contract CallOption is CreditService {
         vestingTime = _initialVesting + block.timestamp;
 
         _vaultAddress = manager.vaults(_underlying);
+        if (_vaultAddress == address(0)) revert InvalidParams();
         // approve vault to spend underlying token for deposits
         // technically, it should be re-approved if the total volume exceeds 2^256
         // in practice, this event never happens, and in case just redeploy the service
