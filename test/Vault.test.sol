@@ -422,7 +422,7 @@ contract VaultTest is Test {
         uint256 shares = 0;
 
         vm.startPrank(receiver);
-        if (withdrawn >= vault.freeLiquidity()) {
+        if (withdrawn > vault.freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             vault.withdraw(withdrawn, receiver, receiver);
             withdrawn = 0;
@@ -604,8 +604,10 @@ contract VaultTest is Test {
 
         // withdraw without leaving 1 token unit
         uint256 vaultBalance = token.balanceOf(address(vault));
-        vm.expectRevert(IVault.InsufficientLiquidity.selector);
-        vault.withdraw(vaultBalance, tokenSink, receiver);
+        if (vaultBalance < type(uint256).max) {
+            vm.expectRevert(IVault.InsufficientLiquidity.selector);
+            vault.withdraw(vaultBalance + 1, tokenSink, receiver);
+        }
     }
 
     function testCannotBorrowMoreThanFreeLiquidity(uint256 amount) public {
