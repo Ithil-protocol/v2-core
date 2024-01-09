@@ -118,8 +118,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 supply = totalSupply();
         uint256 shares = balanceOf(owner);
         // super.maxWithdraw but we leverage the fact of having already computed freeLiq which contains balanceOf()
-        // notice that shares and free liquidity are always at least 1, and freeLiq cannot be withdrawn
-        return (freeLiq - 1).min(shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply));
+        return freeLiq.min(shares.mulDiv(freeLiq + netLoans + _calculateLockedLosses(), supply));
     }
 
     // Assets include netLoans but they are not available for withdraw
@@ -136,9 +135,9 @@ contract Vault is IVault, ERC4626, ERC20Permit {
 
         // convertToShares using the already computed variables
         // if the assets the owner can theoretically withdraw are higher than the free liquidity
-        // we cap them with the convertToShares of the free liquidity - 1, which is always available
-        if (assets >= freeLiquidityCache && assets > 0) {
-            maxRedeemCache = (freeLiquidityCache - 1).mulDiv(supply, totalAssetsCache);
+        // we cap them with the convertToShares of the free liquidity, which is always available
+        if (assets > freeLiquidityCache && assets > 0) {
+            maxRedeemCache = freeLiquidityCache.mulDiv(supply, totalAssetsCache);
         }
 
         return maxRedeemCache;
@@ -185,7 +184,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
     ) public override(ERC4626, IERC4626) returns (uint256) {
         // assets cannot be more than the current free liquidity
         uint256 freeLiq = freeLiquidity();
-        if (assets >= freeLiq) revert InsufficientLiquidity();
+        if (assets > freeLiq) revert InsufficientLiquidity();
 
         // super.withdraw but we leverage the fact of having already computed freeLiq
         uint256 supply = totalSupply();
@@ -209,7 +208,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         uint256 supply = totalSupply();
 
         uint256 assets = shares.mulDiv(totalAssetsCache, supply);
-        if (assets >= freeLiq) revert InsufficientLiquidity();
+        if (assets > freeLiq) revert InsufficientLiquidity();
         // redeem, now all data have been computed
         _withdraw(msg.sender, receiver, owner, assets, shares);
 
@@ -229,6 +228,8 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         if (loan > assets) revert LoanHigherThanAssetsInBorrow();
         uint256 freeLiq = freeLiquidity();
 
+        // We do not allow loans higher than the free liquidity
+        // This prevents the vault to go into unhealthy state
         if (assets >= freeLiq) revert InsufficientFreeLiquidity();
 
         netLoans += loan;
