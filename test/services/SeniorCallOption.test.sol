@@ -106,7 +106,7 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         vm.stopPrank();
         uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
         vm.warp(block.timestamp + 8 * 30 * 86500);
-        if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
+        if (assets > IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(1e17, 0));
         } else {
@@ -123,7 +123,7 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         vm.stopPrank();
         uint256 assets = IVault(manager.vaults(loanTokens[0])).convertToAssets(collaterals[0].amount);
         vm.warp(block.timestamp + 8 * 30 * 86500);
-        if (assets >= IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
+        if (assets > IVault(manager.vaults(loanTokens[0])).freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             service.close(0, abi.encode(1e17, 0));
         } else {

@@ -617,7 +617,9 @@ contract VaultTest is Test {
         vm.stopPrank();
 
         uint256 vaultBalance = token.balanceOf(address(vault));
-        vm.expectRevert(IVault.InsufficientFreeLiquidity.selector);
-        vault.borrow(vaultBalance, vaultBalance, address(this));
+        if (vaultBalance < type(uint256).max) {
+            vm.expectRevert(IVault.InsufficientFreeLiquidity.selector);
+            vault.borrow(vaultBalance + 1, vaultBalance + 1, address(this));
+        }
     }
 }
