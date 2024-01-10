@@ -111,6 +111,19 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         return super.totalAssets() - _calculateLockedProfits();
     }
 
+    function previewWithdraw(uint256 assets) public view override(ERC4626, IERC4626) returns (uint256) {
+        uint256 freeLiq = freeLiquidity();
+        uint256 supply = totalSupply();
+        return assets.mulDiv(supply, freeLiq + netLoans + _calculateLockedLosses());
+    }
+
+    function previewRedeem(uint256 shares) public view override(ERC4626, IERC4626) returns (uint256) {
+        uint256 freeLiq = freeLiquidity();
+        uint256 totalAssetsCache = freeLiq + netLoans + _calculateLockedLosses();
+        uint256 supply = totalSupply();
+        return shares.mulDiv(totalAssetsCache, supply);
+    }
+
     // Assets include netLoans but they are not available for withdraw
     // Therefore we need to cap with the current free liquidity
     function maxWithdraw(address owner) public view override(ERC4626, IERC4626) returns (uint256) {
@@ -228,9 +241,7 @@ contract Vault is IVault, ERC4626, ERC20Permit {
         if (loan > assets) revert LoanHigherThanAssetsInBorrow();
         uint256 freeLiq = freeLiquidity();
 
-        // We do not allow loans higher than the free liquidity
-        // This prevents the vault to go into unhealthy state
-        if (assets >= freeLiq) revert InsufficientFreeLiquidity();
+        if (assets > freeLiq) revert InsufficientFreeLiquidity();
 
         netLoans += loan;
         currentProfits = _calculateLockedProfits();

@@ -210,7 +210,7 @@ contract CallOption is CreditService {
             // To do this, we take liquidity from the vault and register the loss
             // If we incur a loss and the freeLiquidity is not enough, we cannot make the exit fail
             // Otherwise we would have positions impossible to close: thus we withdraw what we can
-            freeLiquidity = vault.freeLiquidity() - 1;
+            freeLiquidity = vault.freeLiquidity();
             toBorrow = toTransfer - redeemed > freeLiquidity ? freeLiquidity : toTransfer - redeemed;
         }
         // We will always have ithil.balanceOf(address(this)) >= toCall, so the following succeeds
