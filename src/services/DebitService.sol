@@ -152,7 +152,8 @@ abstract contract DebitService is Service, BaseRiskModel {
             manager.repay(agreement.loans[index].token, repaidAmount, agreement.loans[index].amount, address(this));
 
             // repay the owner
-            IERC20(agreement.loans[index].token).safeTransfer(agreementOwner, obtained[index] - repaidAmount);
+            if (obtained[index] > repaidAmount)
+                IERC20(agreement.loans[index].token).safeTransfer(agreementOwner, obtained[index] - repaidAmount);
 
             // in case liquidatorReward > 0, a liquidation has occurred and msg.sender is the liquidator
             // at this point to prevent liquidator side reentrancy attacks damaging the users
