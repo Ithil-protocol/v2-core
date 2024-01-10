@@ -475,7 +475,7 @@ contract VaultTest is Test {
         uint256 withdrawn = vault.previewRedeem(redeemed);
 
         vm.startPrank(receiver);
-        if (withdrawn >= vault.freeLiquidity()) {
+        if (withdrawn > vault.freeLiquidity()) {
             vm.expectRevert(bytes4(keccak256(abi.encodePacked("InsufficientLiquidity()"))));
             vault.redeem(redeemed, receiver, receiver);
             redeemed = 0;
