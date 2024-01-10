@@ -136,7 +136,9 @@ abstract contract DebitService is Service, BaseRiskModel {
             // We instead allow the user to liquidate its own position without vault loss
             // Because it is not a vulnerability even if the user manipulated the quoter on purpose to experience a loss
             if (
-                obtained[index] < agreement.loans[index].amount && msg.sender != liquidator && liquidator != address(0)
+                obtained[index] < agreement.loans[index].amount + dueFees[index] &&
+                msg.sender != liquidator &&
+                liquidator != address(0)
             ) {
                 revert LossByArbitraryAddress();
             }
