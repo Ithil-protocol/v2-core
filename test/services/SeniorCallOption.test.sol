@@ -50,10 +50,10 @@ contract CallOptionTest is BaseIntegrationServiceTest {
         vm.stopPrank();
 
         vm.prank(whales[loanTokens[0]]);
-        IERC20(loanTokens[0]).transfer(admin, 1);
+        IERC20(loanTokens[0]).transfer(admin, 1000);
 
         vm.startPrank(admin);
-        IERC20(loanTokens[0]).approve(address(manager), 1);
+        IERC20(loanTokens[0]).approve(address(manager), 1000);
         manager.create(loanTokens[0]);
 
         service = new CallOption(address(manager), address(ithil), 4e17, 1, 86400 * 30, 86400 * 30, 0, loanTokens[0]);

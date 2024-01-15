@@ -46,9 +46,9 @@ contract BaseIntegrationServiceTest is Test, IERC721Receiver {
         for (uint256 i = 0; i < loanLength; i++) {
             if (manager.vaults(loanTokens[i]) == address(0)) {
                 vm.prank(whales[loanTokens[i]]);
-                IERC20(loanTokens[i]).transfer(admin, 1);
+                IERC20(loanTokens[i]).transfer(admin, 1000);
                 vm.startPrank(admin);
-                IERC20(loanTokens[i]).approve(address(manager), 1);
+                IERC20(loanTokens[i]).approve(address(manager), 1000);
                 manager.create(loanTokens[i]);
                 vm.stopPrank();
             }

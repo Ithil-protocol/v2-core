@@ -41,13 +41,13 @@ contract Manager is IManager, Ownable {
             abi.encodePacked(type(Vault).creationCode, abi.encode(IERC20Metadata(token)))
         );
         vaults[token] = vault;
-        // deposit 1 token unit to avoid the typical ERC4626 issue
+        // deposit 1000 wei unit to avoid the typical ERC4626 issue
         // by placing the resulting iToken in the manager, it becomes unredeemable
         // therefore, the Vault is guaranteed to always stay in a healthy status
         IERC20 tkn = IERC20(token);
-        tkn.safeTransferFrom(msg.sender, address(this), 1);
-        tkn.approve(vault, 1);
-        IVault(vault).deposit(1, address(this));
+        tkn.safeTransferFrom(msg.sender, address(this), 1000);
+        tkn.approve(vault, 1000);
+        IVault(vault).deposit(1000, address(this));
 
         emit VaultCreated(token, vault);
 

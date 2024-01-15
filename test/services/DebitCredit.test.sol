@@ -105,10 +105,10 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // recall that the admin needs 1e-6 USDC to create the vault
         vm.stopPrank();
         vm.prank(usdcWhale);
-        IERC20(usdc).transfer(address(admin), 1);
+        IERC20(usdc).transfer(address(admin), 1000);
 
         vm.startPrank(admin);
-        IERC20(usdc).approve(address(manager), 1);
+        IERC20(usdc).approve(address(manager), 1000);
         manager.create(usdc);
 
         // first price is 0.2 USDC: we need to double it in the constructor
@@ -239,7 +239,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         assertLe(collaterals[1].amount, (depositedAmount * _rewards[monthsLocked]) / initialPrice);
         // price was bumped by at least the allocation percentage (virtually) bougth
         assertGe(callOptionService.currentPrice(), initialPrice);
-        assertEq(vault.freeLiquidity(), 4e9 + 1);
+        assertEq(vault.freeLiquidity(), 4e9 + 1000);
         // free liquidity = 4000 USDC
 
         // now depositedAmount are in the vault -> we take an Aave position
@@ -250,7 +250,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         uint256 minCollateral = loan + margin;
         IERC20(usdc).approve(address(aaveService), margin);
         _openAavePosition(margin, loan, minCollateral);
-        assertEq(vault.freeLiquidity(), 3.6e9 + 1);
+        assertEq(vault.freeLiquidity(), 3.6e9 + 1000);
         vm.stopPrank();
         // now, the free liquidity is 3600 USDC
 
@@ -281,8 +281,11 @@ contract DebitCreditTest is Test, IERC721Receiver {
             vault.balanceOf(treasury),
             collaterals[0].amount - vault.convertToShares(((depositedAmount * (1e18 - calledPortion)) / 1e18))
         );
-        assertEq(vault.freeLiquidity(), depositedAmount - loan - (depositedAmount * (1e18 - calledPortion)) / 1e18 + 1);
-        assertEq(vault.freeLiquidity(), 3.2e9 + 1);
+        assertEq(
+            vault.freeLiquidity(),
+            depositedAmount - loan - (depositedAmount * (1e18 - calledPortion)) / 1e18 + 1000
+        );
+        assertEq(vault.freeLiquidity(), 3.2e9 + 1000);
         assertEq(vault.balanceOf(treasury), 3.6e9);
         vm.stopPrank();
         // The free liquidity is now 3200 USDC and treasury has 3600 USDC worth of iTokens
@@ -293,7 +296,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         monthsLocked = 7;
         IERC20(usdc).approve(address(callOptionService), depositedAmount);
         _openCallOption(depositedAmount, monthsLocked);
-        assertEq(vault.freeLiquidity(), 3.5e9 + 1);
+        assertEq(vault.freeLiquidity(), 3.5e9 + 1000);
         vm.stopPrank();
         // Now free liquidity is 3500 USDC, and 400 are taken as loan
         // Total assets are 3900 USDC, so we can still take 380 USDC as loan
@@ -312,7 +315,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         // not all liquidity can be withdrawn, let us just redeem 2900 iUSDC
         vault.redeem(2.9e9, treasury, treasury);
         // Which makes the free liquidity to be 220 USDC
-        assertEq(vault.freeLiquidity(), 2.2e8 + 1);
+        assertEq(vault.freeLiquidity(), 2.2e8 + 1000);
         vm.stopPrank();
 
         vm.startPrank(callOptionSigner);
@@ -342,7 +345,7 @@ contract DebitCreditTest is Test, IERC721Receiver {
         vm.startPrank(aaveUser);
         aaveService.close(0, abi.encode(0));
         // it used to be 400 USDC, so now we have them back
-        assertEq(vault.freeLiquidity(), 6.2e8 + 1);
+        assertEq(vault.freeLiquidity(), 6.2e8 + 1000);
         vm.stopPrank();
 
         // At this point, fees are harvested
