@@ -43,7 +43,14 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         if (transformedAmount == 0) transformedAmount++;
         uint256 transformedMargin = (daiMargin % (maxSupplied - transformedAmount));
         if (transformedMargin == 0) transformedMargin++;
-        IService.Order memory order = _openOrder1(transformedAmount, daiLoan, transformedMargin, 1, block.timestamp, "");
+        IService.Order memory order = _openOrder1(
+            transformedAmount,
+            daiLoan,
+            transformedMargin,
+            1,
+            block.timestamp,
+            ""
+        );
         uint256 initialAllowance = service.totalAllowance(collateralTokens[0]);
         uint256 initialBalance = IAToken(collateralTokens[0]).balanceOf(address(service));
         service.open(order);
