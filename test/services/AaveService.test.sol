@@ -29,19 +29,21 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         loanLength = 1;
         loanTokens = new address[](loanLength);
         collateralTokens = new address[](1);
-        loanTokens[0] = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1; // DAI
-        whales[loanTokens[0]] = 0x252cd7185dB7C3689a571096D5B57D45681aA080;
-        collateralTokens[0] = 0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE;
+        loanTokens[0] = 0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F; // FRAX
+        whales[loanTokens[0]] = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+        collateralTokens[0] = 0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5;
         serviceAddress = address(service);
     }
 
     function testAaveIntegrationOpenPosition(uint256 daiAmount, uint256 daiLoan, uint256 daiMargin) public {
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        uint256 transformedAmount = daiAmount % whaleBalance;
+        uint256 maxSupplied = whaleBalance / 200;
+        uint256 maxMargin = whaleBalance / 200;
+        uint256 transformedAmount = daiAmount % maxSupplied;
         if (transformedAmount == 0) transformedAmount++;
-        uint256 transformedMargin = (daiMargin % (whaleBalance - transformedAmount));
+        uint256 transformedMargin = (daiMargin % (maxSupplied - transformedAmount));
         if (transformedMargin == 0) transformedMargin++;
-        IService.Order memory order = _openOrder1(daiAmount, daiLoan, daiMargin, 1, block.timestamp, "");
+        IService.Order memory order = _openOrder1(transformedAmount, daiLoan, transformedMargin, 1, block.timestamp, "");
         uint256 initialAllowance = service.totalAllowance(collateralTokens[0]);
         uint256 initialBalance = IAToken(collateralTokens[0]).balanceOf(address(service));
         service.open(order);
@@ -64,7 +66,7 @@ contract AaveServiceTest is BaseIntegrationServiceTest {
         uint256 initialUserBalance = IERC20(loanTokens[0]).balanceOf(address(this));
         testAaveIntegrationOpenPosition(daiAmount, daiLoan, daiMargin);
         uint256 whaleBalance = IERC20(loanTokens[0]).balanceOf(whales[loanTokens[0]]);
-        uint256 supplyAmount = whaleBalance / 2;
+        uint256 supplyAmount = whaleBalance / 200;
         if (supplyAmount > 0) {
             vm.startPrank(whales[loanTokens[0]]);
             IERC20(loanTokens[0]).approve(aavePool, supplyAmount);
