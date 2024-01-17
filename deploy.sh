@@ -1,7 +1,5 @@
 #!/bin/bash
 
-VERIFY=true
-
 if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
     echo "Error: DEPLOYER_PRIVATE_KEY is not set."
     exit 1
@@ -12,20 +10,21 @@ if [ -z "$DEPLOYER_PUBLIC_KEY" ]; then
     exit 1
 fi
 
-if [ -z "$ETHERSCAN_API_KEY" ]; then
-    echo "Error: ETHERSCAN_API_KEY is not set."
-    exit 1
-fi
-
 # Config
 RPC_URL="http://localhost:8545"
-CHAIN_NAME="sepolia"
+CHAIN_NAME="arbitrum"
+VERIFY=false
 AAVE_DEADLINE=1
 FRAX_DEADLINE=1
 GMX_DEADLINE=1
 FIXEDYIELD_DEADLINE=1
 FIXEDYIELD_MINLOAD=1
 FIXEDYIELD_YELD=0
+
+if [ "$VERIFY" = true ] && [ -z "$ETHERSCAN_API_KEY" ]; then
+    echo "Error: ETHERSCAN_API_KEY is not set."
+    exit 1
+fi
 
 # Tokens
 USDC=0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8
@@ -142,23 +141,23 @@ fi
 # Set caps
 
 ## AaveService
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDC 8e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDT 8e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $DAI 8e17 1e22
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WETH 8e17 4e18
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 8e17 2e7
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $FRAX 8e17 1e22
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDC 800000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDT 800000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $DAI 800000000000000000 10000000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WETH 800000000000000000 4000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 800000000000000000 20000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $FRAX 800000000000000000 10000000000000000000000
 
 ## GmxService
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $USDC $GMXSERVICE_ADDRESS 5e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $USDT $GMXSERVICE_ADDRESS 5e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $DAI $GMXSERVICE_ADDRESS 5e17 1e22
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $WETH $GMXSERVICE_ADDRESS 5e17 4e18
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 5e17 2e7
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAX $GMXSERVICE_ADDRESS 5e17 1e22
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $USDC $GMXSERVICE_ADDRESS 500000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $USDT $GMXSERVICE_ADDRESS 500000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $DAI $GMXSERVICE_ADDRESS 500000000000000000 10000000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $WETH $GMXSERVICE_ADDRESS 500000000000000000 4000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 500000000000000000 20000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAX $GMXSERVICE_ADDRESS 500000000000000000 10000000000000000000000
 
 ## FraxlendService
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAX $FRAXSERVICE_ADDRESS 4e17 1e22
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAX $FRAXSERVICE_ADDRESS 400000000000000000 10000000000000000000000
 
 ## FixedYieldService
 for token in "${tokens[@]}"; do
