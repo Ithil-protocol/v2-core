@@ -25,12 +25,10 @@ contract FixedYieldService is CreditService {
 
     constructor(
         address _manager,
-        uint256 _minLoan,
         uint256 _yield,
         uint256 _deadline
     ) Service("Fixed Yield Service", "FIXED-YIELD-SERVICE", _manager, _deadline) {
         if (_manager == address(0)) revert InvalidParams();
-        minLoan = _minLoan;
         yield = _yield;
     }
 

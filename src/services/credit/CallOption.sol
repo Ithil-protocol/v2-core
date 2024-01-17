@@ -88,7 +88,7 @@ contract CallOption is CreditService {
         underlying = IERC20(_underlying);
         ithil = IERC20(_ithil);
         halvingTime = _halvingTime;
-        minLoan = _minLoan;
+        minLoan[_underlying] = _minLoan;
         tenorDuration = _tenorDuration;
         vestingTime = _initialVesting + block.timestamp;
 
