@@ -91,12 +91,12 @@ if [ "$VERIFY" = true ]; then
     forge verify-contract $AAVESERVICE_ADDRESS src/services/debit/AaveService.sol:AaveService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
     echo "OK!"
 fi
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 10000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 4000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 20000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
 
 # Deploy FraxlendService
 echo "Deploying FraxlendService contract..."
@@ -112,7 +112,7 @@ if [ "$VERIFY" = true ]; then
     forge verify-contract $FRAXSERVICE_ADDRESS src/services/debit/FraxlendService.sol:FraxlendService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
     echo "OK!"
 fi
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
 
 # Deploy GmxService
 echo "Deploying GmxService contract..."
@@ -128,12 +128,12 @@ if [ "$VERIFY" = true ]; then
     forge verify-contract $GMXSERVICE_ADDRESS src/services/debit/GmxService.sol:GmxService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
     echo "OK!"
 fi
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 10000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 4000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 20000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
 
 # Deploy FixedYieldService
 echo "Deploying FixedYieldService contract..."
@@ -175,12 +175,12 @@ cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRES
 for token in "${tokens[@]}"; do
     cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FIXEDYIELD_ADDRESS $token 1 0
 done
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDT 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $DAI 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WETH 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WBTC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $FRAX 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDT 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $DAI 10000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WETH 4000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WBTC 20000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $FRAX 10000000000000000000
 
 # Print out address
 echo " "
