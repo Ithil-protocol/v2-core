@@ -149,6 +149,12 @@ if [ "$VERIFY" = true ]; then
     forge verify-contract $FIXEDYIELD_ADDRESS src/services/credit/FixedYieldService.sol:FixedYieldService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
     echo "OK!"
 fi
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDT 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $DAI 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WETH 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WBTC 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $FRAX 1
 
 # Set caps
 
@@ -175,12 +181,6 @@ cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRES
 for token in "${tokens[@]}"; do
     cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FIXEDYIELD_ADDRESS $token 1 0
 done
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDT 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $DAI 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WETH 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WBTC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $FRAX 1
 
 # Print out address
 echo " "
