@@ -15,8 +15,8 @@ if [ -z "$DEPLOYER_PUBLIC_KEY" ]; then
 fi
 
 # Config
-RPC_URL="http://localhost:8545"
-CHAIN_NAME="arbitrum"
+RPC_URL="http://localhost:8545" # "https://arb-mainnet..."
+CHAIN_NAME="sepolia" # "arbitrum" "mainnet"...
 VERIFY=true
 AAVE_DEADLINE=2592000
 FRAX_DEADLINE=1296000
@@ -76,7 +76,7 @@ for token in "${tokens[@]}"; do
         echo "Verifying Vault..."
         VAULTS[$token]=$VAULT_ADDRESS
         ENCODED_ARGS=$(cast abi-encode "constructor(address)" $token)
-        forge verify-contract ${VAULTS[$token]} src/Vault.sol:Vault --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+        forge verify-contract ${VAULTS[$token]} src/Vault.sol:Vault --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
         echo "OK!"
     fi
 done
@@ -92,7 +92,7 @@ fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
     ENCODED_ARGS=$(cast abi-encode "constructor(address,address,uint256)" $MANAGER_ADDRESS $AAVE $AAVE_DEADLINE)
-    forge verify-contract $AAVESERVICE_ADDRESS src/services/debit/AaveService.sol:AaveService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    forge verify-contract $AAVESERVICE_ADDRESS src/services/debit/AaveService.sol:AaveService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
 cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 10000000
@@ -113,7 +113,7 @@ fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
     ENCODED_ARGS=$(cast abi-encode "constructor(address,address,uint256)" $MANAGER_ADDRESS $FRAXLEND $FRAX_DEADLINE)
-    forge verify-contract $FRAXSERVICE_ADDRESS src/services/debit/FraxlendService.sol:FraxlendService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    forge verify-contract $FRAXSERVICE_ADDRESS src/services/debit/FraxlendService.sol:FraxlendService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
 cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
@@ -129,7 +129,7 @@ fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
     ENCODED_ARGS=$(cast abi-encode "constructor(address,address,address,uint256)" $MANAGER_ADDRESS $GMXROUTER1 $GMXROUTER2 $GMX_DEADLINE)
-    forge verify-contract $GMXSERVICE_ADDRESS src/services/debit/GmxService.sol:GmxService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    forge verify-contract $GMXSERVICE_ADDRESS src/services/debit/GmxService.sol:GmxService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
 cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 10000000
@@ -149,8 +149,8 @@ if [ -z "$FIXEDYIELD_ADDRESS" ]; then
 fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
-    ENCODED_ARGS=$(cast abi-encode "constructor(address,uint256,uint256,uint256)" $MANAGER_ADDRESS $FIXEDYIELD_YELD $FIXEDYIELD_DEADLINE)
-    forge verify-contract $FIXEDYIELD_ADDRESS src/services/credit/FixedYieldService.sol:FixedYieldService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    ENCODED_ARGS=$(cast abi-encode "constructor(address,uint256,uint256)" $MANAGER_ADDRESS $FIXEDYIELD_YELD $FIXEDYIELD_DEADLINE)
+    forge verify-contract $FIXEDYIELD_ADDRESS src/services/credit/FixedYieldService.sol:FixedYieldService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
 cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 10000000
@@ -185,12 +185,6 @@ cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRES
 for token in "${tokens[@]}"; do
     cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FIXEDYIELD_ADDRESS $token 1 0
 done
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 10000000
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDT 10000000
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $DAI 10000000000000000000
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WETH 4000000000000000
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WBTC 20000
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $FRAX 10000000000000000000
 
 # Print out address
 echo " "
