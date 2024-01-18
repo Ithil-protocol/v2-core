@@ -112,11 +112,6 @@ if [ "$VERIFY" = true ]; then
     forge verify-contract $FRAXSERVICE_ADDRESS src/services/debit/FraxlendService.sol:FraxlendService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
     echo "OK!"
 fi
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 1
 cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 1
 
 # Deploy GmxService
@@ -133,6 +128,11 @@ if [ "$VERIFY" = true ]; then
     forge verify-contract $GMXSERVICE_ADDRESS src/services/debit/GmxService.sol:GmxService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
     echo "OK!"
 fi
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 1
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 1
 cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 1
 
 # Deploy FixedYieldService
