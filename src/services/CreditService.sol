@@ -8,14 +8,24 @@ import { Service } from "./Service.sol";
 abstract contract CreditService is Service {
     using SafeERC20 for IERC20;
 
-    uint256 public minLoan;
+    mapping(address => uint256) public minLoan;
+
+    event MinLoanWasUpdated(address indexed token, uint256 amount);
 
     error LoanBelowMinimum();
     error InvalidInput();
 
+    function setMinLoan(address token, uint256 amount) external onlyGuardian {
+        if (amount == 0) revert InvalidParams();
+        if (token == address(0)) revert InvalidParams();
+        minLoan[token] = amount;
+
+        emit MinLoanWasUpdated(token, amount);
+    }
+
     function open(Order calldata order) public virtual override unlocked {
         Agreement memory agreement = order.agreement;
-        if (agreement.loans[0].amount < minLoan) revert LoanBelowMinimum();
+        if (agreement.loans[0].amount < minLoan[agreement.loans[0].token]) revert LoanBelowMinimum();
         // Transfers deposit the loan to the relevant vault
         // every token corresponds to a collateral token (the vault's address)
         // therefore, the length of the collateral array must be at least the length of the loan array

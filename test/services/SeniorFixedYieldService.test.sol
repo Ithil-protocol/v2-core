@@ -25,7 +25,7 @@ contract FixedYieldServiceTest is BaseIntegrationServiceTest {
 
     constructor() BaseIntegrationServiceTest(rpcUrl, blockNumber) {
         vm.prank(admin);
-        service = new FixedYieldService(address(manager), 1, 1e16, 86400 * 30);
+        service = new FixedYieldService(address(manager), 1e16, 86400 * 30);
 
         loanLength = 1;
         loanTokens = new address[](loanLength);
