@@ -1,6 +1,8 @@
 #!/bin/bash
 
-VERIFY=true
+# DEPLOYER_PRIVATE_KEY=0x...
+# DEPLOYER_PUBLIC_KEY=0x...
+# ETHERSCAN_API_KEY=...
 
 if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
     echo "Error: DEPLOYER_PRIVATE_KEY is not set."
@@ -12,20 +14,20 @@ if [ -z "$DEPLOYER_PUBLIC_KEY" ]; then
     exit 1
 fi
 
-if [ -z "$ETHERSCAN_API_KEY" ]; then
+# Config
+RPC_URL="http://localhost:8545" # "https://arb-mainnet..."
+CHAIN_NAME="sepolia" # "arbitrum" "mainnet"...
+VERIFY=true
+AAVE_DEADLINE=2592000
+FRAX_DEADLINE=1296000
+GMX_DEADLINE=1296000
+FIXEDYIELD_DEADLINE=2592000
+FIXEDYIELD_YELD=0
+
+if [ "$VERIFY" = true ] && [ -z "$ETHERSCAN_API_KEY" ]; then
     echo "Error: ETHERSCAN_API_KEY is not set."
     exit 1
 fi
-
-# Config
-RPC_URL="http://localhost:8545"
-CHAIN_NAME="sepolia"
-AAVE_DEADLINE=1
-FRAX_DEADLINE=1
-GMX_DEADLINE=1
-FIXEDYIELD_DEADLINE=1
-FIXEDYIELD_MINLOAD=1
-FIXEDYIELD_YELD=0
 
 # Tokens
 USDC=0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8
@@ -74,7 +76,7 @@ for token in "${tokens[@]}"; do
         echo "Verifying Vault..."
         VAULTS[$token]=$VAULT_ADDRESS
         ENCODED_ARGS=$(cast abi-encode "constructor(address)" $token)
-        forge verify-contract ${VAULTS[$token]} src/Vault.sol:Vault --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+        forge verify-contract ${VAULTS[$token]} src/Vault.sol:Vault --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
         echo "OK!"
     fi
 done
@@ -90,9 +92,15 @@ fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
     ENCODED_ARGS=$(cast abi-encode "constructor(address,address,uint256)" $MANAGER_ADDRESS $AAVE $AAVE_DEADLINE)
-    forge verify-contract $AAVESERVICE_ADDRESS src/services/debit/AaveService.sol:AaveService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    forge verify-contract $AAVESERVICE_ADDRESS src/services/debit/AaveService.sol:AaveService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 10000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 4000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 20000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
 
 # Deploy FraxlendService
 echo "Deploying FraxlendService contract..."
@@ -105,9 +113,10 @@ fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
     ENCODED_ARGS=$(cast abi-encode "constructor(address,address,uint256)" $MANAGER_ADDRESS $FRAXLEND $FRAX_DEADLINE)
-    forge verify-contract $FRAXSERVICE_ADDRESS src/services/debit/FraxlendService.sol:FraxlendService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    forge verify-contract $FRAXSERVICE_ADDRESS src/services/debit/FraxlendService.sol:FraxlendService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
 
 # Deploy GmxService
 echo "Deploying GmxService contract..."
@@ -120,13 +129,19 @@ fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
     ENCODED_ARGS=$(cast abi-encode "constructor(address,address,address,uint256)" $MANAGER_ADDRESS $GMXROUTER1 $GMXROUTER2 $GMX_DEADLINE)
-    forge verify-contract $GMXSERVICE_ADDRESS src/services/debit/GmxService.sol:GmxService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    forge verify-contract $GMXSERVICE_ADDRESS src/services/debit/GmxService.sol:GmxService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDC 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $USDT 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $DAI 10000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WETH 4000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $WBTC 20000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setMinMargin(address,uint256)" $FRAX 10000000000000000000
 
 # Deploy FixedYieldService
 echo "Deploying FixedYieldService contract..."
-FIXEDYIELD=$(forge create src/services/credit/FixedYieldService.sol:FixedYieldService --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY --optimize --constructor-args $MANAGER_ADDRESS $FIXEDYIELD_MINLOAD $FIXEDYIELD_YELD $FIXEDYIELD_DEADLINE)
+FIXEDYIELD=$(forge create src/services/credit/FixedYieldService.sol:FixedYieldService --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY --optimize --constructor-args $MANAGER_ADDRESS $FIXEDYIELD_YELD $FIXEDYIELD_DEADLINE)
 FIXEDYIELD_ADDRESS=$(echo "$FIXEDYIELD" | grep "Deployed to:" | awk '{print $3}')
 if [ -z "$FIXEDYIELD_ADDRESS" ]; then
     echo "Error: FixedYieldService contract deployment failed"
@@ -134,35 +149,41 @@ if [ -z "$FIXEDYIELD_ADDRESS" ]; then
 fi
 if [ "$VERIFY" = true ]; then
     echo "Verifying..."
-    ENCODED_ARGS=$(cast abi-encode "constructor(address,uint256,uint256,uint256)" $MANAGER_ADDRESS $FIXEDYIELD_MINLOAD $FIXEDYIELD_YELD $FIXEDYIELD_DEADLINE)
-    forge verify-contract $FIXEDYIELD_ADDRESS src/services/credit/FixedYieldService.sol:FixedYieldService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch
+    ENCODED_ARGS=$(cast abi-encode "constructor(address,uint256,uint256)" $MANAGER_ADDRESS $FIXEDYIELD_YELD $FIXEDYIELD_DEADLINE)
+    forge verify-contract $FIXEDYIELD_ADDRESS src/services/credit/FixedYieldService.sol:FixedYieldService --constructor-args $ENCODED_ARGS --chain $CHAIN_NAME --watch --etherscan-api-key $ETHERSCAN_API_KEY
     echo "OK!"
 fi
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDC 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $USDT 10000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $DAI 10000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WETH 4000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $WBTC 20000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FIXEDYIELD_ADDRESS "setMinLoan(address,uint256)" $FRAX 10000000000000000000
 
 # Set caps
 
 ## AaveService
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDC 8e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDT 8e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $DAI 8e17 1e22
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WETH 8e17 4e18
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 8e17 2e7
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $FRAX 8e17 1e22
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDC 800000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $USDT 800000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $DAI 800000000000000000 10000000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WETH 800000000000000000 4000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 800000000000000000 20000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $FRAX 800000000000000000 10000000000000000000000
 
 ## GmxService
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $USDC $GMXSERVICE_ADDRESS 5e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $USDT $GMXSERVICE_ADDRESS 5e17 1e10
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $DAI $GMXSERVICE_ADDRESS 5e17 1e22
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $WETH $GMXSERVICE_ADDRESS 5e17 4e18
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $AAVESERVICE_ADDRESS $WBTC 5e17 2e7
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAX $GMXSERVICE_ADDRESS 5e17 1e22
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $GMXSERVICE_ADDRESS $USDC 500000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $GMXSERVICE_ADDRESS $USDT 500000000000000000 10000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $GMXSERVICE_ADDRESS $DAI 500000000000000000 10000000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $GMXSERVICE_ADDRESS $WETH 500000000000000000 4000000000000000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $GMXSERVICE_ADDRESS $WBTC 500000000000000000 20000000
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $GMXSERVICE_ADDRESS $FRAX 500000000000000000 10000000000000000000000
 
 ## FraxlendService
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAX $FRAXSERVICE_ADDRESS 4e17 1e22
+cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FRAXSERVICE_ADDRESS $FRAX 500000000000000000 10000000000000000000000
 
 ## FixedYieldService
 for token in "${tokens[@]}"; do
-    cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $token $FIXEDYIELD_ADDRESS 1 0
+    cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FIXEDYIELD_ADDRESS $token 1 0
 done
 
 # Print out address
