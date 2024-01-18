@@ -62,14 +62,14 @@ contract GmxServiceTest is BaseIntegrationServiceTest {
         usdc.approve(address(service), type(uint256).max);
 
         vm.startPrank(whale);
-        weth.transfer(admin, 1);
+        weth.transfer(admin, 1000);
         weth.transfer(address(mockRouter), 1e18);
         vm.stopPrank();
         vm.prank(usdcWhale);
-        usdc.transfer(admin, 1);
+        usdc.transfer(admin, 1000);
         vm.startPrank(admin);
-        weth.approve(address(manager), 1);
-        usdc.approve(address(manager), 1);
+        weth.approve(address(manager), 1000);
+        usdc.approve(address(manager), 1000);
         manager.create(address(weth));
         manager.setCap(address(service), address(weth), GeneralMath.RESOLUTION, type(uint256).max);
         manager.create(address(usdc));

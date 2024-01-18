@@ -27,59 +27,21 @@ This repository contains the core smart contracts for Ithil V2.
 - Rent NFTs to access guarded communities or Play2Earn games
 - Develop new integrations to create totally novel on-chain financial services
 
-## Installation
-
-Prerequisites for this project are:
-
-- Git
-- NodeJS v16.x
-- Rust
-- Yarn
-
-To get a copy of the source
-
-```bash
-git clone https://github.com/Ithil-protocol/v2-core
-cd v2-core
-forge install
-```
-
-## Usage
-
-Create an environment file `.env` copying the template environment file
-
-```bash
-cp .env.example .env
-```
-
-and add the following content:
-
-```text
-ARBITRUM_RPC_URL="https://..." needed to run arbitrum fork tests
-```
-
-Load it in your local env with `source .env` and finally you can compile the contracts:
-
-```bash
-forge build
-```
-
-## Test
-
-```bash
-forge test
-```
-
-and to view in details the specific transactions happening
-
-```bash
-forge test -vvvv
-```
-
 ## Security
 
-Audit reports are available in the _audits_ folder. If you find bugs, please follow the instructions on the SECURITY.md
-file. We have a bug bounty program that covers the main source files.
+> Audit reports are available in the _audits_ folder.
+
+The codebase comes with full test coverage, including unit, integration and fuzzy tests.
+
+Smart contracts have been tested with the following automated tools:
+
+- [slither](https://github.com/crytic/slither)
+- [mythril](https://github.com/Consensys/mythril)
+- [halmos](https://github.com/a16z/halmos)
+- [olympix](https://www.olympix.ai)
+
+If you find bugs, please report them to *info@ithil.fi*. We have a bug bounty program up to $50k that covers the main
+deployed smart contracts.
 
 ## Documentation
 

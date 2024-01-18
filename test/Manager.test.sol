@@ -42,11 +42,11 @@ contract ManagerTest is Test {
         secondToken.mint(tokenSink, type(uint256).max);
         spuriousToken.mint(tokenSink, type(uint256).max);
         vm.startPrank(tokenSink);
-        firstToken.transfer(address(this), 1);
-        secondToken.transfer(address(this), 1);
+        firstToken.transfer(address(this), 1000);
+        secondToken.transfer(address(this), 1000);
         vm.stopPrank();
-        firstToken.approve(address(manager), 1);
-        secondToken.approve(address(manager), 1);
+        firstToken.approve(address(manager), 1000);
+        secondToken.approve(address(manager), 1000);
     }
 
     function setUp() public {
@@ -78,15 +78,15 @@ contract ManagerTest is Test {
 
     function testCreate() public {
         vm.prank(tokenSink);
-        spuriousToken.transfer(address(this), 1);
-        spuriousToken.approve(address(manager), 1);
+        spuriousToken.transfer(address(this), 1000);
+        spuriousToken.approve(address(manager), 1000);
         address spuriousVault = manager.create(address(spuriousToken));
         assertTrue(manager.vaults(address(spuriousToken)) == spuriousVault);
     }
 
     function _setupArbitraryState(uint256 previousDeposit, uint256 cap) private returns (uint256) {
         address vaultAddress = manager.vaults(address(firstToken));
-        if (previousDeposit == type(uint256).max) previousDeposit--;
+        if (previousDeposit >= type(uint256).max - 999) previousDeposit = type(uint256).max - 1000;
         vm.startPrank(tokenSink);
         firstToken.approve(vaultAddress, previousDeposit);
         IVault(vaultAddress).deposit(previousDeposit, anyAddress);
