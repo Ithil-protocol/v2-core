@@ -186,26 +186,6 @@ for token in "${tokens[@]}"; do
     cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $MANAGER_ADDRESS "setCap(address,address,uint256,uint256)" $FIXEDYIELD_ADDRESS $token 1 0
 done
 
-# Set risk params
-## Aave
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $USDC 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $USDT 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $DAI 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $FRAX 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $WBTC 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $AAVESERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $WETH 1 1 1
-
-## GMX
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $USDC 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $USDT 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $DAI 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $FRAX 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $WBTC 1 1 1
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $GMXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $WETH 1 1 1
-
-## Fraxlend
-cast send --rpc-url=$RPC_URL --private-key=$DEPLOYER_PRIVATE_KEY $FRAXSERVICE_ADDRESS "setRiskParams(address,uint256,uint256,uint256)" $FRAX 1 1 1
-
 # Print out address
 echo " "
 echo "---------------------------------------------------------------------------"
